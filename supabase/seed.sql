@@ -1,0 +1,1 @@
+-- Seed roles, permissions and meeting types in the database phase.
