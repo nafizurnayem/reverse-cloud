@@ -10,6 +10,7 @@
     "build": "pnpm --filter @reverse-cloud/web build",
     "start": "pnpm --filter @reverse-cloud/web start",
     "lint": "pnpm --filter @reverse-cloud/web lint",
-    "typecheck": "pnpm --filter @reverse-cloud/web typecheck"
+    "typecheck": "pnpm --filter @reverse-cloud/web typecheck",
+    "test:i18n": "pnpm --filter @reverse-cloud/web test:i18n"
   }
 }

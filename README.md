@@ -53,16 +53,27 @@ alongside dependency changes; use `pnpm install --frozen-lockfile` in CI.
 
 ### Current scaffold
 
-The home page runs without external services or environment variables. Existing
-feature folders and message files are preserved for the next phases. The six
+The home page runs without external services or environment variables. The six
 unfinished API endpoints return JSON with HTTP 501 for their intended methods
 (GET for schedule slots; POST for the others).
 
-The original locale/auth proxy is preserved in `apps/web/src/proxy.ts.example`.
-It is inactive until i18n routing, Supabase clients, login, and server-side
-authorization are implemented. Admin and portal pages are not implemented yet.
-When implementing localization, move the home page into the existing
-`[locale]/(public)` group and make the root layout's language locale-aware.
+### English and Bangla
+
+- `/en` and `/bn` render translated home pages, metadata, and HTML language tags.
+- `/` redirects to the saved locale or browser language, with English as the
+  fallback. Explicit locale URLs always take precedence.
+- The language links switch the current pathname between English and Bangla.
+- Add matching translation keys to `apps/web/messages/en.json` and `bn.json`.
+- Put new public pages under `src/app/[locale]/(public)` and use the `Link`,
+  `redirect`, and router helpers from `@/i18n/navigation` for localized navigation.
+- `src/proxy.ts` handles locale routing; API endpoints and static files are excluded.
+
+The original auth draft remains in `apps/web/src/proxy.ts.example`. Supabase
+session handling, login, admin authorization, and portal pages are still pending.
+
+With a development or production server running, run `pnpm test:i18n` to check
+translations, redirects, language links, invalid routes, and API/asset exclusions.
+Set `I18N_TEST_BASE_URL` if the server is not at `http://127.0.0.1:3000`.
 
 For future web integrations, put local secrets in `apps/web/.env.local`, using
 the relevant keys from `.env.example`. Next.js does not automatically load the

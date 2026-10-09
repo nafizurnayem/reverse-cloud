@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "next": "16.4.0",
+    "next-intl": "4.14.9",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -20,6 +21,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:i18n": "node --test tests/i18n.test.mjs"
   }
 }
