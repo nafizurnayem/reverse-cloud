@@ -1,0 +1,44 @@
+name: Database
+
+# Runs on every pull request into dev or main, and after every merge.
+# No path filter on purpose: once this check is marked "required", a filter
+# would leave pull requests that don't touch supabase/ waiting forever.
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+# A newer push to the same branch cancels the older, now pointless, run.
+concurrency:
+  group: database-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Migrations and access-rule tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starting Supabase applies every migration (and seed.sql) to an empty
+      # database. If any migration is broken, this step fails.
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Run database tests
+        run: supabase test db
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup
