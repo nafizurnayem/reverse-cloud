@@ -1,1 +1,36 @@
-.env.local
+# Dependencies and package-manager caches
+node_modules/
+.pnpm-store/
+
+# Next.js and generated build output
+.next/
+out/
+dist/
+build/
+next-env.d.ts
+*.tsbuildinfo
+.vercel/
+
+# Local secrets (keep shareable examples)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Test output and logs
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
