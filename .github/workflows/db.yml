@@ -29,7 +29,7 @@ jobs:
       - name: Install the Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0
 
       # Starting Supabase applies every migration (and seed.sql) to an empty
       # database. If any migration is broken, this step fails.
