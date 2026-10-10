@@ -1,0 +1,7 @@
+# Supabase local files that must not be committed
+.branches/
+.temp/
+snippets/
+.env.keys
+.env.local
+.env.*.local
