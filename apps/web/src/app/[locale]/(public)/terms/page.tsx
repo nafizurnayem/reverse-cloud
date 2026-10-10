@@ -1,0 +1,3 @@
+export default function TermsPage() {
+  return <main className="mx-auto max-w-3xl px-6 py-20 lg:py-28"><p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Terms</p><h1 className="mt-5 text-4xl font-bold">Terms of service</h1><div className="mt-8 rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm text-amber-900">Review placeholder: governing law, legal entity, address, service terms, and limitation language have not been supplied by the project owner.</div><p className="mt-8 leading-8 text-muted">This page must be replaced with approved legal text before production publication. Booking is not confirmed until a signed-in human confirms and the server reports success.</p></main>
+}

@@ -1,1 +1,3 @@
-// Lead form route will be implemented in Phase 1.
+export async function POST() {
+  return Response.json({ error: 'Lead capture is not available yet.' }, { status: 501 })
+}

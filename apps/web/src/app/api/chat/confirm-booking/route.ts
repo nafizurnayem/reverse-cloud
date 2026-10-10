@@ -1,1 +1,3 @@
-// Booking confirmation route will be implemented in Phase 4.
+export async function POST() {
+  return Response.json({ error: 'Booking confirmation is not available yet.' }, { status: 501 })
+}

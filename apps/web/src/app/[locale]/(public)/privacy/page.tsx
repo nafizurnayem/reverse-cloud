@@ -1,0 +1,3 @@
+export default function PrivacyPage() {
+  return <main className="mx-auto max-w-3xl px-6 py-20 lg:py-28"><p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Privacy policy</p><h1 className="mt-5 text-4xl font-bold">Privacy information</h1><div className="mt-8 rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm text-amber-900">Review placeholder: legal entity, address, jurisdiction, data sharing, retention periods, and contact details have not been supplied by the project owner.</div><p className="mt-8 leading-8 text-muted">This page must be replaced with approved legal text before production publication. The application does not provide payment gateway checkout or contract signing.</p></main>
+}

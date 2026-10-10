@@ -1,1 +1,81 @@
-{}
+{
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "schedule": "Schedule",
+    "about": "About",
+    "insights": "Insights",
+    "contact": "Contact Us"
+  },
+  "hero": {
+    "eyebrow": "Digital systems, built differently",
+    "title": "Build what comes next.",
+    "description": "Reverse Cloud is an engineering partner for ambitious teams building intelligent products, reliable automation, and resilient digital infrastructure.",
+    "primary": "Explore our services",
+    "secondary": "Tell us about your project"
+  },
+  "home": {
+    "introLabel": "The Reverse Cloud way",
+    "introTitle": "Complex problems deserve considered solutions.",
+    "introText": "We combine product thinking, technical depth, and practical delivery to turn hard problems into durable advantages.",
+    "pillarsTitle": "Built on strong foundations",
+    "pillars": [
+      { "title": "Clarity", "text": "We make the complex understandable and the path forward visible." },
+      { "title": "Craft", "text": "We care about the details that make systems reliable, useful, and lasting." },
+      { "title": "Momentum", "text": "We ship in thoughtful increments that create value from day one." }
+    ],
+    "differenceLabel": "Why Reverse Cloud",
+    "differenceTitle": "A senior team for the work that matters.",
+    "differenceText": "No layers of handoffs. No black boxes. Just experienced builders working closely with you from first question to final release.",
+    "capabilitiesTitle": "Capabilities",
+    "roadmapTitle": "From first idea to lasting impact",
+    "roadmap": [
+      { "step": "01", "title": "Discover", "text": "Align on the opportunity, constraints, and the outcome that matters." },
+      { "step": "02", "title": "Design", "text": "Shape the right solution with a clear, testable plan." },
+      { "step": "03", "title": "Deliver", "text": "Build, learn, and launch with a team you can trust." }
+    ]
+  },
+  "services": {
+    "eyebrow": "What we do",
+    "title": "Tools for your next chapter.",
+    "description": "Focused expertise across the technologies and systems that move modern businesses forward.",
+    "items": [
+      { "title": "Web development", "text": "Fast, accessible, and expressive web experiences that turn attention into action." },
+      { "title": "Agentic AI", "text": "Useful AI systems that connect reasoning to real workflows and measurable outcomes." },
+      { "title": "Automation", "text": "Remove repetitive work and give your team back its most valuable resource: focus." },
+      { "title": "Python engineering", "text": "Robust services, data pipelines, and internal tools built for the long term." },
+      { "title": "Web scraping", "text": "Reliable data collection that turns the open web into a strategic asset." },
+      { "title": "Technical strategy", "text": "A pragmatic path from a bold idea to a system that can scale." }
+    ],
+    "cta": "Start a conversation"
+  },
+  "footer": {
+    "tagline": "Engineering the systems behind your next advantage.",
+    "company": "Company",
+    "legal": "Legal",
+    "newsletter": "Get occasional notes on building better systems.",
+    "email": "Your email address",
+    "subscribe": "Subscribe",
+    "copyright": "© 2026 Reverse Cloud. All rights reserved."
+  },
+  "health": {
+    "operational": "All systems operational",
+    "status": "System status"
+  },
+  "chat": {
+    "welcome": "Hi! I can help you find the right next step. What are you building?",
+    "title": "Reverse Cloud assistant",
+    "subtitle": "Ask a question to get started",
+    "open": "Open chat",
+    "close": "Close chat",
+    "placeholder": "Ask a question…",
+    "inputLabel": "Chat message",
+    "send": "Send message",
+    "thinking": "Thinking…",
+    "dismiss": "Dismiss",
+    "unavailable": "Chat is unavailable right now. You can try again or contact the team.",
+    "rateLimit": "Too many messages in a short time. Please wait and try again.",
+    "timeout": "The response took too long. Please try again.",
+    "unknownCard": "The assistant returned an unsupported card. The text response is still available."
+  }
+}

@@ -1,1 +1,3 @@
-// Cal.com webhook route will be implemented in Phase 4.
+export async function POST() {
+  return Response.json({ error: 'The Cal.com webhook is not available yet.' }, { status: 501 })
+}

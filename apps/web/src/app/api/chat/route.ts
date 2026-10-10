@@ -1,1 +1,3 @@
-// Chat SSE proxy will be implemented in Phase 2.
+export async function POST() {
+  return Response.json({ error: 'Chat is not available yet.' }, { status: 501 })
+}
