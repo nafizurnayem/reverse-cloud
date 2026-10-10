@@ -11,6 +11,7 @@
     "start": "pnpm --filter @reverse-cloud/web start",
     "lint": "pnpm --filter @reverse-cloud/web lint",
     "typecheck": "pnpm --filter @reverse-cloud/web typecheck",
+    "test": "pnpm --filter @reverse-cloud/web test",
     "test:i18n": "pnpm --filter @reverse-cloud/web test:i18n"
   }
 }

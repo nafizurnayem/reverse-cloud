@@ -68,16 +68,36 @@ unfinished API endpoints return JSON with HTTP 501 for their intended methods
   `redirect`, and router helpers from `@/i18n/navigation` for localized navigation.
 - `src/proxy.ts` handles locale routing; API endpoints and static files are excluded.
 
-The original auth draft remains in `apps/web/src/proxy.ts.example`. Supabase
-session handling, login, admin authorization, and portal pages are still pending.
+The original auth draft remains in `apps/web/src/proxy.ts.example` for reference.
+The active proxy now combines locale routing with Supabase session refresh and
+guards the admin and portal route segments.
 
 With a development or production server running, run `pnpm test:i18n` to check
 translations, redirects, language links, invalid routes, and API/asset exclusions.
 Set `I18N_TEST_BASE_URL` if the server is not at `http://127.0.0.1:3000`.
 
-For future web integrations, put local secrets in `apps/web/.env.local`, using
-the relevant keys from `.env.example`. Next.js does not automatically load the
-repository-root `.env.local` for this app. Never expose service-role secrets
-through `NEXT_PUBLIC_` variables.
+### Supabase and Google login
+
+Put web configuration in `apps/web/.env.local`, using `apps/web/.env.example`.
+Next.js does not load the repository-root `.env.local` for this app. Set
+`NEXT_PUBLIC_SITE_URL` to the exact app origin (for example,
+`http://localhost:3000`) and configure the project URL plus publishable key. The
+legacy anon key is accepted as a fallback. Never expose the service-role key
+through a `NEXT_PUBLIC_` variable.
+
+- `/en/login` and `/bn/login` start Google OAuth through Supabase PKCE.
+- `/{locale}/auth/callback` exchanges the one-time code for cookie-based session
+  tokens and returns the user to a validated same-locale path.
+- A signed-in user can revisit the localized login page to continue or sign out.
+- The proxy refreshes session cookies and preserves them on locale/auth redirects.
+- Admin access requires an active database `admin` role. User metadata is never
+  accepted as authorization, and protected layouts check again on the server.
+- The service-role client is server-only, does not persist sessions, and has an
+  ESLint import allowlist for the future validated leads, webhook, and invitation
+  paths. OAuth and route guards use the user's RLS-scoped session client.
+
+Run `pnpm test` for auth, redirect-validation, proxy, and session regressions.
+See `docs/runbooks/google-oauth.md` for the Google and Supabase dashboard setup
+that Member D must complete before a real sign-in can work.
 
 The application skeleton follows the project plan in `docs/00-plan.md`.

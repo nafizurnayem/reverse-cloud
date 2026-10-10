@@ -13,5 +13,24 @@
     "label": "Choose language",
     "en": "English",
     "bn": "বাংলা"
+  },
+  "Login": {
+    "brand": "Reverse Cloud",
+    "title": "Sign in",
+    "description": "Use your Google account to continue securely.",
+    "google": "Continue with Google",
+    "signedInTitle": "You are signed in",
+    "signedInAs": "Signed in as {email}",
+    "unknownEmail": "your Google account",
+    "continue": "Continue",
+    "signOut": "Sign out",
+    "loggedOut": "You have been signed out.",
+    "errors": {
+      "oauth_denied": "Google sign-in was cancelled or denied. Please try again.",
+      "oauth_start_failed": "Google sign-in could not start. Please try again.",
+      "oauth_callback_failed": "We could not complete Google sign-in. Please try again.",
+      "invalid_callback": "This sign-in link is invalid or expired. Please start again.",
+      "sign_out_failed": "We could not sign you out. Please try again."
+    }
   }
 }

@@ -92,3 +92,74 @@ html:lang(bn) .eyebrow {
   letter-spacing: normal;
   line-height: 1.4;
 }
+
+.auth-page {
+  display: grid;
+  min-height: calc(100svh - 6rem);
+  padding: 2rem 1.5rem;
+  place-items: center;
+}
+
+.auth-card {
+  width: min(100%, 30rem);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid #d8ded7;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgb(23 37 31 / 8%);
+}
+
+.auth-card h1 {
+  margin-block: 0.75rem;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.auth-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #315e4a;
+  border-radius: 0.5rem;
+  color: #fff;
+  background: #315e4a;
+  font: inherit;
+  font-weight: 700;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-button-secondary {
+  color: #315e4a;
+  background: transparent;
+}
+
+.auth-button:hover,
+.auth-button:focus-visible {
+  outline: 2px solid #315e4a;
+  outline-offset: 3px;
+}
+
+.auth-message {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  line-height: 1.5;
+}
+
+.auth-error {
+  color: #7f1d1d;
+  background: #fef2f2;
+}
+
+.auth-success {
+  color: #14532d;
+  background: #f0fdf4;
+}
