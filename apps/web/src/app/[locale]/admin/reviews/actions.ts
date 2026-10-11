@@ -1,0 +1,40 @@
+"use server";
+
+import { hasLocale } from "next-intl";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { routing } from "@/i18n/routing";
+import { requirePermission } from "@/lib/auth/guards";
+import type { Locale } from "@/lib/auth/routes";
+import { checkbox, integer, optionalText, text } from "@/lib/admin/content-values";
+
+function formLocale(formData: FormData): Locale {
+  const value = text(formData, "locale");
+  return hasLocale(routing.locales, value) ? value : routing.defaultLocale;
+}
+
+export async function saveReview(formData: FormData) {
+  const locale = formLocale(formData);
+  const path = `/${locale}/admin/reviews`;
+  const { supabase, user } = await requirePermission(locale, "reviews.moderate");
+  const id = text(formData, "id");
+  const reviewerName = text(formData, "reviewer_name");
+  const body = text(formData, "body");
+  if (!reviewerName || !body) redirect(`${path}?error=invalidInput`);
+  const status = text(formData, "status") || "pending";
+  const payload = {
+    reviewer_name: reviewerName, reviewer_title: optionalText(formData, "reviewer_title"),
+    rating: Math.min(5, Math.max(1, integer(formData, "rating", 5))), body,
+    locale: text(formData, "review_locale") === "bn" ? "bn" : "en",
+    source: text(formData, "source") || "manual", source_url: optionalText(formData, "source_url"),
+    status, is_featured: checkbox(formData, "is_featured"),
+    moderated_by: status === "pending" ? null : user.id,
+    moderated_at: status === "pending" ? null : new Date().toISOString(),
+  };
+  const result = id
+    ? await supabase.from("reviews").update(payload).eq("id", id)
+    : await supabase.from("reviews").insert(payload);
+  if (result.error) redirect(`${path}?error=saveFailed`);
+  revalidatePath(path);
+  redirect(`${path}?saved=1`);
+}
