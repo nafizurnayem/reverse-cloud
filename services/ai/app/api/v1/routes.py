@@ -1,7 +1,6 @@
-import os
-
 from fastapi import APIRouter, Header, HTTPException, Request
 
+from ...config import get_settings
 from ...estimator.engine import EstimateInput, estimate_project
 from ...schemas.estimate import EstimateRequest, EstimateResponse
 from ...security.signing import InvalidSignature, verify_request_signature
@@ -16,7 +15,7 @@ async def create_estimate(
     x_ai_timestamp: str | None = Header(default=None),
     x_ai_signature: str | None = Header(default=None),
 ) -> EstimateResponse:
-    secret = os.getenv("AI_HMAC_SECRET_CURRENT")
+    secret = get_settings().ai_hmac_secret_current
     if not secret or not x_ai_timestamp or not x_ai_signature:
         raise HTTPException(status_code=401, detail="missing service authentication")
     try:
