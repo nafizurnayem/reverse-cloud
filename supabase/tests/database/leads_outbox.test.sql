@@ -29,7 +29,9 @@ select throws_ok(
   '23514', null, 'a public form lead needs consent');
 
 set local role anon;
-select is((select count(*)::int from public.leads), 0, 'anonymous users cannot read leads');
+select throws_ok(
+  $$ select count(*)::int from public.leads $$,
+  '42501', null, 'anonymous users cannot read leads');
 select throws_ok(
   $$ insert into public.leads (name, email, message, source, consent_at)
      values ('Attacker', 'attacker@example.com', 'Hello', 'contact_form', now()) $$,
@@ -77,8 +79,9 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-0000000000e1","role":"authenticated"}', true);
-select is((select count(*)::int from public.notifications_outbox), 0,
-  'the outbox is hidden even from administrators');
+select throws_ok(
+  $$ select count(*)::int from public.notifications_outbox $$,
+  '42501', null, 'the outbox is hidden even from administrators');
 
 select * from finish();
 rollback;
