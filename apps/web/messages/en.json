@@ -95,5 +95,87 @@
         "description": "Review recorded changes to sensitive data."
       }
     }
+  },
+  "AdminContent": {
+    "eyebrow": "Content operations",
+    "title": "Manage public content",
+    "description": "Create, translate, review and publish the content used across the public website.",
+    "open": "Open",
+    "back": "Content overview",
+    "backDashboard": "Dashboard",
+    "saved": "Your changes were saved.",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "archive": "Archive",
+    "restore": "Restore",
+    "editItem": "Edit item",
+    "newService": "Add a service",
+    "newFaq": "Add an FAQ",
+    "newPortfolio": "Add a portfolio item",
+    "newBlog": "Add a blog post",
+    "newSetting": "Add a setting",
+    "allItems": "All items",
+    "status": "Status",
+    "actions": "Actions",
+    "published": "Published",
+    "draft": "Draft",
+    "archived": "Archived",
+    "generalFaq": "General FAQ",
+    "yes": "Yes",
+    "no": "No",
+    "untitled": "Untitled draft",
+    "visibility": "Visibility",
+    "public": "Public",
+    "private": "Private",
+    "resources": {
+      "services": { "title": "Services", "description": "Edit the service catalog, bilingual descriptions and display pricing." },
+      "faqs": { "title": "FAQs", "description": "Maintain general and service-specific questions in both languages." },
+      "portfolio": { "title": "Portfolio", "description": "Create consent-controlled case studies and project summaries." },
+      "blog": { "title": "Blog", "description": "Draft and publish bilingual articles with SEO metadata." },
+      "settings": { "title": "Site settings", "description": "Manage public contact information and operational site settings." }
+    },
+    "fields": {
+      "nameEn": "English name", "nameBn": "Bangla name", "slug": "Slug", "icon": "Icon",
+      "summaryEn": "English summary", "summaryBn": "Bangla summary", "bodyEn": "English body", "bodyBn": "Bangla body",
+      "pricingModel": "Pricing model", "startingUsd": "Starting price (USD)", "sortOrder": "Sort order", "published": "Published",
+      "service": "Service", "questionEn": "English question", "questionBn": "Bangla question", "answerEn": "English answer", "answerBn": "Bangla answer",
+      "titleEn": "English title", "titleBn": "Bangla title", "clientName": "Public client name",
+      "challengeEn": "English challenge", "challengeBn": "Bangla challenge", "solutionEn": "English solution", "solutionBn": "Bangla solution",
+      "resultEn": "English result", "resultBn": "Bangla result", "coverPath": "Cover image path", "liveUrl": "Live URL",
+      "techStack": "Technology stack", "completedOn": "Completion date", "services": "Related services", "clientConsent": "Client consent recorded", "featured": "Featured",
+      "excerptEn": "English excerpt", "excerptBn": "Bangla excerpt", "tags": "Tags", "seoTitle": "SEO title", "seoDescription": "SEO description",
+      "settingKey": "Setting key", "jsonValue": "JSON value", "publicSetting": "Public setting"
+    },
+    "options": { "fixed": "Fixed", "hourly": "Hourly", "retainer": "Retainer", "custom": "Custom quote" },
+    "hints": {
+      "servicePublish": "Publishing requires an English summary and body.",
+      "consent": "Confirm that the client approved public use of this case study.",
+      "portfolioPublish": "Publishing requires consent and an English summary.",
+      "publicSetting": "Public settings can be read by website visitors.",
+      "multiSelect": "Hold Ctrl or Command to select more than one service."
+    },
+    "media": { "title": "Portfolio gallery", "file": "Image file", "altEn": "English alternative text", "altBn": "Bangla alternative text", "useAsCover": "Use as cover image", "upload": "Upload image", "empty": "No gallery images have been uploaded." },
+    "errors": {
+      "duplicateSlug": "That slug or unique value is already in use.",
+      "publishNeedsEnglish": "Add the required English content before publishing.",
+      "portfolioNeedsConsent": "Record client consent before publishing this portfolio item.",
+      "invalidJson": "Enter a valid JSON value.",
+      "invalidFile": "Choose a JPEG, PNG, WebP or AVIF image no larger than 5 MB.",
+      "invalidInput": "Complete the required fields with valid values.",
+      "saveFailed": "The change could not be saved. Please try again."
+    }
+  },
+  "AdminReviews": {
+    "eyebrow": "Trust and quality",
+    "title": "Review moderation",
+    "description": "Approve client feedback, reject unsuitable submissions and add verified reviews manually.",
+    "newReview": "Add a review",
+    "fields": {
+      "name": "Reviewer name", "title": "Reviewer title", "rating": "Rating", "locale": "Language",
+      "source": "Source", "sourceUrl": "Source URL", "body": "Review", "featured": "Featured review"
+    },
+    "options": { "manual": "Manual", "other": "Other", "portal": "Client portal", "pending": "Pending", "approved": "Approved", "rejected": "Rejected" }
   }
 }
