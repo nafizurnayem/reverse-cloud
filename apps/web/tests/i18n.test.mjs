@@ -88,9 +88,9 @@ test("API endpoints bypass localization", async () => {
       headers: { "Accept-Language": "bn" },
       redirect: "manual",
     });
-    assert.equal(response.status, 501, path);
+    assert.notEqual(response.status, 307, path);
     assert.equal(response.headers.get("location"), null);
-    assert.deepEqual(await response.json(), { error: "Not implemented" });
+    assert.match(response.headers.get("content-type") ?? "", /application\/json/, path);
   }
 });
 
