@@ -167,7 +167,8 @@ do $$ begin
     '{"sub":"00000000-0000-0000-0000-0000000000c1","role":"authenticated"}', true);
 end $$;
 
-select is((select count(*)::int from public.services), 3,
+select is((select count(*)::int from public.services
+            where slug in ('web-dev', 'draft-svc', 'old-svc')), 3,
   'admin sees draft and archived services');
 select lives_ok(
   $$ insert into public.services (slug, name_en) values ('new-svc', 'New service') $$,

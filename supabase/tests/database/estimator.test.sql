@@ -1,7 +1,6 @@
 -- estimator.test.sql
--- Automatic tests for migration 0008 (estimator and wizard tables).
--- These check the rules built into the tables. Who may read and write them
--- is tested after migration 0009.
+-- Automatic tests for migration 0008 (estimator and wizard tables):
+-- the rules built into the tables themselves.
 -- Everything runs inside one transaction that is rolled back at the end.
 
 begin;
@@ -11,18 +10,18 @@ select plan(10);
 -- ============================================================ test data
 insert into public.services (slug, name_en) values ('est-svc', 'Estimator test service');
 
-insert into public.estimator_versions (version, status, usd_to_bdt, activated_at) values
-  (1, 'active', 120, now());
+-- Both versions start as drafts, because a used version cannot be changed.
 insert into public.estimator_versions (version, status, usd_to_bdt) values
+  (1, 'draft', 120),
   (2, 'draft', 121);
 
 insert into public.estimator_service_rates (version_id, service_id, base_min, base_max, weeks_min, weeks_max)
 select v.id, s.id, 500, 1500, 2, 4
 from public.estimator_versions v, public.services s
-where v.version = 1 and s.slug = 'est-svc';
+where s.slug = 'est-svc';
 
 insert into public.estimator_factors (version_id, kind, key, label_en, multiplier)
-select id, 'complexity', 'simple', 'Simple', 1 from public.estimator_versions where version = 1;
+select id, 'complexity', 'simple', 'Simple', 1 from public.estimator_versions;
 
 insert into public.estimator_factors (version_id, kind, key, label_en, monthly_min, monthly_max)
 select id, 'support', 'basic', 'Basic support', 50, 100
@@ -39,6 +38,10 @@ select id, 'A new website' from public.wizard_questions where key = 'goal';
 insert into public.wizard_option_scores (option_id, service_id, weight)
 select o.id, s.id, 3 from public.wizard_options o, public.services s
 where o.label_en = 'A new website' and s.slug = 'est-svc';
+
+-- Version 1 goes live. Version 2 stays a draft.
+update public.estimator_versions
+   set status = 'active', activated_at = now() where version = 1;
 
 -- ===================================================== structure and rules
 select is(
@@ -66,7 +69,7 @@ select throws_ok(
        (version_id, service_id, base_min, base_max, weeks_min, weeks_max)
      select v.id, s.id, 100, 200, 1, 2
        from public.estimator_versions v, public.services s
-      where v.version = 1 and s.slug = 'est-svc' $$,
+      where v.version = 2 and s.slug = 'est-svc' $$,
   '23505', null, 'a service has only one rate per version');
 
 select throws_ok(
@@ -84,7 +87,7 @@ select throws_ok(
 select throws_ok(
   $$ insert into public.estimator_factors (version_id, kind, key, label_en)
      select id, 'complexity', 'simple', 'Simple again'
-       from public.estimator_versions where version = 1 $$,
+       from public.estimator_versions where version = 2 $$,
   '23505', null, 'a factor key is unique within its version');
 
 select throws_ok(
@@ -96,7 +99,7 @@ select throws_ok(
 
 select throws_ok(
   $$ delete from public.estimator_versions where version = 1 $$,
-  '23503', null, 'a version with saved estimates cannot be deleted');
+  '55000', null, 'an active version cannot be deleted');
 
 select throws_ok(
   $$ insert into public.wizard_option_scores (option_id, service_id, weight)
