@@ -25,6 +25,14 @@ class Settings(BaseSettings):
 	database_min_size: int = Field(default=1, ge=1)
 	database_max_size: int = Field(default=5, ge=1)
 	ai_hmac_secret_current: str | None = None
+	email_api_key: str | None = None
+	email_api_url: str = "https://api.resend.com/emails"
+	email_from: str | None = None
+	telegram_bot_token: str | None = None
+	telegram_chat_id: str | None = None
+	outbox_batch_size: int = Field(default=20, ge=1, le=100)
+	outbox_max_attempts: int = Field(default=5, ge=1, le=20)
+	outbox_lock_timeout_seconds: int = Field(default=900, ge=60, le=3600)
 
 
 @lru_cache
