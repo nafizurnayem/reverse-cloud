@@ -1,0 +1,99 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+import type { CookieMethodsServer } from "@supabase/ssr";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
+
+const mocks = vi.hoisted(() => ({
+  getClaims: vi.fn(),
+  from: vi.fn(),
+  select: vi.fn(),
+  eq: vi.fn(),
+  limit: vi.fn(),
+  createServer: vi.fn(),
+}));
+
+vi.mock("server-only", () => ({}));
+vi.mock("@supabase/ssr", () => ({ createServerClient: mocks.createServer }));
+
+import { config, proxy } from "../src/proxy";
+
+let cookieAdapter: CookieMethodsServer;
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "public-key");
+  mocks.getClaims.mockResolvedValue({ data: { claims: null }, error: null });
+  const query = { select: mocks.select, eq: mocks.eq, limit: mocks.limit };
+  mocks.from.mockReturnValue(query);
+  mocks.select.mockReturnValue(query);
+  mocks.eq.mockReturnValue(query);
+  mocks.limit.mockResolvedValue({ data: [], error: null });
+  mocks.createServer.mockImplementation((_url, _key, options) => {
+    cookieAdapter = options.cookies;
+    return { auth: { getClaims: mocks.getClaims }, from: mocks.from };
+  });
+});
+
+function request(path: string, headers: Record<string, string> = {}) {
+  return new NextRequest(`http://localhost:3000${path}`, { headers });
+}
+
+describe("session proxy", () => {
+  it("matches protected dotted paths while excluding APIs and assets", () => {
+    for (const url of ["/admin/user.json", "/bn/portal/file.pdf", "/en/admin"]) {
+      expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
+    }
+    for (const url of ["/api/leads", "/_next/static/file.js", "/favicon.ico"]) {
+      expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(false);
+    }
+  });
+
+  it("redirects an unprefixed protected route to localized login", async () => {
+    const response = await proxy(request("/admin?tab=staff", { "accept-language": "bn" }));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/bn/login");
+    expect(location.searchParams.get("next")).toBe("/bn/admin?tab=staff");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("preserves refreshed and deleted cookies on redirects", async () => {
+    mocks.getClaims.mockImplementation(async () => {
+      await cookieAdapter.setAll!([
+        { name: "sb-session.0", value: "fresh", options: { path: "/", secure: true } },
+        { name: "sb-session.1", value: "", options: { path: "/", maxAge: 0 } },
+      ], { "Cache-Control": "private, no-store", Pragma: "no-cache" });
+      return { data: { claims: null }, error: null };
+    });
+
+    const response = await proxy(request("/en/admin"));
+    expect(response.cookies.get("sb-session.0")?.value).toBe("fresh");
+    expect(response.cookies.get("sb-session.0")?.secure).toBe(true);
+    expect(response.cookies.get("sb-session.1")?.maxAge).toBe(0);
+    expect(response.headers.get("pragma")).toBe("no-cache");
+  });
+
+  it("denies signed-in users without an active database staff role", async () => {
+    mocks.getClaims.mockResolvedValue({
+      data: { claims: { sub: "user-1", user_metadata: { role: "admin" } } },
+      error: null,
+    });
+    const response = await proxy(request("/en/admin"));
+    expect(response.status).toBe(403);
+    expect(mocks.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(mocks.eq).toHaveBeenCalledWith("is_active", true);
+  });
+
+  it("allows any active staff role and keeps session responses private", async () => {
+    mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "developer-1" } }, error: null });
+    mocks.limit.mockResolvedValue({ data: [{ role_id: "developer-role" }], error: null });
+    const response = await proxy(request("/admin", { Cookie: "NEXT_LOCALE=bn" }));
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/bn/admin");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("fails closed when auth is unavailable", async () => {
+    mocks.getClaims.mockRejectedValue(new Error("network unavailable"));
+    expect((await proxy(request("/bn/portal"))).status).toBe(503);
+  });
+});

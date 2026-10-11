@@ -13,5 +13,87 @@
     "label": "Choose language",
     "en": "English",
     "bn": "বাংলা"
+  },
+  "Login": {
+    "brand": "Reverse Cloud",
+    "title": "Sign in",
+    "description": "Use your Google account to continue securely.",
+    "google": "Continue with Google",
+    "signedInTitle": "You are signed in",
+    "signedInAs": "Signed in as {email}",
+    "unknownEmail": "your Google account",
+    "continue": "Continue",
+    "signOut": "Sign out",
+    "loggedOut": "You have been signed out.",
+    "errors": {
+      "oauth_denied": "Google sign-in was cancelled or denied. Please try again.",
+      "oauth_start_failed": "Google sign-in could not start. Please try again.",
+      "oauth_callback_failed": "We could not complete Google sign-in. Please try again.",
+      "invalid_callback": "This sign-in link is invalid or expired. Please start again.",
+      "sign_out_failed": "We could not sign you out. Please try again."
+    }
+  },
+  "Admin": {
+    "brand": "Reverse Cloud",
+    "workspace": "Admin workspace",
+    "navigation": "Admin navigation",
+    "dashboard": "Dashboard",
+    "unknownUser": "Staff member",
+    "signedInAs": "Signed in as",
+    "permissionCount": "{count, plural, one {# permission} other {# permissions}}",
+    "signOut": "Sign out",
+    "eyebrow": "Operations",
+    "title": "Your work, in one place.",
+    "intro": "The tools shown here come directly from your active database roles and permissions.",
+    "accessEyebrow": "Access",
+    "accessTitle": "Available tools",
+    "accessDescription": "Only sections you are authorized to use appear in this workspace.",
+    "open": "Open",
+    "noTools": "Your staff account is active, but no tools have been assigned to it yet.",
+    "statusLabel": "Section status",
+    "connectedTitle": "Permission verified",
+    "connectedDescription": "Your database role allows access to this section. Feature screens will appear here as they are delivered.",
+    "sections": {
+      "content": {
+        "title": "Content",
+        "description": "Manage services, FAQs, portfolio, blog, wizard content and site settings."
+      },
+      "reviews": {
+        "title": "Reviews",
+        "description": "Approve, reject and maintain client reviews."
+      },
+      "estimator": {
+        "title": "Estimator",
+        "description": "Manage rate versions, service ranges and pricing factors."
+      },
+      "leads": {
+        "title": "Leads",
+        "description": "Review incoming enquiries and manage their progress."
+      },
+      "clients": {
+        "title": "Clients",
+        "description": "Create client records, update details and send invitations."
+      },
+      "projects": {
+        "title": "Projects",
+        "description": "Create projects and maintain milestones, progress and updates."
+      },
+      "payments": {
+        "title": "Payments",
+        "description": "View payment schedules and record external payments."
+      },
+      "meetings": {
+        "title": "Meetings",
+        "description": "Review scheduled client meetings."
+      },
+      "staff": {
+        "title": "Staff access",
+        "description": "Manage staff assignments, roles and permissions."
+      },
+      "audit": {
+        "title": "Audit log",
+        "description": "Review recorded changes to sensitive data."
+      }
+    }
   }
 }
