@@ -1,16 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 80 14% 96%;
+    --foreground: 154 24% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 154 24% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 154 24% 12%;
+    --primary: 154 32% 28%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 15% 94%;
+    --secondary-foreground: 154 24% 12%;
+    --muted: 150 12% 92%;
+    --muted-foreground: 154 7% 38%;
+    --accent: 79 59% 65%;
+    --accent-foreground: 154 29% 12%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 150 10% 86%;
+    --input: 150 10% 86%;
+    --ring: 154 32% 28%;
+    --radius: 0.625rem;
+
+    /* Reverse Cloud Brand Tokens */
+    --brand-primary: 154 32% 28%;
+    --brand-dark: 154 29% 12%;
+    --brand-light: 80 14% 96%;
+    --brand-accent: 79 59% 65%;
+    --brand-muted: 154 7% 38%;
+    --brand-border: 150 10% 86%;
+  }
+
+  .dark {
+    --background: 154 29% 12%;
+    --foreground: 140 18% 93%;
+    --card: 154 25% 15%;
+    --card-foreground: 140 18% 93%;
+    --popover: 154 25% 15%;
+    --popover-foreground: 140 18% 93%;
+    --primary: 79 59% 65%;
+    --primary-foreground: 154 29% 12%;
+    --secondary: 154 22% 20%;
+    --secondary-foreground: 140 18% 93%;
+    --muted: 154 22% 20%;
+    --muted-foreground: 146 10% 69%;
+    --accent: 154 22% 24%;
+    --accent-foreground: 140 18% 93%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 154 18% 23%;
+    --input: 154 18% 23%;
+    --ring: 79 59% 65%;
+
+    /* Brand Tokens in Dark Mode */
+    --brand-primary: 79 59% 65%;
+    --brand-dark: 154 29% 12%;
+    --brand-light: 154 25% 15%;
+    --brand-accent: 79 59% 65%;
+    --brand-muted: 146 10% 69%;
+    --brand-border: 154 18% 23%;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+  }
+}
+
 :root {
   color-scheme: light;
   color: #17251f;
   background: #f5f7f2;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
 .site-header {
@@ -84,7 +153,7 @@ h1 {
 }
 
 html:lang(bn) {
-  font-family: "Noto Sans Bengali", "Vrinda", sans-serif;
+  font-family: var(--font-bengali), "Noto Sans Bengali", "Vrinda", sans-serif;
 }
 
 html:lang(bn) h1,
