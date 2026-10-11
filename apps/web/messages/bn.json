@@ -1,8 +1,9 @@
 { "nav": {
     "home": "হোম",
     "services": "সেবাসমূহ",
-    "schedule": "সময় নির্ধারণ",
+    "pricing": "মূল্য নির্ধারণ",
     "about": "আমাদের সম্পর্কে",
+    "schedule": "সময় নির্ধারণ",
     "insights": "ইনসাইটস",
     "contact": "যোগাযোগ"
   },
@@ -32,8 +33,10 @@
     "privacy": "গোপনীয়তা নীতি",
     "terms": "সেবার শর্তাবলি",
     "socials": "সামাজিক মাধ্যম",
+    "newsletter": "ইঞ্জিনিয়ারিং নোট ও পণ্যের আপডেট। কোনো স্প্যাম নয়।",
     "newsletterTitle": "আপডেট পেতে থাকুন",
     "newsletterDescription": "ইঞ্জিনিয়ারিং নোট ও পণ্যের আপডেট। কোনো স্প্যাম নয়।",
+    "email": "ইমেইল ঠিকানা",
     "emailLabel": "ইমেইল ঠিকানা",
     "emailPlaceholder": "you@company.com",
     "subscribe": "সাবস্ক্রাইব করুন",

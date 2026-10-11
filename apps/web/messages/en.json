@@ -2,8 +2,9 @@
   "nav": {
     "home": "Home",
     "services": "Services",
-    "schedule": "Schedule",
+    "pricing": "Pricing",
     "about": "About",
+    "schedule": "Schedule",
     "insights": "Insights",
     "contact": "Contact Us"
   },
@@ -53,9 +54,13 @@
     "tagline": "Engineering the systems behind your next advantage.",
     "company": "Company",
     "legal": "Legal",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service",
+    "newsletterTitle": "Newsletter",
     "newsletter": "Get occasional notes on building better systems.",
     "email": "Your email address",
     "subscribe": "Subscribe",
+    "subscribed": "Thanks for subscribing.",
     "copyright": "© 2026 Reverse Cloud. All rights reserved."
   },
   "health": {

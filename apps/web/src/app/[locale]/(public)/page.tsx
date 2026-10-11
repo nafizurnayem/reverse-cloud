@@ -14,7 +14,7 @@ export default function HomePage() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 pb-20 pt-24 lg:px-10 lg:pb-28 lg:pt-36">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">{t('hero.eyebrow')}</p>
-          <h1 className="mt-7 max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-[-0.05em] sm:text-7xl">{t('hero.title')}</h1>
+          <h1 className="mt-7 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">{t('hero.title')}</h1>
           <p className="mt-8 max-w-2xl text-lg leading-8 text-muted">{t('hero.description')}</p>
           <Link href="/services" className="mt-10 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:gap-3">
             {t('hero.primary')} <ArrowRight size={17} />
@@ -24,7 +24,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">{t('home.introLabel')}</p>
         <div className="mt-7 grid gap-8 lg:grid-cols-2">
-          <h2 className="max-w-2xl text-4xl font-bold leading-tight tracking-[-0.04em] sm:text-5xl">{t('home.introTitle')}</h2>
+          <h2 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">{t('home.introTitle')}</h2>
           <p className="max-w-lg self-end text-lg leading-8 text-muted">{t('home.introText')}</p>
         </div>
       </section>

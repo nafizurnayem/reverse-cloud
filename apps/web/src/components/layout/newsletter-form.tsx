@@ -14,7 +14,7 @@ export function NewsletterForm() {
   }
 
   if (submitted) {
-    return <p className="text-sm text-primary">Thanks for subscribing.</p>
+    return <p className="text-sm text-primary">{t('subscribed')}</p>
   }
 
   return (

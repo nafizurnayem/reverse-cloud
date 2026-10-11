@@ -3,29 +3,48 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { siteConfig } from '@/lib/site-config'
+import { NewsletterForm } from './newsletter-form'
 import { SystemHealthIndicator } from './system-health-indicator'
 
 export function SiteFooter() {
   const t = useTranslations('footer')
   const nav = useTranslations('nav')
   const locale = useLocale()
+
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.5fr_1fr_1fr] lg:px-10">
+      <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.4fr] lg:px-10">
         <div>
-          <Link href="/" locale={locale} className="text-lg font-extrabold tracking-tight">reverse<span className="text-primary">.</span>cloud</Link>
+          <Link href="/" locale={locale} className="text-lg font-extrabold tracking-tight">
+            reverse<span className="text-primary">.</span>cloud
+          </Link>
           <p className="mt-5 max-w-xs text-sm leading-7 text-muted">{t('tagline')}</p>
         </div>
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{t('company')}</h2>
           <div className="mt-5 flex flex-col gap-3 text-sm text-muted">
-            {siteConfig.navigation.map((item) => <Link key={item.key} href={item.href} locale={locale} className="rounded-sm hover:text-foreground">{nav(item.key)}</Link>)}
+            {siteConfig.navigation.map((item) => (
+              <Link key={item.key} href={item.href} locale={locale} className="rounded-sm hover:text-foreground">
+                {nav(item.key)}
+              </Link>
+            ))}
           </div>
         </div>
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{t('legal')}</h2>
           <div className="mt-5 flex flex-col gap-3 text-sm text-muted">
-            {siteConfig.legal.map((item) => <Link key={item.key} href={item.href} locale={locale} className="rounded-sm hover:text-foreground">{item.key === 'privacy' ? 'Privacy policy' : 'Terms'}</Link>)}
+            {siteConfig.legal.map((item) => (
+              <Link key={item.key} href={item.href} locale={locale} className="rounded-sm hover:text-foreground">
+                {t(item.key)}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{t('newsletterTitle')}</h2>
+          <p className="mt-5 text-sm leading-6 text-muted">{t('newsletter')}</p>
+          <div className="mt-4">
+            <NewsletterForm />
           </div>
         </div>
       </div>
@@ -38,3 +57,4 @@ export function SiteFooter() {
     </footer>
   )
 }
+

@@ -7,12 +7,22 @@
 :root {
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
-  --muted: 215 20% 65%;
-  --muted-foreground: 215 16% 47%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
   --primary: 186 78% 42%;
   --primary-foreground: 210 40% 98%;
-  --card: 0 0% 100%;
+  --secondary: 210 40% 94%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 215 20% 65%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 94%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
   --border: 214 32% 91%;
+  --input: 214 32% 91%;
   --ring: 186 78% 42%;
   --radius: 0.75rem;
 }
@@ -20,12 +30,22 @@
 .dark {
   --background: 222 47% 7%;
   --foreground: 210 40% 98%;
-  --muted: 215 20% 35%;
-  --muted-foreground: 215 20% 65%;
+  --card: 222 39% 10%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 39% 10%;
+  --popover-foreground: 210 40% 98%;
   --primary: 186 78% 48%;
   --primary-foreground: 222 47% 7%;
-  --card: 222 39% 10%;
+  --secondary: 217 33% 18%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 215 20% 35%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 33% 18%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
   --border: 217 33% 18%;
+  --input: 217 33% 18%;
   --ring: 186 78% 48%;
 }
 
@@ -37,9 +57,37 @@ body {
   font-family: var(--font-inter), var(--font-bengali), Inter, 'Noto Sans Bengali', sans-serif;
   margin: 0;
 }
-.font-bengali, [lang='bn'] body {
-  font-family: var(--font-bengali), 'Noto Sans Bengali', var(--font-inter), Inter, sans-serif;
+
+.font-bengali,
+[lang='bn'] {
+  font-family: var(--font-bengali), 'Noto Sans Bengali', system-ui, sans-serif;
+}
+
+[lang='bn'] body {
+  font-family: var(--font-bengali), 'Noto Sans Bengali', system-ui, sans-serif;
   line-height: 1.85;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+[lang='bn'] h1,
+[lang='bn'] h2,
+[lang='bn'] h3,
+[lang='bn'] h4,
+[lang='bn'] h5,
+[lang='bn'] h6 {
+  letter-spacing: normal !important;
+  line-height: 1.35 !important;
+}
+
+[lang='bn'] p,
+[lang='bn'] span,
+[lang='bn'] a,
+[lang='bn'] button,
+[lang='bn'] input,
+[lang='bn'] textarea,
+[lang='bn'] label {
+  letter-spacing: normal;
 }
 a { color: inherit; text-decoration: none; }
 button, a, input, select, textarea {
