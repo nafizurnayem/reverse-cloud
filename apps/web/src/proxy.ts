@@ -3,7 +3,7 @@ import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
 import { localizedPath, loginPath, protectedArea } from "./lib/auth/routes";
-import { isActiveAdmin } from "./lib/supabase/roles";
+import { isActiveStaff } from "./lib/supabase/roles";
 import { refreshSession } from "./lib/supabase/session";
 
 const handleLocale = createMiddleware(routing);
@@ -36,7 +36,7 @@ export async function proxy(request: NextRequest) {
 
     if (
       area === "admin" &&
-      (!session.supabase || !(await isActiveAdmin(session.supabase, session.userId)))
+      (!session.supabase || !(await isActiveStaff(session.supabase, session.userId)))
     ) {
       return session.applyTo(
         NextResponse.json({ error: "Forbidden" }, { status: 403 }),

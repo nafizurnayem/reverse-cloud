@@ -73,7 +73,7 @@ describe("session proxy", () => {
     expect(response.headers.get("pragma")).toBe("no-cache");
   });
 
-  it("denies signed-in users without an active database admin role", async () => {
+  it("denies signed-in users without an active database staff role", async () => {
     mocks.getClaims.mockResolvedValue({
       data: { claims: { sub: "user-1", user_metadata: { role: "admin" } } },
       error: null,
@@ -82,12 +82,11 @@ describe("session proxy", () => {
     expect(response.status).toBe(403);
     expect(mocks.eq).toHaveBeenCalledWith("user_id", "user-1");
     expect(mocks.eq).toHaveBeenCalledWith("is_active", true);
-    expect(mocks.eq).toHaveBeenCalledWith("roles.key", "admin");
   });
 
-  it("allows an active admin and keeps session responses private", async () => {
-    mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "admin-1" } }, error: null });
-    mocks.limit.mockResolvedValue({ data: [{ roles: { key: "admin" } }], error: null });
+  it("allows any active staff role and keeps session responses private", async () => {
+    mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "developer-1" } }, error: null });
+    mocks.limit.mockResolvedValue({ data: [{ role_id: "developer-role" }], error: null });
     const response = await proxy(request("/admin", { Cookie: "NEXT_LOCALE=bn" }));
     expect(new URL(response.headers.get("location")!).pathname).toBe("/bn/admin");
     expect(response.headers.get("cache-control")).toContain("no-store");

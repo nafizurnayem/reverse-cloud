@@ -1,8 +1,10 @@
 import "server-only";
 
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isActiveAdmin } from "@/lib/supabase/roles";
+import { getStaffAccess } from "@/lib/supabase/roles";
+import { hasAnyPermission, type Permission } from "./permissions";
 import { loginPath, type Locale } from "./routes";
 
 export async function requireUser(locale: Locale, returnTo = `/${locale}/portal`) {
@@ -12,8 +14,24 @@ export async function requireUser(locale: Locale, returnTo = `/${locale}/portal`
   return { supabase, user: data.user };
 }
 
-export async function requireAdmin(locale: Locale) {
+export const requireStaff = cache(async (locale: Locale) => {
   const session = await requireUser(locale, `/${locale}/admin`);
-  if (!(await isActiveAdmin(session.supabase, session.user.id))) notFound();
+  const access = await getStaffAccess(session.supabase, session.user.id);
+  if (!access.isStaff) notFound();
+  return { ...session, access };
+});
+
+export async function requireAdmin(locale: Locale) {
+  const session = await requireStaff(locale);
+  if (!session.access.isAdmin) notFound();
+  return session;
+}
+
+export async function requirePermission(
+  locale: Locale,
+  permission: Permission | readonly Permission[],
+) {
+  const session = await requireStaff(locale);
+  if (!hasAnyPermission(session.access, permission)) notFound();
   return session;
 }
