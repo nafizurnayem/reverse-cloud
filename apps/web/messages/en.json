@@ -7,7 +7,13 @@
     "brand": "Reverse Cloud",
     "heading": "Build what comes next.",
     "description": "Web development, AI and automation for your next idea.",
-    "status": "Our website is taking shape. More coming soon."
+    "status": "Our website is taking shape. More coming soon.",
+    "exploreServices": "Explore Services",
+    "getStarted": "Get Started",
+    "servicesTitle": "Core Specializations",
+    "servicesSubtitle": "From bespoke digital products to production agentic AI, we engineer solutions designed to lead.",
+    "whyUsTitle": "Built with Precision",
+    "whyUsSubtitle": "Modern architecture, security by default, and uncompromising code quality."
   },
   "LanguageSwitcher": {
     "label": "Choose language",
@@ -94,6 +100,75 @@
         "title": "Audit log",
         "description": "Review recorded changes to sensitive data."
       }
+    }
+  },
+  "Nav": {
+    "brand": "Reverse Cloud",
+    "home": "Home",
+    "services": "Services",
+    "login": "Sign in"
+  },
+  "Footer": {
+    "brand": "Reverse Cloud",
+    "description": "Custom web platforms, agentic AI systems, workflow automation, Python and scraping services for forward-thinking teams.",
+    "linksHeading": "Navigation",
+    "servicesHeading": "Services",
+    "home": "Home",
+    "services": "Services",
+    "login": "Staff & Client Login",
+    "webDev": "Web Development",
+    "aiSolutions": "Agentic AI",
+    "automation": "Workflow Automation",
+    "scraping": "Python & Scraping",
+    "rights": "All rights reserved."
+  },
+  "Services": {
+    "metadata": {
+      "title": "Services — Reverse Cloud",
+      "description": "High-impact web development, agentic AI, automation, Python and data scraping services."
+    },
+    "hero": {
+      "eyebrow": "Our Capabilities",
+      "title": "Engineered for speed, intelligence, and scale.",
+      "description": "We build robust full-stack web applications, deploy autonomous agentic AI workflows, and automate high-throughput data pipelines."
+    },
+    "web": {
+      "title": "Web Development",
+      "badge": "Full-Stack & Cloud",
+      "description": "High-performance, localized web applications built with Next.js, React 19, TypeScript, and modern cloud architecture.",
+      "feature1": "Next.js App Router & SSR/SSG architectures",
+      "feature2": "Full multi-language & i18n routing support",
+      "feature3": "Database design with Supabase & Postgres RLS"
+    },
+    "ai": {
+      "title": "Agentic AI Solutions",
+      "badge": "Autonomous Systems",
+      "description": "Intelligent AI systems, PydanticAI agents, retrieval pipelines, and automated reasoning tools tailored to your operational domain.",
+      "feature1": "Specialized multi-agent coordination workflows",
+      "feature2": "Secure HMAC-signed server-to-server AI APIs",
+      "feature3": "Custom evaluation harnesses & knowledge retrieval"
+    },
+    "automation": {
+      "title": "Workflow Automation",
+      "badge": "Process Optimization",
+      "description": "Eliminate repetitive operations with reliable event-driven automations, webhook integrations, and real-time synchronization.",
+      "feature1": "Third-party SaaS & custom API integrations",
+      "feature2": "Scheduled task orchestration & background queues",
+      "feature3": "End-to-end audit logging & observability"
+    },
+    "scraping": {
+      "title": "Python & Web Scraping",
+      "badge": "Data Intelligence",
+      "description": "Large-scale resilient data extraction, structured transformation pipelines, and high-performance Python services.",
+      "feature1": "Resilient multi-source distributed scrapers",
+      "feature2": "Asynchronous data ingestion with asyncpg & FastAPI",
+      "feature3": "Data cleaning, schema mapping & vector indexing"
+    },
+    "cta": {
+      "title": "Have a project in mind?",
+      "description": "Let's collaborate to build your next web platform or AI capability.",
+      "button": "Get Started",
+      "viewHome": "Back to Home"
     }
   }
 }

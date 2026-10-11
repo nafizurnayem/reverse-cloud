@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
+import { Inter, Noto_Sans_Bengali } from "next/font/google";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
+
+const sansFont = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+});
+
+const bengaliFont = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  display: "swap",
+  variable: "--font-bengali",
+  weight: ["400", "500", "600", "700"],
+});
 
 type Props = {
   children: ReactNode;
@@ -37,11 +50,8 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale}>
-      <body>
+      <body className={`${sansFont.variable} ${bengaliFont.variable} ${locale === "bn" ? "font-bengali" : "font-sans"} antialiased`}>
         <NextIntlClientProvider>
-          <header className="site-header">
-            <LanguageSwitcher />
-          </header>
           {children}
         </NextIntlClientProvider>
       </body>
