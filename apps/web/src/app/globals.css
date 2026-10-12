@@ -190,6 +190,57 @@ html:lang(bn) .eyebrow {
   margin-top: 1.5rem;
 }
 
+.auth-divider {
+  display: flex;
+  margin-block: 1.25rem;
+  color: #647067;
+  font-size: 0.875rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  background: #d8ded7;
+  content: "";
+  flex: 1;
+}
+
+.auth-email-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-email-form label {
+  color: #17251f;
+  font-weight: 700;
+}
+
+.auth-email-form input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.75rem;
+  border: 1px solid #a9b5ac;
+  border-radius: 0.5rem;
+  color: #17251f;
+  background: #fff;
+  font: inherit;
+}
+
+.auth-email-form input:focus-visible {
+  border-color: #315e4a;
+  outline: 2px solid #315e4a;
+  outline-offset: 2px;
+}
+
+.auth-email-form p {
+  margin: 0;
+  color: #526156;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 .auth-button {
   display: inline-flex;
   min-height: 2.75rem;

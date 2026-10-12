@@ -1,0 +1,137 @@
+import { createHmac } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+const mocks = vi.hoisted(() => ({
+  limit: vi.fn(),
+  verify: vi.fn(),
+  fetch: vi.fn(),
+}));
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/ratelimit", () => ({
+  requestIp: () => "192.0.2.20",
+  limitChatRequests: mocks.limit,
+}));
+vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.verify }));
+
+import { POST } from "../src/app/api/chat/route";
+
+const payload = {
+  messages: [{ role: "user", content: "Hello" }],
+  locale: "bn",
+  conversation_id: "browser-controlled",
+};
+
+function request(body: unknown, options: { cookie?: string; token?: string } = {}) {
+  const headers = new Headers({ "content-type": "application/json" });
+  if (options.cookie) headers.set("cookie", `rc_chat_session=${options.cookie}`);
+  if (options.token) headers.set("x-turnstile-token", options.token);
+  return new NextRequest("http://localhost/api/chat", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.stubEnv("AI_SERVICE_URL", "https://ai.example/");
+  vi.stubEnv("AI_HMAC_SECRET_CURRENT", "service-secret");
+  vi.stubEnv("CHAT_COOKIE_SECRET", "0123456789abcdef0123456789abcdef");
+  mocks.limit.mockResolvedValue({ allowed: true, limit: 20, remaining: 19, reset: 1060 });
+  mocks.verify.mockResolvedValue({ success: true, errors: [] });
+  mocks.fetch.mockResolvedValue(new Response(
+    'event: message_start\ndata: {"conversation_id":"id"}\n\n',
+    { status: 200, headers: { "content-type": "text/event-stream" } },
+  ));
+  vi.stubGlobal("fetch", mocks.fetch);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+describe("POST /api/chat", () => {
+  it("establishes a protected cookie session and signs the normalized upstream request", async () => {
+    const response = await POST(request(payload, { token: "turnstile-token" }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(response.headers.get("x-accel-buffering")).toBe("no");
+    expect(response.headers.get("set-cookie")).toContain("rc_chat_session=");
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(mocks.verify).toHaveBeenCalledWith(
+      "turnstile-token",
+      "192.0.2.20",
+      { expectedAction: "chat" },
+    );
+
+    const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://ai.example/v1/chat");
+    const upstreamBody = String(init.body);
+    const parsed = JSON.parse(upstreamBody);
+    expect(parsed).toMatchObject({ messages: payload.messages, locale: "bn" });
+    expect(parsed.conversation_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(parsed.conversation_id).not.toBe("browser-controlled");
+    const headers = new Headers(init.headers);
+    const timestamp = headers.get("x-ai-timestamp")!;
+    expect(headers.get("x-ai-signature")).toBe(
+      createHmac("sha256", "service-secret")
+        .update(`${timestamp}.${upstreamBody}`)
+        .digest("hex"),
+    );
+  });
+
+  it("reuses the signed conversation cookie without another Turnstile challenge", async () => {
+    const first = await POST(request(payload, { token: "turnstile-token" }));
+    const cookie = first.cookies.get("rc_chat_session")!.value;
+    mocks.fetch.mockResolvedValueOnce(new Response("event: message_end\ndata: {}\n\n", {
+      headers: { "content-type": "text/event-stream" },
+    }));
+
+    const second = await POST(request(payload, { cookie }));
+    expect(second.status).toBe(200);
+    expect(mocks.verify).toHaveBeenCalledTimes(1);
+    expect(second.cookies.get("rc_chat_session")).toBeUndefined();
+    const firstBody = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
+    const secondBody = JSON.parse(String(mocks.fetch.mock.calls[1][1].body));
+    expect(secondBody.conversation_id).toBe(firstBody.conversation_id);
+  });
+
+  it("requires Turnstile for a missing or tampered session cookie", async () => {
+    let response = await POST(request(payload));
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: "turnstile_required" });
+
+    const established = await POST(request(payload, { token: "turnstile-token" }));
+    const token = established.cookies.get("rc_chat_session")!.value;
+    response = await POST(request(payload, { cookie: `${token.slice(0, -1)}x` }));
+    expect(response.status).toBe(403);
+  });
+
+  it("reports unavailable Turnstile infrastructure separately from a failed challenge", async () => {
+    mocks.verify.mockResolvedValue({ success: false, errors: ["siteverify-unavailable"] });
+    let response = await POST(request(payload, { token: "token" }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "protection_unavailable" });
+
+    mocks.verify.mockResolvedValue({ success: false, errors: ["invalid-input-response"] });
+    response = await POST(request(payload, { token: "token" }));
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: "turnstile_failed" });
+  });
+
+  it("rejects invalid input and rate-limited clients before calling the AI service", async () => {
+    let response = await POST(request({ messages: [] }, { token: "token" }));
+    expect(response.status).toBe(400);
+    expect(mocks.limit).not.toHaveBeenCalled();
+
+    mocks.limit.mockResolvedValue({ allowed: false, limit: 20, remaining: 0, reset: 1060 });
+    response = await POST(request(payload, { token: "token" }));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBeTruthy();
+    expect(mocks.verify).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+});
