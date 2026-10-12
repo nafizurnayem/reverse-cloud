@@ -59,6 +59,14 @@ export function Footer() {
                   {t("login")}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("contact")}
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -111,6 +119,9 @@ export function Footer() {
             © {currentYear} {t("brand")}. {t("rights")}
           </p>
           <div className="flex items-center gap-6">
+            <Link href="/contact" className="transition-colors hover:text-foreground">
+              {t("contact")}
+            </Link>
             <Link href="/services" className="transition-colors hover:text-foreground">
               {t("services")}
             </Link>

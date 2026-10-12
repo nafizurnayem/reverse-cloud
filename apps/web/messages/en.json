@@ -183,10 +183,79 @@
       "source": "Source", "sourceUrl": "Source URL", "body": "Review", "featured": "Featured review"
     },
     "options": { "manual": "Manual", "other": "Other", "portal": "Client portal", "pending": "Pending", "approved": "Approved", "rejected": "Rejected" }
+  },
+  "AdminLeads": {
+    "eyebrow": "Sales inbox",
+    "title": "Incoming leads",
+    "description": "Review contact requests, follow up with prospects and keep each opportunity's status current.",
+    "saved": "The lead status was updated.",
+    "allLeads": "Leads",
+    "detail": "Lead details",
+    "open": "Open",
+    "updateStatus": "Update status",
+    "fields": {
+      "lead": "Lead",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "country": "Country",
+      "service": "Service",
+      "message": "Message",
+      "source": "Source",
+      "status": "Status",
+      "received": "Received"
+    },
+    "filters": { "allStatuses": "All statuses", "allSources": "All sources", "apply": "Apply filters", "clear": "Clear" },
+    "statuses": { "new": "New", "contacted": "Contacted", "qualified": "Qualified", "converted": "Converted", "lost": "Lost" },
+    "sources": { "contact_form": "Contact form", "chat": "Chat", "estimator": "Estimator", "handoff": "Human handoff", "manual": "Manual" },
+    "errors": { "invalidInput": "Choose a valid lead and status.", "saveFailed": "The lead could not be updated. Please try again." }
+  },
+  "Contact": {
+    "metadata": { "title": "Contact — Reverse Cloud", "description": "Tell Reverse Cloud about your web, AI, automation or data project." },
+    "eyebrow": "Start a conversation",
+    "title": "Tell us what you want to build.",
+    "description": "Share the goal, the problem and any timing you already have in mind. We will review it and reply with a practical next step.",
+    "expectationTitle": "What happens next",
+    "expectation": "Your message goes directly to our team. We normally reply within one business day.",
+    "formTitle": "Project enquiry",
+    "formDescription": "Fields marked as required must be completed. Add either an email address or phone number.",
+    "contactHint": "Add at least one contact method: email or phone.",
+    "consent": "I agree that Reverse Cloud may use these details to respond to my enquiry.",
+    "submit": "Send enquiry",
+    "sending": "Sending…",
+    "success": "Thank you. Your enquiry was saved and our team has been notified.",
+    "fields": {
+      "name": "Your name",
+      "company": "Company",
+      "email": "Email address",
+      "phone": "Phone number",
+      "country": "Country",
+      "service": "Service of interest",
+      "chooseService": "Choose a service (optional)",
+      "message": "How can we help?"
+    },
+    "errors": {
+      "payload_too_large": "The submitted message is too large.",
+      "invalid_json": "The form could not be read. Please try again.",
+      "invalid_input": "Check the form and enter valid information.",
+      "contact_required": "Add an email address or phone number.",
+      "consent_required": "Consent is required before we can contact you.",
+      "turnstile_required": "Complete the security check.",
+      "turnstile_failed": "The security check failed or expired. Please try again.",
+      "rate_limited": "Too many enquiries were sent from this connection. Try again later.",
+      "protection_unavailable": "Form protection is temporarily unavailable. Please try again later.",
+      "notifications_unavailable": "The contact service is temporarily unavailable. Please try again later.",
+      "invalid_service": "Choose a valid service or leave that field empty.",
+      "save_failed": "Your enquiry could not be saved. Please try again.",
+      "network_error": "The network request failed. Check your connection and try again.",
+      "not_configured": "The secure contact form is not configured yet."
+    }
+  },
   "Nav": {
     "brand": "Reverse Cloud",
     "home": "Home",
     "services": "Services",
+    "contact": "Contact",
     "login": "Sign in"
   },
   "Footer": {
@@ -196,6 +265,7 @@
     "servicesHeading": "Services",
     "home": "Home",
     "services": "Services",
+    "contact": "Contact",
     "login": "Staff & Client Login",
     "webDev": "Web Development",
     "aiSolutions": "Agentic AI",
