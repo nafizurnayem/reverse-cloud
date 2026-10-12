@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 	database_min_size: int = Field(default=1, ge=1)
 	database_max_size: int = Field(default=5, ge=1)
 	ai_hmac_secret_current: str | None = None
+	llm_api_key: str | None = None
+	llm_model: str = "gpt-4o-mini"
 	email_api_key: str | None = None
 	email_api_url: str = "https://api.resend.com/emails"
 	email_from: str | None = None

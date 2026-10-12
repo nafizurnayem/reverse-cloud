@@ -1,11 +1,57 @@
-from fastapi import APIRouter, Header, HTTPException, Request
+import json
 
+from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
+
+from ...chat import stream_chat_completion
 from ...config import get_settings
 from ...estimator.engine import EstimateInput, estimate_project
+from ...schemas.chat import ChatRequest
 from ...schemas.estimate import EstimateRequest, EstimateResponse
 from ...security.signing import InvalidSignature, verify_request_signature
 
 router = APIRouter(prefix="/v1")
+
+
+def _sse(event: str, payload: dict[str, str]) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+
+
+async def _chat_events(payload: ChatRequest):
+    yield _sse("message_start", {"conversation_id": payload.conversation_id or ""})
+    try:
+        async for text in stream_chat_completion(payload):
+            yield _sse("text_delta", {"text": text})
+    except Exception as error:
+        yield _sse("error", {"code": "provider_error", "message": str(error)})
+    else:
+        yield _sse("message_end", {"reason": "stop"})
+
+
+@router.post("/chat")
+async def create_chat(
+    payload: ChatRequest,
+    request: Request,
+    x_ai_timestamp: str | None = Header(default=None),
+    x_ai_signature: str | None = Header(default=None),
+) -> StreamingResponse:
+    secret = get_settings().ai_hmac_secret_current
+    if not secret or not x_ai_timestamp or not x_ai_signature:
+        raise HTTPException(status_code=401, detail="missing service authentication")
+    try:
+        verify_request_signature(
+            await request.body(), x_ai_timestamp, x_ai_signature, secret
+        )
+    except InvalidSignature as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+
+    if not get_settings().llm_api_key:
+        raise HTTPException(status_code=503, detail="chat service is not configured")
+    return StreamingResponse(
+        _chat_events(payload),
+        media_type="text/event-stream",
+        headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
+    )
 
 
 @router.post("/estimate", response_model=EstimateResponse)
