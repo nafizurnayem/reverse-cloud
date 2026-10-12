@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { limitContactRequests, requestIp } from "../src/lib/ratelimit";
+import { limitChatRequests, limitContactRequests, requestIp } from "../src/lib/ratelimit";
 import { verifyTurnstile } from "../src/lib/turnstile";
 
 describe("public form protection", () => {
@@ -21,6 +21,15 @@ describe("public form protection", () => {
     }
     const blocked = await limitContactRequests("192.0.2.15", options);
     expect(blocked).toMatchObject({ allowed: false, remaining: 0, reset: 4600 });
+  });
+
+  it("limits local chat requests to twenty per minute", async () => {
+    const options = { hashSecret: "test-secret", production: false, now: 2000 };
+    for (let attempt = 1; attempt <= 20; attempt += 1) {
+      expect((await limitChatRequests("192.0.2.25", options)).allowed).toBe(true);
+    }
+    const blocked = await limitChatRequests("192.0.2.25", options);
+    expect(blocked).toMatchObject({ allowed: false, remaining: 0, reset: 2060 });
   });
 
   it("accepts only a successful Turnstile contact action", async () => {
@@ -62,5 +71,19 @@ describe("public form protection", () => {
       fetcher: testToken,
       production: true,
     })).resolves.toMatchObject({ success: false });
+  });
+
+  it("supports a separate Turnstile action for chat", async () => {
+    const accepted = vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      action: "chat",
+      hostname: "example.com",
+    }), { status: 200 })) as unknown as typeof fetch;
+    await expect(verifyTurnstile("valid", "192.0.2.1", {
+      secret: "secret",
+      expectedHostname: "example.com",
+      expectedAction: "chat",
+      fetcher: accepted,
+    })).resolves.toMatchObject({ success: true });
   });
 });

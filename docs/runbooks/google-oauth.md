@@ -1,4 +1,4 @@
-# Google OAuth setup
+# Authentication setup
 
 The application code uses Supabase Auth's server-side PKCE flow. Member D owns
 the provider and redirect configuration below. Never commit the Google client
@@ -35,7 +35,19 @@ In **Authentication → URL Configuration**:
 Use exact callback paths in production. Keep preview wildcards scoped to the
 team/account slug.
 
-## 3. Web environment
+## 3. Email magic links
+
+In **Authentication → Providers → Email**, enable email authentication and decide
+whether new users may sign up. The current application permits account creation
+from a magic link, matching Google sign-in behavior. Configure a production SMTP
+provider before launch; Supabase's built-in sender is intended only for testing
+and is rate limited.
+
+Keep the standard Supabase magic-link confirmation URL in the email template.
+The application starts the PKCE flow and sends users back through the same
+localized `/en/auth/callback` or `/bn/auth/callback` allowlisted above.
+
+## 4. Web environment
 
 Create `apps/web/.env.local` locally and configure:
 
@@ -50,14 +62,14 @@ The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` works when a publishable key is not
 available. Configure equivalent values in Vercel for preview and production,
 with the appropriate `NEXT_PUBLIC_SITE_URL` for each environment.
 
-## 4. Admin provisioning
+## 5. Admin provisioning
 
 Google sign-in creates the Auth user and profile. It does not grant admin access.
 After the intended staff user signs in once, insert an active `staff_roles` row
 for that user's ID and the seeded `admin` role ID using a trusted database/admin
 process. Do not let users assign their own roles.
 
-## 5. Acceptance check
+## 6. Acceptance check
 
 1. Open `/en/login`, sign in, and confirm return to `/en/portal` (or the requested
    safe path).
@@ -66,3 +78,7 @@ process. Do not let users assign their own roles.
 4. Confirm an ordinary signed-in user receives no admin access.
 5. Assign the intended admin role, then confirm that user can reach `/en/admin`.
 6. Verify `/en/login?next=https://example.net` falls back to `/en/portal`.
+7. Request a magic link from `/en/login`, open it in the same browser, and
+   confirm it returns to the requested safe path with a persistent session.
+8. Repeat the magic-link flow from `/bn/login` and confirm all status and error
+   messages remain in Bangla.

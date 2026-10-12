@@ -46,9 +46,13 @@ function localLimit(key: string, limit: number, windowSeconds: number, now: numb
   };
 }
 
-export async function limitContactRequests(ip: string, options: RateLimitOptions = {}): Promise<RateLimitResult> {
-  const limit = 5;
-  const windowSeconds = 60 * 60;
+async function limitRequests(
+  scope: string,
+  identity: string,
+  limit: number,
+  windowSeconds: number,
+  options: RateLimitOptions,
+): Promise<RateLimitResult> {
   const now = options.now ?? Math.floor(Date.now() / 1000);
   const redisUrl = options.redisUrl ?? process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = options.redisToken ?? process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -58,7 +62,7 @@ export async function limitContactRequests(ip: string, options: RateLimitOptions
     ?? process.env.TURNSTILE_SECRET_KEY;
   const production = options.production ?? process.env.NODE_ENV === "production";
   if (!hashSecret) throw new Error("RATE_LIMIT_SALT is not configured.");
-  const key = `rate:contact:${hashedKey(ip, hashSecret)}`;
+  const key = `rate:${scope}:${hashedKey(identity, hashSecret)}`;
 
   if (!redisUrl || !redisToken) {
     if (production) throw new Error("Upstash rate limiting is not configured.");
@@ -88,4 +92,12 @@ export async function limitContactRequests(ip: string, options: RateLimitOptions
     remaining: Math.max(0, limit - count),
     reset: now + (ttl > 0 ? ttl : windowSeconds),
   };
+}
+
+export function limitContactRequests(ip: string, options: RateLimitOptions = {}) {
+  return limitRequests("contact", ip, 5, 60 * 60, options);
+}
+
+export function limitChatRequests(ip: string, options: RateLimitOptions = {}) {
+  return limitRequests("chat", ip, 20, 60, options);
 }

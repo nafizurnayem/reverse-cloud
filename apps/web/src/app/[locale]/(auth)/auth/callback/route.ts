@@ -20,19 +20,24 @@ export async function GET(request: NextRequest, { params }: Context) {
   }
 
   const next = safePostLoginPath(request.nextUrl.searchParams.get("next"), locale);
+  const magicLink = request.nextUrl.searchParams.get("method") === "magic_link";
   if (request.nextUrl.searchParams.has("error")) {
-    return loginError(request, locale, "oauth_denied", next);
+    return loginError(request, locale, magicLink ? "magic_link_invalid" : "oauth_denied", next);
   }
 
   const code = request.nextUrl.searchParams.get("code");
-  if (!code) return loginError(request, locale, "invalid_callback", next);
+  if (!code) {
+    return loginError(request, locale, magicLink ? "magic_link_invalid" : "invalid_callback", next);
+  }
 
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) return loginError(request, locale, "oauth_callback_failed", next);
+    if (error) {
+      return loginError(request, locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
+    }
   } catch {
-    return loginError(request, locale, "oauth_callback_failed", next);
+    return loginError(request, locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
   }
 
   const response = NextResponse.redirect(new URL(next, request.url));
