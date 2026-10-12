@@ -12,8 +12,14 @@ export function Header() {
   const navLinks = [
     { href: "/", label: t("home") },
     { href: "/services", label: t("services") },
+    { href: "/portfolio", label: t("portfolio") },
+    { href: "/pricing", label: t("pricing") },
+    { href: "/blog", label: t("blog") },
+    { href: "/about", label: t("about") },
+    { href: "/wizard", label: t("wizard") },
     { href: "/contact", label: t("contact") },
   ];
+
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-md transition-all">
