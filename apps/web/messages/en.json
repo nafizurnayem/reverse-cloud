@@ -63,13 +63,6 @@
     "invalidDescription": "This invitation is invalid, expired, revoked or has already been used.",
     "returnHome": "Return home"
   },
-  "Portal": {
-    "eyebrow": "Client portal",
-    "title": "Welcome to your portal",
-    "description": "Your account is connected. Project information and client tools will appear here as they become available.",
-    "inviteAccepted": "Invitation accepted. Your client account is now connected.",
-    "returnHome": "Return home"
-  },
   "Admin": {
     "brand": "Reverse Cloud",
     "workspace": "Admin workspace",
@@ -562,7 +555,11 @@
     "offlineNotice": "Live chat service is temporarily unavailable. Please connect via our contact form."
   },
   "Portal": {
+    "eyebrow": "Client portal",
     "title": "Client Portal",
+    "description": "Your account is connected. Project information and client tools will appear here as they become available.",
+    "inviteAccepted": "Invitation accepted. Your client account is now connected.",
+    "returnHome": "Return home",
     "subtitle": "Real-time read-only access to milestone progress, live previews, and billing schedules.",
     "projects": "Client Projects",
     "allProjects": "All Projects",
