@@ -3,9 +3,14 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { safePostLoginPath } from "@/lib/auth/routes";
+import { needsClientAccountLink, safePostLoginPath } from "@/lib/auth/routes";
 import { createClient } from "@/lib/supabase/server";
-import { signInWithGoogle, signInWithMagicLink, signOut } from "../actions";
+import {
+  continueWithClientAccount,
+  signInWithGoogle,
+  signInWithMagicLink,
+  signOut,
+} from "../actions";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -24,6 +29,7 @@ const errorKeys = new Set([
   "invalid_email",
   "magic_link_start_failed",
   "magic_link_invalid",
+  "account_link_failed",
   "invalid_callback",
   "sign_out_failed",
 ]);
@@ -66,7 +72,13 @@ export default async function LoginPage({ params, searchParams }: Props) {
           <>
             <p className="description">{t("signedInAs", { email: user.email ?? t("unknownEmail") })}</p>
             <div className="auth-actions">
-              <Link className="auth-button" href={next}>{t("continue")}</Link>
+              {error === "account_link_failed" && needsClientAccountLink(next, locale) ? (
+                <form action={continueWithClientAccount.bind(null, locale, next)}>
+                  <button className="auth-button" type="submit">{t("continue")}</button>
+                </form>
+              ) : (
+                <Link className="auth-button" href={next}>{t("continue")}</Link>
+              )}
               <form action={signOut.bind(null, locale)}>
                 <button className="auth-button auth-button-secondary" type="submit">{t("signOut")}</button>
               </form>

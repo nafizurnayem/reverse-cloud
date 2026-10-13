@@ -18,6 +18,12 @@ export type RateLimitResult = {
   reset: number;
 };
 
+export type ChatRateLimitResult = {
+  allowed: boolean;
+  ip: RateLimitResult;
+  session: RateLimitResult;
+};
+
 const localWindows = new Map<string, { count: number; expiresAt: number }>();
 
 export function requestIp(headers: Headers) {
@@ -28,8 +34,8 @@ export function requestIp(headers: Headers) {
     || "unknown";
 }
 
-function hashedKey(ip: string, secret: string) {
-  return createHmac("sha256", secret).update(ip).digest("hex");
+function hashedKey(identity: string, secret: string) {
+  return createHmac("sha256", secret).update(identity).digest("hex");
 }
 
 function localLimit(key: string, limit: number, windowSeconds: number, now: number): RateLimitResult {
@@ -98,6 +104,18 @@ export function limitContactRequests(ip: string, options: RateLimitOptions = {})
   return limitRequests("contact", ip, 5, 60 * 60, options);
 }
 
-export function limitChatRequests(ip: string, options: RateLimitOptions = {}) {
-  return limitRequests("chat", ip, 20, 60, options);
+export async function limitChatRequests(
+  ip: string,
+  sessionId: string,
+  options: RateLimitOptions = {},
+): Promise<ChatRateLimitResult> {
+  const [ipResult, sessionResult] = await Promise.all([
+    limitRequests("chat:ip", ip, 60, 60, options),
+    limitRequests("chat:session", sessionId, 20, 60, options),
+  ]);
+  return {
+    allowed: ipResult.allowed && sessionResult.allowed,
+    ip: ipResult,
+    session: sessionResult,
+  };
 }
