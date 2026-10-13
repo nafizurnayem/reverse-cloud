@@ -264,6 +264,11 @@
     "brand": "Reverse Cloud",
     "home": "Home",
     "services": "Services",
+    "portfolio": "Portfolio",
+    "blog": "Blog",
+    "pricing": "Pricing",
+    "about": "About",
+    "wizard": "Service Finder",
     "contact": "Contact",
     "login": "Sign in"
   },
@@ -274,6 +279,11 @@
     "servicesHeading": "Services",
     "home": "Home",
     "services": "Services",
+    "portfolio": "Portfolio",
+    "blog": "Blog",
+    "pricing": "Pricing",
+    "about": "About Us",
+    "wizard": "Service Finder",
     "contact": "Contact",
     "login": "Staff & Client Login",
     "webDev": "Web Development",
@@ -282,6 +292,7 @@
     "scraping": "Python & Scraping",
     "rights": "All rights reserved."
   },
+
   "Services": {
     "metadata": {
       "title": "Services — Reverse Cloud",
@@ -330,5 +341,191 @@
       "button": "Get Started",
       "viewHome": "Back to Home"
     }
+  },
+  "ServiceDetail": {
+    "backToServices": "Back to all services",
+    "overview": "Overview",
+    "startingFrom": "Starting from",
+    "startingPriceLabel": "${price} USD",
+    "customQuote": "Custom Quote",
+    "fixedModel": "Fixed Scope",
+    "retainerModel": "Monthly Retainer",
+    "hourlyModel": "Hourly Engagement",
+    "customModel": "Tailored Architecture",
+    "deliverablesTitle": "Key Deliverables & Specifications",
+    "deliverablesSubtitle": "What is included with our production-grade engineering delivery.",
+    "processTitle": "Execution Methodology",
+    "processSubtitle": "Transparent, structured delivery from initial brief to deployment.",
+    "techStackTitle": "Technology Stack & Tooling",
+    "faqsTitle": "Frequently Asked Questions",
+    "faqsSubtitle": "Direct answers about timelines, scope, and technical deliverables.",
+    "ctaTitle": "Ready to build with this capability?",
+    "ctaSubtitle": "Discuss your technical requirements with our engineering team or get an instant estimation.",
+    "requestProposal": "Request a Proposal",
+    "openWizard": "Use Service Finder",
+    "exploreMore": "Explore Other Services",
+    "notFoundTitle": "Service Not Found"
+  },
+  "Portfolio": {
+    "metadata": {
+      "title": "Portfolio — Reverse Cloud",
+      "description": "Real-world engineering case studies, full-stack web platforms, and production AI deployments."
+    },
+    "hero": {
+      "eyebrow": "Our Work",
+      "title": "Engineered for impact. Built for scale.",
+      "description": "Explore our published case studies across web platforms, automated AI pipelines, and distributed data systems."
+    },
+    "featuredBadge": "Featured Project",
+    "filterAll": "All Projects",
+    "filterWeb": "Web & Cloud",
+    "filterAi": "Agentic AI",
+    "filterSaas": "SaaS Platforms",
+    "filterAutomation": "Automation & Scraping",
+    "clientLabel": "Client",
+    "completedLabel": "Delivered",
+    "viewCaseStudy": "View Case Study",
+    "visitLive": "Visit Live Site",
+    "challengeTitle": "The Challenge",
+    "solutionTitle": "Our Solution & Architecture",
+    "resultsTitle": "Measurable Results & Impact",
+    "techStackTitle": "Technologies Used",
+    "backToPortfolio": "Back to all case studies",
+    "ctaTitle": "Have a similar challenge to solve?",
+    "ctaSubtitle": "Let's architect and build a solution tailored to your operational goals.",
+    "startProject": "Start Your Project",
+    "exploreServices": "View Our Services",
+    "notFoundTitle": "Case Study Not Found"
+  },
+  "Blog": {
+    "metadata": {
+      "title": "Blog & Insights — Reverse Cloud",
+      "description": "Technical articles on modern web architecture, agentic AI systems, PostgreSQL optimization, and workflow automation."
+    },
+    "hero": {
+      "eyebrow": "Engineering Blog",
+      "title": "Architecture, automation, and AI in practice.",
+      "description": "In-depth technical guides, post-mortems, and engineering insights from the Reverse Cloud team."
+    },
+    "featuredBadge": "Featured Article",
+    "readTime": "{minutes} min read",
+    "readArticle": "Read Article",
+    "publishedOn": "Published on",
+    "author": "By",
+    "tagsTitle": "Topics",
+    "backToBlog": "Back to all articles",
+    "ctaTitle": "Have questions or need assistance?",
+    "ctaSubtitle": "Connect with our engineers to discuss your technical architecture or implementation.",
+    "contactUs": "Get in Touch",
+    "viewServices": "Explore Services",
+    "notFoundTitle": "Article Not Found"
+  },
+  "About": {
+    "metadata": {
+      "title": "About Us — Reverse Cloud",
+      "description": "We engineer high-performance web applications, deterministic AI agents, and scalable cloud architectures."
+    },
+    "hero": {
+      "eyebrow": "About Reverse Cloud",
+      "title": "We engineer what comes next.",
+      "description": "We bridge the gap between speculative AI prototypes and mission-critical, production-grade cloud software."
+    },
+    "pillarsTitle": "Our Engineering Pillars",
+    "pillarsSubtitle": "Four non-negotiable principles guiding every line of code we ship.",
+    "pillar1Title": "Security by Default",
+    "pillar1Desc": "Database-level Row Level Security, zero-trust isolation, and encrypted audit trails protecting your enterprise data.",
+    "pillar2Title": "Deterministic AI",
+    "pillar2Desc": "Strict schema parsing, Pydantic validation, and self-correcting retry loops eliminating hallucinations.",
+    "pillar3Title": "Uncompromising Speed",
+    "pillar3Desc": "Sub-second server response times, edge caching, and strict 95+ Core Web Vitals thresholds.",
+    "pillar4Title": "True Localization",
+    "pillar4Desc": "Native bilingual architecture with Noto Sans Bengali typography and full translation key parity.",
+    "valuesTitle": "How We Work",
+    "valuesSubtitle": "Engineering standards that keep software maintainable over years, not months.",
+    "value1Title": "Strict Type Safety",
+    "value1Desc": "TypeScript and Pydantic end-to-end to catch bugs during development, not in production.",
+    "value2Title": "Automated Test Discipline",
+    "value2Desc": "Vitest suites and continuous integration pipelines guaranteeing that every release is stable.",
+    "value3Title": "Transparent Milestones",
+    "value3Desc": "Fixed deliverables, clear version control, and zero vendor lock-in for your intellectual property.",
+    "teamTitle": "Built by Engineers",
+    "teamDesc": "We are a distributed team of systems architects, full-stack engineers, and machine learning practitioners passionate about software reliability.",
+    "ctaTitle": "Ready to collaborate?",
+    "ctaSubtitle": "Let's turn your technical roadmap into high-performing reality.",
+    "ctaButton": "Talk to Our Team",
+    "viewPortfolio": "Explore Case Studies"
+  },
+  "Pricing": {
+    "metadata": {
+      "title": "Pricing & Rates — Reverse Cloud",
+      "description": "Transparent pricing models, starting rates for all 11 core services, and flexible engagement options."
+    },
+    "hero": {
+      "eyebrow": "Transparent Investment",
+      "title": "Predictable pricing. Zero hidden fees.",
+      "description": "Choose between fixed milestone scopes, monthly engineering retainers, or tailored enterprise architectures."
+    },
+    "modelsTitle": "Engagement Models",
+    "modelsSubtitle": "Choose the structure that aligns with your operational velocity.",
+    "modelFixedTitle": "Fixed Scope",
+    "modelFixedDesc": "Clear project boundaries, defined deliverables, and guaranteed completion milestones.",
+    "modelRetainerTitle": "Monthly Retainer",
+    "modelRetainerDesc": "Continuous system management, growth optimization, and ongoing maintenance coverage.",
+    "modelHourlyTitle": "Hourly Advisory",
+    "modelHourlyDesc": "Flexible engineering consultancy, architecture reviews, and technical debugging sprints.",
+    "modelCustomTitle": "Tailored Architecture",
+    "modelCustomDesc": "Multi-tenant SaaS engineering and complex distributed architectures with bespoke scoping.",
+    "servicesTitle": "Service Starting Rates",
+    "servicesSubtitle": "Baseline starting rates for each of our 11 specialized engineering capabilities.",
+    "startingFrom": "Starting from",
+    "viewDetail": "View Details & Scope",
+    "requestEstimate": "Request Quote",
+    "currencyNote": "All prices listed in USD. Local invoicing in BDT is supported for Bangladesh clients via official bank transfer.",
+    "faqsTitle": "Pricing & Billing FAQs",
+    "faqsSubtitle": "Direct answers to questions regarding payment terms, scopes, and invoicing.",
+    "faq1Q": "How do milestone-based payments work?",
+    "faq1A": "For fixed-scope projects, payments are typically split into milestones (e.g. 30% upfront, 40% after prototype/staging verification, and 30% upon final production handoff).",
+    "faq2Q": "Can Bangladesh clients pay in Bangladeshi Taka (BDT)?",
+    "faq2A": "Yes, we support official BDT invoicing via local corporate bank transfer, using the prevailing verified exchange rates.",
+    "faq3Q": "What happens if our project scope changes during development?",
+    "faq3A": "We maintain a transparent change-order process. Any modifications to deliverables are documented and approved by both parties before work proceeds.",
+    "faq4Q": "Do you offer post-launch support and maintenance?",
+    "faq4A": "Yes, we offer monthly retainer packages covering 24/7 uptime monitoring, security patching, and regular feature updates.",
+    "ctaTitle": "Need an exact project estimate?",
+    "ctaSubtitle": "Tell us about your requirements or use our interactive service finder to get recommendations.",
+    "useWizard": "Use Service Finder",
+    "contactUs": "Contact Us"
+  },
+  "Wizard": {
+    "metadata": {
+      "title": "Service Finder Wizard — Reverse Cloud",
+      "description": "Interactive service finder matching your technical requirements to our 11 specialized engineering capabilities."
+    },
+    "hero": {
+      "eyebrow": "Service Finder",
+      "title": "Find the optimal architecture for your project.",
+      "description": "Answer 4 quick technical questions to receive our top 3 recommended engineering services with pricing breakdowns."
+    },
+    "stepLabel": "Step {current} of {total}",
+    "multiHint": "Select all options that apply",
+    "next": "Next Question",
+    "back": "Previous",
+    "calculate": "Calculate Recommendations",
+    "restart": "Start Over",
+    "resultsTitle": "Top Recommended Capabilities",
+    "resultsSubtitle": "Calculated directly from your operational goals and technical priorities.",
+    "matchLabel": "{pct}% Match",
+    "startingFrom": "Starting from",
+    "customQuote": "Custom Quote",
+    "viewService": "View Full Specifications",
+    "requestService": "Request Proposal",
+    "ctaTitle": "Ready to discuss your recommended roadmap?",
+    "ctaSubtitle": "Our engineering team is ready to analyze your requirements and prepare a formal milestone schedule.",
+    "contactUs": "Schedule Architecture Call"
   }
 }
+
+
+
+
+
