@@ -21,6 +21,15 @@ export function loginPath(locale: Locale, returnTo: string) {
   return `/${locale}/login?${new URLSearchParams({ next: returnTo })}`;
 }
 
+export function needsClientAccountLink(destination: string, locale: Locale) {
+  try {
+    const pathname = new URL(destination, "https://internal.invalid").pathname.replace(/\/$/, "");
+    return pathname === `/${locale}/portal` || pathname.startsWith(`/${locale}/portal/`);
+  } catch {
+    return false;
+  }
+}
+
 export function safePostLoginPath(
   value: string | readonly string[] | null | undefined,
   locale: Locale,

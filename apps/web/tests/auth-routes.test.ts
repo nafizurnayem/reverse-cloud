@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safePostLoginPath } from "../src/lib/auth/routes";
+import { needsClientAccountLink, safePostLoginPath } from "../src/lib/auth/routes";
 
 describe("post-login destination validation", () => {
   it.each([
@@ -17,5 +17,15 @@ describe("post-login destination validation", () => {
     [["/en/admin"], "en", "/en/portal"],
   ] as const)("maps %j for %s to %s", (value, locale, expected) => {
     expect(safePostLoginPath(value, locale)).toBe(expected);
+  });
+});
+
+describe("client account linking destinations", () => {
+  it("links portal sign-ins without creating client records for admin or invitation callbacks", () => {
+    expect(needsClientAccountLink("/en/portal", "en")).toBe(true);
+    expect(needsClientAccountLink("/bn/portal/projects/1?tab=files", "bn")).toBe(true);
+    expect(needsClientAccountLink("/en/admin", "en")).toBe(false);
+    expect(needsClientAccountLink("/en/accept-invite?token=secret", "en")).toBe(false);
+    expect(needsClientAccountLink("/bn/portal", "en")).toBe(false);
   });
 });

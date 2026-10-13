@@ -1,7 +1,8 @@
 import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
-import { safePostLoginPath } from "@/lib/auth/routes";
+import { needsClientAccountLink, safePostLoginPath } from "@/lib/auth/routes";
+import { inviteTokenFromDestination } from "@/lib/invites/routes";
 import { createClient } from "@/lib/supabase/server";
 
 type Context = { params: Promise<{ locale: string }> };
@@ -13,6 +14,14 @@ function loginError(request: NextRequest, locale: string, code: string, next?: s
   return NextResponse.redirect(url);
 }
 
+function privateRedirect(url: URL) {
+  const response = NextResponse.redirect(url);
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+  return response;
+}
+
 export async function GET(request: NextRequest, { params }: Context) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) {
@@ -20,24 +29,52 @@ export async function GET(request: NextRequest, { params }: Context) {
   }
 
   const next = safePostLoginPath(request.nextUrl.searchParams.get("next"), locale);
+  const magicLink = request.nextUrl.searchParams.get("method") === "magic_link";
   if (request.nextUrl.searchParams.has("error")) {
-    return loginError(request, locale, "oauth_denied", next);
+    return loginError(request, locale, magicLink ? "magic_link_invalid" : "oauth_denied", next);
   }
 
   const code = request.nextUrl.searchParams.get("code");
-  if (!code) return loginError(request, locale, "invalid_callback", next);
-
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) return loginError(request, locale, "oauth_callback_failed", next);
-  } catch {
-    return loginError(request, locale, "oauth_callback_failed", next);
+  if (!code) {
+    return loginError(request, locale, magicLink ? "magic_link_invalid" : "invalid_callback", next);
   }
 
-  const response = NextResponse.redirect(new URL(next, request.url));
-  response.headers.set("Cache-Control", "private, no-store, max-age=0");
-  response.headers.set("Pragma", "no-cache");
-  response.headers.set("Expires", "0");
-  return response;
+  let supabase: Awaited<ReturnType<typeof createClient>>;
+  try {
+    supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return loginError(request, locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
+    }
+  } catch {
+    return loginError(request, locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
+  }
+
+  const inviteToken = inviteTokenFromDestination(next, locale);
+  if (inviteToken) {
+    try {
+      const { data, error } = await supabase.rpc("accept_client_invite", { p_token: inviteToken });
+      if (error || typeof data !== "string") {
+        const rejected = new URL(`/${locale}/accept-invite`, request.url);
+        rejected.searchParams.set("error", "invalid_or_expired_invite");
+        return privateRedirect(rejected);
+      }
+    } catch {
+      const rejected = new URL(`/${locale}/accept-invite`, request.url);
+      rejected.searchParams.set("error", "invalid_or_expired_invite");
+      return privateRedirect(rejected);
+    }
+    return privateRedirect(new URL(`/${locale}/portal?invite=accepted`, request.url));
+  }
+
+  if (needsClientAccountLink(next, locale)) {
+    try {
+      const { error } = await supabase.rpc("link_my_client_account");
+      if (error) return loginError(request, locale, "account_link_failed", next);
+    } catch {
+      return loginError(request, locale, "account_link_failed", next);
+    }
+  }
+
+  return privateRedirect(new URL(next, request.url));
 }

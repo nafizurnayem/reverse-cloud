@@ -23,8 +23,14 @@
   "Login": {
     "brand": "Reverse Cloud",
     "title": "Sign in",
-    "description": "Use your Google account to continue securely.",
+    "description": "Continue securely with Google or a sign-in link sent to your email.",
     "google": "Continue with Google",
+    "or": "or",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "emailHint": "We will email you a secure, one-time sign-in link.",
+    "magicLink": "Email me a sign-in link",
+    "magicLinkSent": "Check your email for your sign-in link. You can close this page after opening it.",
     "signedInTitle": "You are signed in",
     "signedInAs": "Signed in as {email}",
     "unknownEmail": "your Google account",
@@ -35,9 +41,34 @@
       "oauth_denied": "Google sign-in was cancelled or denied. Please try again.",
       "oauth_start_failed": "Google sign-in could not start. Please try again.",
       "oauth_callback_failed": "We could not complete Google sign-in. Please try again.",
+      "invalid_email": "Enter a valid email address.",
+      "magic_link_start_failed": "We could not send the sign-in link. Please try again.",
+      "magic_link_invalid": "This email sign-in link is invalid or expired. Request a new link.",
+      "account_link_failed": "You signed in, but we could not connect your client account. Continue to retry the invitation or sign out and try again.",
       "invalid_callback": "This sign-in link is invalid or expired. Please start again.",
       "sign_out_failed": "We could not sign you out. Please try again."
     }
+  },
+  "Invite": {
+    "brand": "Reverse Cloud",
+    "title": "Accept your invitation",
+    "confirmDescription": "Accepting connects this account to your client portal.",
+    "signedInAs": "Signed in as {email}",
+    "unknownEmail": "your account",
+    "accept": "Accept invitation",
+    "cancel": "Cancel",
+    "signInDescription": "Sign in with the invited email address before accepting this invitation.",
+    "signIn": "Sign in to continue",
+    "invalidTitle": "Invitation unavailable",
+    "invalidDescription": "This invitation is invalid, expired, revoked or has already been used.",
+    "returnHome": "Return home"
+  },
+  "Portal": {
+    "eyebrow": "Client portal",
+    "title": "Welcome to your portal",
+    "description": "Your account is connected. Project information and client tools will appear here as they become available.",
+    "inviteAccepted": "Invitation accepted. Your client account is now connected.",
+    "returnHome": "Return home"
   },
   "Admin": {
     "brand": "Reverse Cloud",

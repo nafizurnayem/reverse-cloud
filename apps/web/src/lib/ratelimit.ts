@@ -18,6 +18,12 @@ export type RateLimitResult = {
   reset: number;
 };
 
+export type ChatRateLimitResult = {
+  allowed: boolean;
+  ip: RateLimitResult;
+  session: RateLimitResult;
+};
+
 const localWindows = new Map<string, { count: number; expiresAt: number }>();
 
 export function requestIp(headers: Headers) {
@@ -28,8 +34,8 @@ export function requestIp(headers: Headers) {
     || "unknown";
 }
 
-function hashedKey(ip: string, secret: string) {
-  return createHmac("sha256", secret).update(ip).digest("hex");
+function hashedKey(identity: string, secret: string) {
+  return createHmac("sha256", secret).update(identity).digest("hex");
 }
 
 function localLimit(key: string, limit: number, windowSeconds: number, now: number): RateLimitResult {
@@ -46,9 +52,13 @@ function localLimit(key: string, limit: number, windowSeconds: number, now: numb
   };
 }
 
-export async function limitContactRequests(ip: string, options: RateLimitOptions = {}): Promise<RateLimitResult> {
-  const limit = 5;
-  const windowSeconds = 60 * 60;
+async function limitRequests(
+  scope: string,
+  identity: string,
+  limit: number,
+  windowSeconds: number,
+  options: RateLimitOptions,
+): Promise<RateLimitResult> {
   const now = options.now ?? Math.floor(Date.now() / 1000);
   const redisUrl = options.redisUrl ?? process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = options.redisToken ?? process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -58,7 +68,7 @@ export async function limitContactRequests(ip: string, options: RateLimitOptions
     ?? process.env.TURNSTILE_SECRET_KEY;
   const production = options.production ?? process.env.NODE_ENV === "production";
   if (!hashSecret) throw new Error("RATE_LIMIT_SALT is not configured.");
-  const key = `rate:contact:${hashedKey(ip, hashSecret)}`;
+  const key = `rate:${scope}:${hashedKey(identity, hashSecret)}`;
 
   if (!redisUrl || !redisToken) {
     if (production) throw new Error("Upstash rate limiting is not configured.");
@@ -87,5 +97,25 @@ export async function limitContactRequests(ip: string, options: RateLimitOptions
     limit,
     remaining: Math.max(0, limit - count),
     reset: now + (ttl > 0 ? ttl : windowSeconds),
+  };
+}
+
+export function limitContactRequests(ip: string, options: RateLimitOptions = {}) {
+  return limitRequests("contact", ip, 5, 60 * 60, options);
+}
+
+export async function limitChatRequests(
+  ip: string,
+  sessionId: string,
+  options: RateLimitOptions = {},
+): Promise<ChatRateLimitResult> {
+  const [ipResult, sessionResult] = await Promise.all([
+    limitRequests("chat:ip", ip, 60, 60, options),
+    limitRequests("chat:session", sessionId, 20, 60, options),
+  ]);
+  return {
+    allowed: ipResult.allowed && sessionResult.allowed,
+    ip: ipResult,
+    session: sessionResult,
   };
 }

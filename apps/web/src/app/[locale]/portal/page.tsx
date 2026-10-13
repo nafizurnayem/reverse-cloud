@@ -1,4 +1,5 @@
 import { hasLocale } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Calendar, Clock, Flag } from "lucide-react";
@@ -8,12 +9,16 @@ import { calculateClientProgress } from "@/lib/portal/portal-calc";
 
 export default async function PortalProjectsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ invite?: string | string[] }>;
 }) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
+  const query = await searchParams;
+  const t = await getTranslations({ locale, namespace: "Portal" });
   const isBn = locale === "bn";
   const projects = await fetchClientProjects();
 
@@ -30,6 +35,12 @@ export default async function PortalProjectsPage({
             : "Real-time read-only access to milestone progress, live previews, and billing schedules."}
         </p>
       </div>
+
+      {query.invite === "accepted" ? (
+        <p className="auth-message auth-success" role="status">
+          {t("inviteAccepted")}
+        </p>
+      ) : null}
 
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
