@@ -34,7 +34,7 @@ export function Footer() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {t("linksHeading")}
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-1">
               <li>
                 <Link
                   href="/"
@@ -53,10 +53,42 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/login"
+                  href="/portfolio"
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {t("login")}
+                  {t("portfolio")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/pricing"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("pricing")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("blog")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/about"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("about")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/wizard"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("wizard")}
                 </Link>
               </li>
               <li>
@@ -67,8 +99,17 @@ export function Footer() {
                   {t("contact")}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/login"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("login")}
+                </Link>
+              </li>
             </ul>
           </div>
+
 
           {/* Services */}
           <div className="space-y-3">
@@ -78,7 +119,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link
-                  href="/services#web-dev"
+                  href="/services/website-development"
                   className="transition-colors hover:text-foreground"
                 >
                   {t("webDev")}
@@ -86,7 +127,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/services#ai"
+                  href="/services/ai-chatbots-agents"
                   className="transition-colors hover:text-foreground"
                 >
                   {t("aiSolutions")}
@@ -94,7 +135,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/services#automation"
+                  href="/services/ai-automation"
                   className="transition-colors hover:text-foreground"
                 >
                   {t("automation")}
@@ -102,12 +143,13 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/services#scraping"
+                  href="/services/saas-development"
                   className="transition-colors hover:text-foreground"
                 >
                   {t("scraping")}
                 </Link>
               </li>
+
             </ul>
           </div>
         </div>
