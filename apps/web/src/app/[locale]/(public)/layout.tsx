@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { ChatWidget } from "@/components/chat";
 
 type Props = {
   children: ReactNode;
@@ -12,6 +13,7 @@ export default function PublicLayout({ children }: Props) {
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <ChatWidget />
     </div>
   );
 }

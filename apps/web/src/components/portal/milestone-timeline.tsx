@@ -1,0 +1,133 @@
+"use client";
+
+import { Calendar, CheckCircle2, Flag } from "lucide-react";
+import type { PortalMilestone } from "@/lib/portal/types";
+
+interface MilestoneTimelineProps {
+  milestones: PortalMilestone[];
+  locale: string;
+}
+
+export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps) {
+  const isBn = locale === "bn";
+  // Enforce rule: client sees ONLY isClientVisible = true milestones
+  const visibleMilestones = milestones.filter((m) => m.isClientVisible);
+
+  return (
+    <div className="rounded-2xl border bg-card p-6 shadow-sm text-card-foreground space-y-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Flag className="h-4 w-4 text-primary" />
+            <span>{isBn ? "মাইলফলক টাইমলাইন" : "Milestone Timeline"}</span>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {isBn
+              ? "প্রজেক্টের প্রতিটি পর্যায়ের ওজন, অগ্রগতি এবং সময়সীমা"
+              : "Detailed milestone weight, delivery progress, and schedule"}
+          </p>
+        </div>
+        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+          {visibleMilestones.length} {isBn ? "মাইলফলক" : "Milestones"}
+        </span>
+      </div>
+
+      <div className="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-2.5 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-muted">
+        {visibleMilestones.map((m, index) => {
+          const isDone = m.status === "completed" || m.progress === 100;
+          const isInProgress = m.status === "in_progress" && m.progress < 100;
+
+          return (
+            <div key={m.id} className="relative group">
+              {/* Timeline marker icon */}
+              <div
+                className={`absolute -left-6 sm:-left-8 top-0 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border-2 bg-card text-xs transition-colors ${
+                  isDone
+                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-600"
+                    : isInProgress
+                    ? "border-primary bg-primary/10 text-primary animate-pulse"
+                    : "border-muted bg-muted/40 text-muted-foreground"
+                }`}
+              >
+                {isDone ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                ) : (
+                  <span className="font-mono text-[11px] font-bold">{index + 1}</span>
+                )}
+              </div>
+
+              {/* Milestone Card */}
+              <div
+                className={`rounded-xl border p-4 transition-all duration-200 ${
+                  isInProgress
+                    ? "border-primary/40 bg-muted/20 shadow-sm"
+                    : "border-border bg-card"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-foreground">
+                        {m.title}
+                      </h4>
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                          isDone
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            : isInProgress
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isDone
+                          ? (isBn ? "সম্পন্ন" : "Completed")
+                          : isInProgress
+                          ? (isBn ? "চলমান" : "In Progress")
+                          : (isBn ? "আসন্ন" : "Upcoming")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {m.description}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap sm:flex-col items-end gap-1.5 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
+                        {isBn ? "ওজন:" : "Weight:"} {m.weight}%
+                      </span>
+                      <span className="rounded bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary font-mono">
+                        {m.progress}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>{m.targetDate}</span>
+                    </div>
+
+                    {m.completedAt && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        {isBn ? `সম্পন্ন: ${m.completedAt}` : `Delivered: ${m.completedAt}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Milestone Mini-progress */}
+                <div className="mt-3 relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      isDone ? "bg-emerald-500" : "bg-primary"
+                    }`}
+                    style={{ width: `${m.progress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
