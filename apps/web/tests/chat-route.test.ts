@@ -23,7 +23,10 @@ const payload = {
   conversation_id: "browser-controlled",
 };
 
-function request(body: unknown, options: { cookie?: string; token?: string } = {}) {
+function request(
+  body: unknown,
+  options: { cookie?: string; token?: string; signal?: AbortSignal } = {},
+) {
   const headers = new Headers({ "content-type": "application/json" });
   if (options.cookie) headers.set("cookie", `rc_chat_session=${options.cookie}`);
   if (options.token) headers.set("x-turnstile-token", options.token);
@@ -31,15 +34,26 @@ function request(body: unknown, options: { cookie?: string; token?: string } = {
     method: "POST",
     headers,
     body: JSON.stringify(body),
+    signal: options.signal,
   });
 }
 
+function allowedRate() {
+  return {
+    allowed: true,
+    ip: { allowed: true, limit: 60, remaining: 59, reset: 1060 },
+    session: { allowed: true, limit: 20, remaining: 19, reset: 1060 },
+  };
+}
+
 beforeEach(() => {
+  vi.useRealTimers();
   vi.resetAllMocks();
   vi.stubEnv("AI_SERVICE_URL", "https://ai.example/");
   vi.stubEnv("AI_HMAC_SECRET_CURRENT", "service-secret");
+  vi.stubEnv("AI_CHAT_CONNECT_TIMEOUT_MS", "10000");
   vi.stubEnv("CHAT_COOKIE_SECRET", "0123456789abcdef0123456789abcdef");
-  mocks.limit.mockResolvedValue({ allowed: true, limit: 20, remaining: 19, reset: 1060 });
+  mocks.limit.mockResolvedValue(allowedRate());
   mocks.verify.mockResolvedValue({ success: true, errors: [] });
   mocks.fetch.mockResolvedValue(new Response(
     'event: message_start\ndata: {"conversation_id":"id"}\n\n',
@@ -49,6 +63,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
@@ -74,6 +89,7 @@ describe("POST /api/chat", () => {
     expect(parsed).toMatchObject({ messages: payload.messages, locale: "bn" });
     expect(parsed.conversation_id).toMatch(/^[0-9a-f-]{36}$/);
     expect(parsed.conversation_id).not.toBe("browser-controlled");
+    expect(mocks.limit).toHaveBeenCalledWith("192.0.2.20", parsed.conversation_id);
     const headers = new Headers(init.headers);
     const timestamp = headers.get("x-ai-timestamp")!;
     expect(headers.get("x-ai-signature")).toBe(
@@ -127,11 +143,47 @@ describe("POST /api/chat", () => {
     expect(response.status).toBe(400);
     expect(mocks.limit).not.toHaveBeenCalled();
 
-    mocks.limit.mockResolvedValue({ allowed: false, limit: 20, remaining: 0, reset: 1060 });
+    mocks.limit.mockResolvedValue({
+      allowed: false,
+      ip: { allowed: true, limit: 60, remaining: 39, reset: 1060 },
+      session: { allowed: false, limit: 20, remaining: 0, reset: 1060 },
+    });
     response = await POST(request(payload, { token: "token" }));
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBeTruthy();
+    expect(response.headers.get("x-ratelimit-session-remaining")).toBe("0");
+    expect(response.headers.get("x-ratelimit-ip-remaining")).toBe("39");
     expect(mocks.verify).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("aborts FastAPI when it does not start a response before the timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("AI_CHAT_CONNECT_TIMEOUT_MS", "1000");
+    mocks.fetch.mockImplementationOnce((_url: string, init: RequestInit) => new Promise((_, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    }));
+
+    const pending = POST(request(payload, { token: "turnstile-token" }));
+    await vi.advanceTimersByTimeAsync(1000);
+    const response = await pending;
+
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toMatchObject({ code: "service_timeout" });
+  });
+
+  it("aborts the upstream request when the browser disconnects", async () => {
+    const controller = new AbortController();
+    mocks.fetch.mockImplementationOnce((_url: string, init: RequestInit) => new Promise((_, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    }));
+
+    const pending = POST(request(payload, { token: "turnstile-token", signal: controller.signal }));
+    await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledOnce());
+    controller.abort();
+    const response = await pending;
+
+    expect(response.status).toBe(499);
+    await expect(response.json()).resolves.toMatchObject({ code: "client_disconnected" });
   });
 });

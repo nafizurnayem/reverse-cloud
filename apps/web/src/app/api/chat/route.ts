@@ -6,24 +6,57 @@ import {
   type ChatSession,
 } from "@/lib/chat/session";
 import { validateChatPayload } from "@/lib/chat/values";
-import { limitChatRequests, requestIp, type RateLimitResult } from "@/lib/ratelimit";
+import {
+  limitChatRequests,
+  requestIp,
+  type ChatRateLimitResult,
+  type RateLimitResult,
+} from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
 const maxRequestBytes = 625_000;
+const defaultConnectTimeoutMs = 10_000;
 
-function rateHeaders(rate?: RateLimitResult) {
+function connectTimeoutMs() {
+  const raw = process.env.AI_CHAT_CONNECT_TIMEOUT_MS?.trim();
+  if (!raw) return defaultConnectTimeoutMs;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1_000 || value > 30_000) {
+    throw new Error("AI_CHAT_CONNECT_TIMEOUT_MS must be between 1000 and 30000.");
+  }
+  return value;
+}
+
+function primaryRate(rate: ChatRateLimitResult): RateLimitResult {
+  if (!rate.session.allowed) return rate.session;
+  if (!rate.ip.allowed) return rate.ip;
+  return rate.session;
+}
+
+function rateHeaders(rate?: ChatRateLimitResult) {
   const headers = new Headers({
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
   });
   if (rate) {
-    headers.set("x-ratelimit-limit", String(rate.limit));
-    headers.set("x-ratelimit-remaining", String(rate.remaining));
-    headers.set("x-ratelimit-reset", String(rate.reset));
+    const primary = primaryRate(rate);
+    headers.set("x-ratelimit-limit", String(primary.limit));
+    headers.set("x-ratelimit-remaining", String(primary.remaining));
+    headers.set("x-ratelimit-reset", String(primary.reset));
+    headers.set("x-ratelimit-ip-limit", String(rate.ip.limit));
+    headers.set("x-ratelimit-ip-remaining", String(rate.ip.remaining));
+    headers.set("x-ratelimit-ip-reset", String(rate.ip.reset));
+    headers.set("x-ratelimit-session-limit", String(rate.session.limit));
+    headers.set("x-ratelimit-session-remaining", String(rate.session.remaining));
+    headers.set("x-ratelimit-session-reset", String(rate.session.reset));
     if (!rate.allowed) {
-      headers.set("retry-after", String(Math.max(1, rate.reset - Math.floor(Date.now() / 1000))));
+      const reset = Math.max(
+        rate.ip.allowed ? 0 : rate.ip.reset,
+        rate.session.allowed ? 0 : rate.session.reset,
+      );
+      headers.set("retry-after", String(Math.max(1, reset - Math.floor(Date.now() / 1000))));
     }
   }
   return headers;
@@ -45,7 +78,7 @@ function attachSession(response: NextResponse, session?: ChatSession) {
 function json(
   body: Record<string, unknown>,
   status: number,
-  rate?: RateLimitResult,
+  rate?: ChatRateLimitResult,
   session?: ChatSession,
 ) {
   return attachSession(NextResponse.json(body, { status, headers: rateHeaders(rate) }), session);
@@ -54,6 +87,12 @@ function json(
 export async function POST(request: NextRequest) {
   const serviceUrl = process.env.AI_SERVICE_URL?.trim();
   const serviceSecret = process.env.AI_HMAC_SECRET_CURRENT;
+  let timeoutMs: number;
+  try {
+    timeoutMs = connectTimeoutMs();
+  } catch {
+    return json({ error: "Chat service is not configured", code: "not_configured" }, 503);
+  }
   if (!serviceUrl || !serviceSecret) {
     return json({ error: "Chat service is not configured", code: "not_configured" }, 503);
   }
@@ -87,9 +126,9 @@ export async function POST(request: NextRequest) {
   }
 
   const ip = requestIp(request.headers);
-  let rate: RateLimitResult;
+  let rate: ChatRateLimitResult;
   try {
-    rate = await limitChatRequests(ip);
+    rate = await limitChatRequests(ip, session.id);
   } catch {
     return json({ error: "Chat protection is unavailable", code: "protection_unavailable" }, 503);
   }
@@ -118,6 +157,12 @@ export async function POST(request: NextRequest) {
     .digest("hex");
 
   let upstream: Response;
+  let timedOut = false;
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    timeoutController.abort();
+  }, timeoutMs);
   try {
     upstream = await fetch(`${serviceUrl.replace(/\/$/, "")}/v1/chat`, {
       method: "POST",
@@ -128,10 +173,18 @@ export async function POST(request: NextRequest) {
       },
       body,
       cache: "no-store",
-      signal: request.signal,
+      signal: AbortSignal.any([request.signal, timeoutController.signal]),
     });
   } catch {
+    if (request.signal.aborted) {
+      return json({ error: "Client disconnected", code: "client_disconnected" }, 499, rate, session);
+    }
+    if (timedOut) {
+      return json({ error: "Chat service timed out", code: "service_timeout" }, 504, rate, session);
+    }
     return json({ error: "Chat service unavailable", code: "service_unavailable" }, 502, rate, session);
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!upstream.body) {

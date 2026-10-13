@@ -3,7 +3,7 @@
 import { hasLocale } from "next-intl";
 import { redirect } from "next/navigation";
 import { routing } from "@/i18n/routing";
-import { safePostLoginPath, type Locale } from "@/lib/auth/routes";
+import { loginPath, safePostLoginPath, type Locale } from "@/lib/auth/routes";
 import { requireSiteUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -75,6 +75,30 @@ export async function signInWithMagicLink(
   }
 
   redirect(`/${locale}/login?magic_link_sent=1&next=${encodeURIComponent(next)}`);
+}
+
+export async function continueWithClientAccount(localeValue: string, nextValue: string) {
+  const locale = checkedLocale(localeValue);
+  const next = safePostLoginPath(nextValue, locale);
+  let signedIn = false;
+  let linked = false;
+  try {
+    const supabase = await createClient();
+    const userResult = await supabase.auth.getUser();
+    signedIn = !userResult.error && Boolean(userResult.data.user);
+    if (signedIn) {
+      const result = await supabase.rpc("link_my_client_account");
+      linked = !result.error && typeof result.data === "string";
+    }
+  } catch {
+    // The localized login page displays the stable account-link error below.
+  }
+
+  if (!signedIn) redirect(loginPath(locale, next));
+  if (!linked) {
+    redirect(`/${locale}/login?error=account_link_failed&next=${encodeURIComponent(next)}`);
+  }
+  redirect(next);
 }
 
 export async function signOut(localeValue: string) {

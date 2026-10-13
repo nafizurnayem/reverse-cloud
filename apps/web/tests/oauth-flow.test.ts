@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   signInWithOAuth: vi.fn(),
   signInWithOtp: vi.fn(),
   exchangeCodeForSession: vi.fn(),
+  getUser: vi.fn(),
+  rpc: vi.fn(),
   signOut: vi.fn(),
   redirect: vi.fn((url: string) => { throw new Error(`redirect:${url}`); }),
 }));
@@ -14,7 +16,12 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
-import { signInWithGoogle, signInWithMagicLink, signOut } from "../src/app/[locale]/(auth)/actions";
+import {
+  continueWithClientAccount,
+  signInWithGoogle,
+  signInWithMagicLink,
+  signOut,
+} from "../src/app/[locale]/(auth)/actions";
 import { GET } from "../src/app/[locale]/(auth)/auth/callback/route";
 
 beforeEach(() => {
@@ -25,8 +32,10 @@ beforeEach(() => {
       signInWithOAuth: mocks.signInWithOAuth,
       signInWithOtp: mocks.signInWithOtp,
       exchangeCodeForSession: mocks.exchangeCodeForSession,
+      getUser: mocks.getUser,
       signOut: mocks.signOut,
     },
+    rpc: mocks.rpc,
   });
   mocks.signInWithOAuth.mockResolvedValue({
     data: { url: "https://project.supabase.co/auth/v1/authorize" },
@@ -34,6 +43,8 @@ beforeEach(() => {
   });
   mocks.signInWithOtp.mockResolvedValue({ data: { user: null, session: null }, error: null });
   mocks.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+  mocks.rpc.mockResolvedValue({ data: "00000000-0000-4000-8000-000000000001", error: null });
   mocks.signOut.mockResolvedValue({ error: null });
 });
 
@@ -110,11 +121,12 @@ describe("OAuth callback", () => {
 
   it("exchanges the code and redirects without caching", async () => {
     const response = await GET(
-      new NextRequest("https://reverse-cloud.example/bn/auth/callback?code=once&next=%2Fbn%2Fadmin"),
+      new NextRequest("https://reverse-cloud.example/bn/auth/callback?code=once&next=%2Fbn%2Fportal"),
       context("bn"),
     );
     expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("once");
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/bn/admin");
+    expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/bn/portal");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
@@ -124,6 +136,7 @@ describe("OAuth callback", () => {
       context("en"),
     );
     expect(mocks.exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
     expect(new URL(response.headers.get("location")!).pathname).toBe("/en/login");
     expect(new URL(response.headers.get("location")!).searchParams.get("error")).toBe("oauth_denied");
   });
@@ -158,6 +171,56 @@ describe("OAuth callback", () => {
     expect(destination.searchParams.get("error")).toBe("magic_link_invalid");
     expect(destination.searchParams.get("next")).toBe("/bn/portal");
   });
+
+  it("reports account-linking failures without exposing database details", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: new Error("email_already_linked") });
+    const response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen%2Fportal"),
+      context("en"),
+    );
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.pathname).toBe("/en/login");
+    expect(destination.searchParams.get("error")).toBe("account_link_failed");
+    expect(destination.searchParams.get("next")).toBe("/en/portal");
+  });
+
+  it("accepts the preserved invitation after login and skips client records for admin", async () => {
+    let response = await GET(
+      new NextRequest(
+        `https://reverse-cloud.example/en/auth/callback?code=once&next=${encodeURIComponent(`/en/accept-invite?token=${"a".repeat(43)}`)}`,
+      ),
+      context("en"),
+    );
+    expect(response.headers.get("location")).toBe(
+      "https://reverse-cloud.example/en/portal?invite=accepted",
+    );
+    expect(mocks.rpc).toHaveBeenCalledWith("accept_client_invite", { p_token: "a".repeat(43) });
+
+    mocks.rpc.mockClear();
+    mocks.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
+    response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=twice&next=%2Fen%2Fadmin"),
+      context("en"),
+    );
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/admin");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid, expired, or used invitation without exposing its token", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: new Error("private database detail") });
+    const response = await GET(
+      new NextRequest(
+        `https://reverse-cloud.example/bn/auth/callback?code=once&next=${encodeURIComponent(`/bn/accept-invite?token=${"a".repeat(43)}`)}`,
+      ),
+      context("bn"),
+    );
+
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.pathname).toBe("/bn/accept-invite");
+    expect(destination.searchParams.get("error")).toBe("invalid_or_expired_invite");
+    expect(destination.searchParams.has("token")).toBe(false);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
 });
 
 describe("logout", () => {
@@ -169,5 +232,21 @@ describe("logout", () => {
   it("shows a stable error when sign-out fails", async () => {
     mocks.signOut.mockResolvedValue({ error: new Error("network") });
     await expect(signOut("en")).rejects.toThrow("redirect:/en/login?error=sign_out_failed");
+  });
+});
+
+describe("account-link retry", () => {
+  it("links a signed-in user before continuing to a safe portal destination", async () => {
+    await expect(continueWithClientAccount("bn", "/bn/portal?tab=projects")).rejects.toThrow(
+      "redirect:/bn/portal?tab=projects",
+    );
+    expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
+  });
+
+  it("keeps account-link failures stable and rejects external destinations", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: new Error("private detail") });
+    await expect(continueWithClientAccount("en", "https://evil.example")).rejects.toThrow(
+      "redirect:/en/login?error=account_link_failed&next=%2Fen%2Fportal",
+    );
   });
 });
