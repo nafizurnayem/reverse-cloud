@@ -513,6 +513,45 @@
     "ctaTitle": "Ready to discuss your recommended roadmap?",
     "ctaSubtitle": "Our engineering team is ready to analyze your requirements and prepare a formal milestone schedule.",
     "contactUs": "Schedule Architecture Call"
+  },
+  "Chat": {
+    "title": "Reverse Cloud AI",
+    "subtitle": "Instant Estimates & Architecture",
+    "greeting": "Hello! Welcome to Reverse Cloud. How can I help you today? Would you like a project budget estimate, or details on our engineering services?",
+    "placeholder": "Ask about services, architecture, or project estimates...",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "open": "Open chat widget",
+    "close": "Close",
+    "minimize": "Minimize",
+    "expand": "Expand",
+    "newChat": "New Chat",
+    "resetNotice": "Chat has been reset. How can I assist you with your project?",
+    "scenario": "Scenario:",
+    "offlineNotice": "Live chat service is temporarily unavailable. Please connect via our contact form."
+  },
+  "Portal": {
+    "title": "Client Portal",
+    "subtitle": "Real-time read-only access to milestone progress, live previews, and billing schedules.",
+    "projects": "Client Projects",
+    "allProjects": "All Projects",
+    "backToProjects": "Back to Projects",
+    "readOnlyMode": "Read-Only Mode",
+    "active": "Active",
+    "completed": "Completed",
+    "overallProgress": "Overall Project Progress",
+    "currentStage": "Current Stage",
+    "targetDate": "Target Delivery",
+    "milestones": "Milestone Timeline",
+    "paymentSchedule": "Payment Schedule & Invoices",
+    "livePreview": "Live Staging Preview",
+    "recentActivity": "Recent Activity & Feed",
+    "specifications": "Project Specifications",
+    "clientLead": "Client Lead",
+    "contractValue": "Contract Value",
+    "startDate": "Start Date",
+    "invoice": "Invoice",
+    "print": "Print"
   }
 }
 

@@ -1,1 +1,27 @@
-// BDT and USD formatting will be implemented with payment features.
+export function formatUsd(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function formatBdt(amount: number): string {
+  return new Intl.NumberFormat("bn-BD", {
+    style: "currency",
+    currency: "BDT",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function formatPriceRange(
+  minUsd: number,
+  maxUsd: number,
+  minBdt: number,
+  maxBdt: number,
+): { usd: string; bdt: string } {
+  return {
+    usd: `${formatUsd(minUsd)} - ${formatUsd(maxUsd)}`,
+    bdt: `${formatBdt(minBdt)} - ${formatBdt(maxBdt)}`,
+  };
+}
