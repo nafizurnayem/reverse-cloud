@@ -25,6 +25,9 @@ class Settings(BaseSettings):
 	database_min_size: int = Field(default=1, ge=1)
 	database_max_size: int = Field(default=5, ge=1)
 	ai_hmac_secret_current: str | None = None
+	ai_enabled: bool = True
+	ai_daily_token_budget: int = Field(default=1_000_000, ge=1)
+	ai_stream_timeout_seconds: float = Field(default=60.0, ge=1.0)
 	llm_api_key: str | None = None
 	llm_model: str = "gpt-4o-mini"
 	email_api_key: str | None = None
