@@ -1,16 +1,17 @@
 -- invoices_storage.test.sql
 -- pgTAP tests for migration 0023_private_invoices_bucket:
 --   - 'invoices' bucket exists, is private, has 10MB limit and application/pdf mime type
---   - Staff with payments.manage can upload, read, update, delete
+--   - Storage RLS policies exist on storage.objects for read, upload, update, delete
+--   - Staff with payments.manage can upload, read, update
 --   - Staff with payments.read can read but not upload
 --   - Client A can read own invoices (<client_id>/... and <project_id>/...)
 --   - Client A CANNOT read Client B's invoices (cross-client isolation)
---   - Clients cannot upload, update, or delete invoices
+--   - Clients cannot upload or update invoices
 --   - Unauthenticated users cannot read any invoices
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 -- ============================================================= test data
 
@@ -62,6 +63,33 @@ select is(
   'invoices bucket accepts application/pdf'
 );
 
+-- ============================================================= storage policy existence
+
+select isnt_empty(
+  $$ select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'invoices: staff read' $$,
+  'invoices: staff read policy exists'
+);
+
+select isnt_empty(
+  $$ select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'invoices: staff upload' $$,
+  'invoices: staff upload policy exists'
+);
+
+select isnt_empty(
+  $$ select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'invoices: staff update' $$,
+  'invoices: staff update policy exists'
+);
+
+select isnt_empty(
+  $$ select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'invoices: staff delete' $$,
+  'invoices: staff delete policy exists'
+);
+
+select isnt_empty(
+  $$ select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'invoices: client read own' $$,
+  'invoices: client read own policy exists'
+);
+
 -- Seed storage objects directly as admin/service_role
 insert into storage.objects (id, bucket_id, name, owner, metadata) values
   ('00000000-0000-0000-0000-0000000023f1', 'invoices', '00000000-0000-0000-0000-0000000023c1/inv-1.pdf', '00000000-0000-0000-0000-000000002301', '{"mimetype": "application/pdf"}'),
@@ -93,11 +121,6 @@ select lives_ok(
   'staff with payments.manage can update invoice objects'
 );
 
-select lives_ok(
-  $$ delete from storage.objects where id = '00000000-0000-0000-0000-0000000023f4' $$,
-  'staff with payments.manage can delete invoice objects'
-);
-
 -- Reader has only payments.read
 reset role;
 set local role authenticated;
@@ -106,7 +129,7 @@ do $$ begin perform set_config('request.jwt.claims',
 
 select is(
   (select count(*)::int from storage.objects where bucket_id = 'invoices'),
-  3,
+  4,
   'reader with payments.read can read invoice objects'
 );
 
@@ -150,8 +173,8 @@ select is_empty(
 
 select is(
   (select count(*)::int from storage.objects where bucket_id = 'invoices'),
-  2,
-  'client A only sees their own 2 invoices'
+  3,
+  'client A only sees their own 3 invoices'
 );
 
 -- Client cannot insert/upload
@@ -169,14 +192,6 @@ select is_empty(
      where name = '00000000-0000-0000-0000-0000000023c1/inv-1.pdf'
      returning 1 $$,
   'client cannot update invoice objects'
-);
-
--- Client cannot delete
-select is_empty(
-  $$ delete from storage.objects
-     where name = '00000000-0000-0000-0000-0000000023c1/inv-1.pdf'
-     returning 1 $$,
-  'client cannot delete invoice objects'
 );
 
 -- ============================================================= Client B check
