@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Box, LogOut, Shield } from "lucide-react";
+import { ArrowLeft, Box, CreditCard, LogOut, Shield } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 interface PortalHeaderProps {
@@ -52,6 +52,14 @@ export function PortalHeader({
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href={`/${locale}/portal/payments`}
+            className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{isBn ? "পেমেন্ট" : "Payments"}</span>
+          </Link>
+
           <LanguageSwitcher />
 
           {(clientName || companyName) && (

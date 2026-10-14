@@ -29,12 +29,12 @@ export function EditorPanel({ title, children }: { title: string; children: Reac
   return <section className="content-editor"><h2>{title}</h2>{children}</section>;
 }
 
-export function Field({ label, name, defaultValue, type = "text", required = false, min, step, placeholder, readOnly = false }: {
+export function Field({ label, name, defaultValue, type = "text", required = false, min, step, maxLength, placeholder, readOnly = false }: {
   label: string; name: string; defaultValue?: unknown; type?: string; required?: boolean;
-  min?: string | number; step?: string | number; placeholder?: string; readOnly?: boolean;
+  min?: string | number; step?: string | number; maxLength?: number; placeholder?: string; readOnly?: boolean;
 }) {
   const valueProps = type === "file" ? {} : { defaultValue: inputValue(defaultValue) };
-  return <label className="content-field"><span>{label}</span><input name={name} type={type} {...valueProps} required={required} min={min} step={step} placeholder={placeholder} readOnly={readOnly} /></label>;
+  return <label className="content-field"><span>{label}</span><input name={name} type={type} {...valueProps} required={required} min={min} step={step} maxLength={maxLength} placeholder={placeholder} readOnly={readOnly} /></label>;
 }
 
 export function TextareaField({ label, name, defaultValue, required = false, rows = 4, placeholder }: {
