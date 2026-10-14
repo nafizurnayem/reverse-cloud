@@ -285,13 +285,13 @@ def test_nothing_is_touched_when_no_provider_is_configured(monkeypatch, ai_url, 
 
 def test_unsupported_template_fails_with_a_clear_reason(ai_url, clean) -> None:
     # Not patched: the real delivery code refuses before any network call.
-    row_id = add_row(template="client_invite")
+    row_id = add_row(template="unknown_template")
 
     assert run_worker(make_settings(ai_url)) == (0, 1)
 
     row = state(row_id)
     assert row["status"] == "pending"
-    assert row["last_error"] == "Unsupported notification template: client_invite"
+    assert row["last_error"] == "Unsupported notification template: unknown_template"
 
 
 # --------------------------------------------------------------------- locks

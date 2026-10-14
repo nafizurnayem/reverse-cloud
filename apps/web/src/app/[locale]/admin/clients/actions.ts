@@ -84,10 +84,12 @@ export async function createClientInvite(
     return { status: "error", error: "invalidInput" };
   }
 
+  const sendEmail = formData.get("send_email") === "true";
+
   const result = await supabase.rpc("create_client_invite", {
     p_client_id: clientId,
     p_email: email,
-    p_send_email: false,
+    p_send_email: sendEmail,
   });
   if (result.error) {
     return {

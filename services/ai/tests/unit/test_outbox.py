@@ -4,7 +4,9 @@ from app.config import Settings
 from app.jobs.outbox import (
     TELEGRAM_MAX_CHARS,
     _configured_channels,
+    _invite_email,
     _lead_text,
+    _payment_reminder_email,
     _payload,
     _safe_error,
     _telegram_text,
@@ -59,3 +61,50 @@ def test_long_telegram_message_is_shortened_to_the_limit() -> None:
     assert len(text) <= TELEGRAM_MAX_CHARS
     assert text.endswith("[message shortened]")
     assert "Name: Nafiz" in text
+
+
+def test_invite_email_renders_english() -> None:
+    settings = Settings(site_url="https://app.reversecloud.io")
+    subject, text, html_content = _invite_email(
+        {
+            "client_name": "Rahim Chowdhury",
+            "token": "secret-invite-token-123",
+            "locale": "en",
+        },
+        settings,
+    )
+    assert subject == "Invitation: Access your Reverse Cloud Client Portal"
+    assert "Rahim Chowdhury" in text
+    assert "https://app.reversecloud.io/en/accept-invite?token=secret-invite-token-123" in text
+    assert "https://app.reversecloud.io/en/accept-invite?token=secret-invite-token-123" in html_content
+    assert "336 hours" in text
+
+
+def test_invite_email_renders_bangla() -> None:
+    settings = Settings(site_url="https://app.reversecloud.io")
+    subject, text, html_content = _invite_email(
+        {
+            "client_name": "রহিম চৌধুরী",
+            "token": "token-bn-456",
+            "locale": "bn",
+        },
+        settings,
+    )
+    assert "রিভার্স ক্লাউড ক্লায়েন্ট পোর্টালে আপনার আমন্ত্রণ" in subject
+    assert "রহিম চৌধুরী" in text
+    assert "https://app.reversecloud.io/bn/accept-invite?token=token-bn-456" in text
+    assert "৩৩৬ ঘণ্টা" in text
+
+
+def test_payment_reminder_email_renders_correctly() -> None:
+    subject, text, html_content = _payment_reminder_email({
+        "title": "Milestone 1 Frontend",
+        "amount_due": 2500,
+        "currency": "USD",
+        "due_on": "2026-11-01",
+        "client_name": "Acme Corp",
+    })
+    assert "Milestone 1 Frontend" in subject
+    assert "2500 USD" in subject
+    assert "2026-11-01" in text
+    assert "Acme Corp" in text

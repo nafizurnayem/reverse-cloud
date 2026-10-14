@@ -33,6 +33,10 @@ class Settings(BaseSettings):
 	email_api_key: str | None = None
 	email_api_url: str = "https://api.resend.com/emails"
 	email_from: str | None = None
+	site_url: str = Field(
+		default="https://reversecloud.io",
+		validation_alias=AliasChoices("SITE_URL", "NEXT_PUBLIC_SITE_URL"),
+	)
 	telegram_bot_token: str | None = None
 	telegram_chat_id: str | None = None
 	outbox_batch_size: int = Field(default=20, ge=1, le=100)

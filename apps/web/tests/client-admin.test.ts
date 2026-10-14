@@ -154,6 +154,28 @@ describe("Clients admin actions", () => {
     });
   });
 
+  it("passes p_send_email: true when send_email is set to true in formData", async () => {
+    const token = "b".repeat(43);
+    mocks.rpc.mockResolvedValue({
+      data: [{ invite_id: inviteId, token, expires_at: "2026-10-28T00:00:00.000Z" }],
+      error: null,
+    });
+    const formData = new FormData();
+    formData.set("locale", "en");
+    formData.set("client_id", clientId);
+    formData.set("email", "client@example.com");
+    formData.set("send_email", "true");
+
+    const state = await createClientInvite({ status: "idle" }, formData);
+
+    expect(mocks.rpc).toHaveBeenCalledWith("create_client_invite", {
+      p_client_id: clientId,
+      p_email: "client@example.com",
+      p_send_email: true,
+    });
+    expect(state.status).toBe("success");
+  });
+
   it("does not call the invite RPC for malformed client input", async () => {
     const formData = new FormData();
     formData.set("locale", "en");

@@ -186,9 +186,9 @@ select throws_ok(
   $$ delete from public.client_invites $$,
   '42501', null, 'staff cannot delete invites');
 
-select throws_ok(
+select lives_ok(
   $$ select * from public.create_client_invite('00000000-0000-0000-0000-00000000b002', 'x@example.com', true) $$,
-  '0A000', 'email_delivery_not_enabled', 'sending the invite by email is switched off');
+  'sending the invite by email is enabled and delivers via outbox');
 select throws_ok(
   $$ select * from public.create_client_invite('00000000-0000-0000-0000-00000000b002', 'nope') $$,
   '22023', 'invalid_invite_email', 'an invite needs a valid email');
