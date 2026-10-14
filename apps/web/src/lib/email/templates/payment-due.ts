@@ -1,4 +1,4 @@
-import { wrapEmailLayout } from "../layout";
+import { escapeEmailHtml, safeEmailSubject, wrapEmailLayout } from "../layout";
 import type { PaymentDueEmailContext, RenderedEmail } from "../types";
 import { formatBdt, formatUsd } from "@/lib/money";
 
@@ -7,8 +7,13 @@ export function renderPaymentDueEmail(
 ): RenderedEmail {
   const locale = context.locale ?? "en";
   const isBn = locale === "bn";
-  const formattedUsd = formatUsd(context.amountUsd);
-  const formattedBdt = formatBdt(context.amountBdt);
+  const formattedUsd = formatUsd(Number.isFinite(context.amountUsd) ? Math.max(0, context.amountUsd) : 0);
+  const formattedBdt = formatBdt(Number.isFinite(context.amountBdt) ? Math.max(0, context.amountBdt) : 0);
+  const recipientName = escapeEmailHtml(context.recipientName);
+  const projectTitle = escapeEmailHtml(context.projectTitle);
+  const milestoneTitle = escapeEmailHtml(context.milestoneTitle);
+  const invoiceNumber = escapeEmailHtml(context.invoiceNumber);
+  const dueDate = escapeEmailHtml(context.dueDate);
 
   const subject = isBn
     ? `ইনভয়েস প্রদেয়: ${context.invoiceNumber} (${context.projectTitle})`
@@ -24,13 +29,13 @@ export function renderPaymentDueEmail(
     <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
       <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b;">${
         isBn ? "ইনভয়েস নম্বর" : "INVOICE NUMBER"
-      }: <strong>#${context.invoiceNumber}</strong></span>
+      }: <strong>#${invoiceNumber}</strong></span>
       <span style="font-size: 11px; color: #dc2626; font-weight: 700;">${
         isBn ? "শেষ সময়:" : "DUE:"
-      } ${context.dueDate}</span>
+      } ${dueDate}</span>
     </div>
     <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #0f172a;">${
-      context.milestoneTitle
+      milestoneTitle
     }</p>
     <div style="font-size: 18px; font-weight: 800; color: #0284c7; font-family: monospace;">
       ${formattedUsd} <span style="font-size: 12px; font-weight: 500; color: #64748b;">(≈ ${formattedBdt})</span>
@@ -38,12 +43,12 @@ export function renderPaymentDueEmail(
   </div>`;
 
   const bodyHtml = isBn
-    ? `<p>প্রিয় <strong>${context.recipientName}</strong>,</p>
-       <p>আপনার <strong>${context.projectTitle}</strong> প্রজেক্টের সংশ্লিষ্ট মাইলফলক অগ্রগতির ভিত্তিতে নতুন ইনভয়েস তৈরি করা হয়েছে:</p>
+    ? `<p>প্রিয় <strong>${recipientName}</strong>,</p>
+       <p>আপনার <strong>${projectTitle}</strong> প্রজেক্টের সংশ্লিষ্ট মাইলফলক অগ্রগতির ভিত্তিতে নতুন ইনভয়েস তৈরি করা হয়েছে:</p>
        ${invoiceBox}
        <p>ক্লায়েন্ট পোর্টালে ইনভয়েসটির অফিসিয়াল কপি ও বিস্তারিত ব্রেকডাউন ডাউনলোড করতে পারবেন। ব্যাংক ওয়্যার বা অনলাইন পেমেন্টের জন্য পোর্টালে ভিজিট করুন।</p>`
-    : `<p>Hello <strong>${context.recipientName}</strong>,</p>
-       <p>An invoice has been issued for milestone delivery on project <strong>${context.projectTitle}</strong>:</p>
+    : `<p>Hello <strong>${recipientName}</strong>,</p>
+       <p>An invoice has been issued for milestone delivery on project <strong>${projectTitle}</strong>:</p>
        ${invoiceBox}
        <p>You can review and download the official invoice copy or proceed with wire transfer/online disbursement through your client portal.</p>`;
 
@@ -63,5 +68,5 @@ export function renderPaymentDueEmail(
     ctaUrl: context.invoiceUrl,
   });
 
-  return { subject, html, text };
+  return { subject: safeEmailSubject(subject), html, text };
 }

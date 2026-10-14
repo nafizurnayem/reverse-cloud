@@ -1,4 +1,4 @@
-import { wrapEmailLayout } from "../layout";
+import { escapeEmailHtml, safeEmailSubject, wrapEmailLayout } from "../layout";
 import type { ProjectActivatedEmailContext, RenderedEmail } from "../types";
 
 export function renderProjectActivatedEmail(
@@ -6,6 +6,9 @@ export function renderProjectActivatedEmail(
 ): RenderedEmail {
   const locale = context.locale ?? "en";
   const isBn = locale === "bn";
+  const recipientName = escapeEmailHtml(context.recipientName);
+  const projectTitle = escapeEmailHtml(context.projectTitle);
+  const leadArchitect = context.leadArchitect ? escapeEmailHtml(context.leadArchitect) : "";
 
   const subject = isBn
     ? `প্রজেক্ট সক্রিয় হয়েছে: ${context.projectTitle}`
@@ -17,10 +20,10 @@ export function renderProjectActivatedEmail(
     ? `${context.projectTitle} প্রজেক্টের ইঞ্জিনিয়ারিং কাজ আনুষ্ঠানিকভাবে শুরু হয়েছে।`
     : `Engineering kick-off for ${context.projectTitle} has commenced.`;
 
-  const leadInfo = context.leadArchitect
+  const leadInfo = leadArchitect
     ? isBn
-      ? `<p style="margin: 12px 0;"><strong>দায়িত্বপ্রাপ্ত লিড আর্কিটেক্ট:</strong> ${context.leadArchitect}</p>`
-      : `<p style="margin: 12px 0;"><strong>Lead Architect Assigned:</strong> ${context.leadArchitect}</p>`
+      ? `<p style="margin: 12px 0;"><strong>দায়িত্বপ্রাপ্ত লিড আর্কিটেক্ট:</strong> ${leadArchitect}</p>`
+      : `<p style="margin: 12px 0;"><strong>Lead Architect Assigned:</strong> ${leadArchitect}</p>`
     : "";
 
   const leadText = context.leadArchitect
@@ -30,12 +33,12 @@ export function renderProjectActivatedEmail(
     : "";
 
   const bodyHtml = isBn
-    ? `<p>প্রিয় <strong>${context.recipientName}</strong>,</p>
-       <p>আমরা আনন্দের সাথে জানাচ্ছি যে <strong>${context.projectTitle}</strong> প্রজেক্টটি আমাদের ইঞ্জিনিয়ারিং পাইপলাইনে আনুষ্ঠানিকভাবে সক্রিয় করা হয়েছে।</p>
+    ? `<p>প্রিয় <strong>${recipientName}</strong>,</p>
+       <p>আমরা আনন্দের সাথে জানাচ্ছি যে <strong>${projectTitle}</strong> প্রজেক্টটি আমাদের ইঞ্জিনিয়ারিং পাইপলাইনে আনুষ্ঠানিকভাবে সক্রিয় করা হয়েছে।</p>
        ${leadInfo}
        <p>আমাদের ক্লাউড এবং সফটওয়্যার টিম প্রাথমিক আর্কিটেকচার সেটআপ, রিপোজিটরি কনফিগারেশন এবং সিআই/সিডি অটোমেশন শুরু করেছে। আপনার ক্লায়েন্ট পোর্টালে প্রতিটি মাইলফলকের অগ্রগতি নিয়মিত আপডেট করা হবে।</p>`
-    : `<p>Hello <strong>${context.recipientName}</strong>,</p>
-       <p>We are excited to confirm that <strong>${context.projectTitle}</strong> has officially been activated in our engineering pipeline.</p>
+    : `<p>Hello <strong>${recipientName}</strong>,</p>
+       <p>We are excited to confirm that <strong>${projectTitle}</strong> has officially been activated in our engineering pipeline.</p>
        ${leadInfo}
        <p>Our team has commenced repository initialization, architecture blueprints, and CI/CD automation. You can track all progress live on your client portal.</p>`;
 
@@ -55,5 +58,5 @@ export function renderProjectActivatedEmail(
     ctaUrl: context.portalUrl,
   });
 
-  return { subject, html, text };
+  return { subject: safeEmailSubject(subject), html, text };
 }
