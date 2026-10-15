@@ -250,6 +250,38 @@ async def _send_payment_reminder_email(client: httpx.AsyncClient, row: asyncpg.R
     response.raise_for_status()
 
 
+async def _alert_outbox_failure(
+    client: httpx.AsyncClient,
+    row: asyncpg.Record,
+    error_text: str,
+    settings: Settings,
+) -> None:
+    """Send an alert to staff when an outbox message exhausts all retries and terminally fails."""
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+    text = (
+        f"🚨 <b>Outbox Delivery Failure</b>\n"
+        f"ID: <code>{row['id']}</code>\n"
+        f"Template: {html.escape(str(row['template']))}\n"
+        f"Channel: {html.escape(str(row['channel']))}\n"
+        f"Recipient: {html.escape(str(row['to_address']))}\n"
+        f"Attempts: {row['attempts']}\n"
+        f"Error: {html.escape(error_text)}"
+    )
+    try:
+        await client.post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
+            json={
+                "chat_id": settings.telegram_chat_id,
+                "text": text,
+                "parse_mode": "HTML",
+            },
+            timeout=5.0,
+        )
+    except Exception as exc:
+        logger.warning("Failed to send terminal outbox alert to Telegram: %s", exc)
+
+
 async def _deliver(client: httpx.AsyncClient, row: asyncpg.Record, settings: Settings) -> None:
     template = row["template"]
     if template == "new_lead":
@@ -319,6 +351,8 @@ async def process_outbox(settings: Settings | None = None) -> tuple[int, int]:
                         row["id"], worker_id, "failed" if terminal else "pending",
                         error_text, delay_seconds,
                     )
+                    if terminal:
+                        await _alert_outbox_failure(client, row, error_text, settings)
                     logger.warning(
                         "Outbox delivery failed for %s (attempt %s, %s): %s",
                         row["id"], row["attempts"], "gave up" if terminal else "will retry", error_text,

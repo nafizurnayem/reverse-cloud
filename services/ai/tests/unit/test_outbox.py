@@ -108,3 +108,32 @@ def test_payment_reminder_email_renders_correctly() -> None:
     assert "2500 USD" in subject
     assert "2026-11-01" in text
     assert "Acme Corp" in text
+
+
+import pytest
+from unittest.mock import AsyncMock
+from app.jobs.outbox import _alert_outbox_failure
+
+
+@pytest.mark.asyncio
+async def test_alert_outbox_failure_posts_to_telegram() -> None:
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock()
+    settings = Settings(telegram_bot_token="bot-token", telegram_chat_id="chat-id")
+    row = {
+        "id": "outbox-1",
+        "template": "new_lead",
+        "channel": "email",
+        "to_address": "staff@example.com",
+        "attempts": 5,
+    }
+
+    await _alert_outbox_failure(client, row, "Connection refused", settings)
+
+    client.post.assert_awaited_once()
+    call_args = client.post.call_args
+    assert "https://api.telegram.org/botbot-token/sendMessage" == call_args[0][0]
+    payload = call_args[1]["json"]
+    assert payload["chat_id"] == "chat-id"
+    assert "Outbox Delivery Failure" in payload["text"]
+    assert "outbox-1" in payload["text"]
