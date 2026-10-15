@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn((url: string) => { throw new Error(`redirect:${url}`); }),
   revalidatePath: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -12,7 +13,7 @@ vi.mock("@/lib/auth/guards", () => ({ requirePermission: mocks.requirePermission
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
-import { savePayment, savePaymentItem } from "../src/app/[locale]/admin/payments/actions";
+import { savePayment, savePaymentItem, voidPayment } from "../src/app/[locale]/admin/payments/actions";
 import { paymentItemPayload, paymentPayload } from "../src/lib/admin/payment-values";
 
 const projectId = "00000000-0000-4000-8000-000000000201";
@@ -41,7 +42,8 @@ function builder(result = { data: { id: itemId }, error: null }) {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.requirePermission.mockResolvedValue({ user: { id: "00000000-0000-4000-8000-000000000204" }, supabase: { from: mocks.from } });
+  mocks.rpc.mockResolvedValue({ data: paymentId, error: null });
+  mocks.requirePermission.mockResolvedValue({ user: { id: "00000000-0000-4000-8000-000000000204" }, supabase: { from: mocks.from, rpc: mocks.rpc } });
 });
 
 describe("payment values", () => {
@@ -76,5 +78,21 @@ describe("payment actions", () => {
     expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 500.25, reference: "TX-100" }));
     expect(query.update.mock.calls[0][0]).not.toHaveProperty("payment_item_id");
     expect(query.update.mock.calls[0][0]).not.toHaveProperty("currency");
+  });
+
+  it("voids a payment through the restricted RPC with an audit reason", async () => {
+    const data = form({ locale: "bn", payment_item_id: itemId, payment_id: paymentId, reason: "Transfer reversed" });
+    await expect(voidPayment(data)).rejects.toThrow(`redirect:/bn/admin/payments?item=${itemId}&saved=voided`);
+    expect(mocks.requirePermission).toHaveBeenCalledWith("bn", "payments.manage");
+    expect(mocks.rpc).toHaveBeenCalledWith("void_payment", {
+      p_payment_id: paymentId,
+      p_reason: "Transfer reversed",
+    });
+  });
+
+  it("rejects a void without a valid reason before calling the database", async () => {
+    const data = form({ locale: "en", payment_item_id: itemId, payment_id: paymentId, reason: "" });
+    await expect(voidPayment(data)).rejects.toThrow(`redirect:/en/admin/payments?item=${itemId}&error=invalidVoid`);
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 });

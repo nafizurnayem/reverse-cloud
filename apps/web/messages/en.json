@@ -890,14 +890,17 @@
     "noDueDate": "No due date",
     "saved": {
       "item": "The payment schedule item was saved.",
-      "payment": "The payment record was saved."
+      "payment": "The payment record was saved.",
+      "voided": "The payment was voided and removed from received totals."
     },
     "errors": {
       "invalidItem": "Enter valid installment details.",
       "itemSaveFailed": "The installment could not be saved.",
       "invalidPayment": "Enter valid payment details.",
       "paymentSaveFailed": "The payment record could not be saved.",
-      "currencyMismatch": "The payment currency must match the installment currency."
+      "currencyMismatch": "The payment currency must match the installment currency.",
+      "invalidVoid": "Enter a valid reason before voiding the payment.",
+      "voidFailed": "The payment could not be voided. It may already be voided."
     },
     "summary": {
       "scheduled": "Scheduled",
@@ -927,7 +930,8 @@
       "paidAt": "Received at",
       "method": "Payment method",
       "reference": "Reference",
-      "notes": "Notes"
+      "notes": "Notes",
+      "voidReason": "Reason for voiding"
     },
     "statuses": {
       "pending": "Pending",
@@ -954,6 +958,8 @@
       "new": "Record a payment",
       "edit": "Correct payment record",
       "save": "Save payment",
+      "void": "Void payment",
+      "voided": "Voided",
       "context": "{amount} due in {currency}",
       "empty": "No payments have been recorded for this installment."
     }

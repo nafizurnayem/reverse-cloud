@@ -37,10 +37,10 @@ export function Field({ label, name, defaultValue, type = "text", required = fal
   return <label className="content-field"><span>{label}</span><input name={name} type={type} {...valueProps} required={required} min={min} step={step} maxLength={maxLength} placeholder={placeholder} readOnly={readOnly} /></label>;
 }
 
-export function TextareaField({ label, name, defaultValue, required = false, rows = 4, placeholder }: {
-  label: string; name: string; defaultValue?: unknown; required?: boolean; rows?: number; placeholder?: string;
+export function TextareaField({ label, name, defaultValue, required = false, rows = 4, placeholder, maxLength }: {
+  label: string; name: string; defaultValue?: unknown; required?: boolean; rows?: number; placeholder?: string; maxLength?: number;
 }) {
-  return <label className="content-field content-field-wide"><span>{label}</span><textarea name={name} defaultValue={inputValue(defaultValue)} required={required} rows={rows} placeholder={placeholder} /></label>;
+  return <label className="content-field content-field-wide"><span>{label}</span><textarea name={name} defaultValue={inputValue(defaultValue)} required={required} rows={rows} placeholder={placeholder} maxLength={maxLength} /></label>;
 }
 
 export function SelectField({ label, name, defaultValue, children }: {

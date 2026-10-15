@@ -66,3 +66,23 @@ export async function savePayment(formData: FormData) {
   revalidate(locale);
   redirect(paymentsPath(locale, { item: payload.payment_item_id, saved: "payment" }));
 }
+
+export async function voidPayment(formData: FormData) {
+  const locale = localeFrom(formData);
+  const { supabase } = await requirePermission(locale, "payments.manage");
+  const itemId = text(formData, "payment_item_id");
+  const paymentId = text(formData, "payment_id");
+  const reason = text(formData, "reason");
+  if (!validPaymentId(itemId) || !validPaymentId(paymentId) || !reason || reason.length > 500) {
+    actionError(locale, "invalidVoid", validPaymentId(itemId) ? itemId : undefined);
+  }
+
+  const result = await supabase.rpc("void_payment", {
+    p_payment_id: paymentId,
+    p_reason: reason,
+  });
+  if (result.error || result.data !== paymentId) actionError(locale, "voidFailed", itemId);
+
+  revalidate(locale);
+  redirect(paymentsPath(locale, { item: itemId, saved: "voided" }));
+}

@@ -6,15 +6,15 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { paymentItemStatuses, paymentMethods, validPaymentId } from "@/lib/admin/payment-values";
 import { requirePermission } from "@/lib/auth/guards";
-import { savePayment, savePaymentItem } from "./actions";
+import { savePayment, savePaymentItem, voidPayment } from "./actions";
 
 type Search = { item?: string; payment?: string; project?: string; status?: string; saved?: string; error?: string };
 type Project = { id: string; title: string; client_id: string };
 type Item = { id: string; project_id: string; title: string; description: string | null; amount_due: number; currency: string; status: "pending" | "paid" | "overdue" | "cancelled"; due_on: string | null; paid_at: string | null; sort_order: number };
-type Payment = { id: string; payment_item_id: string; currency: string; amount_paid: number; paid_at: string; method: string | null; reference: string | null; notes: string | null };
+type Payment = { id: string; payment_item_id: string; currency: string; amount_paid: number; paid_at: string; method: string | null; reference: string | null; notes: string | null; voided_at: string | null; void_reason: string | null };
 
-const savedKeys = new Set(["item", "payment"]);
-const errorKeys = new Set(["invalidItem", "itemSaveFailed", "invalidPayment", "paymentSaveFailed", "currencyMismatch"]);
+const savedKeys = new Set(["item", "payment", "voided"]);
+const errorKeys = new Set(["invalidItem", "itemSaveFailed", "invalidPayment", "paymentSaveFailed", "currencyMismatch", "invalidVoid", "voidFailed"]);
 
 function money(amount: number, currency: string, locale: string) {
   try { return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount); }
@@ -54,7 +54,7 @@ export default async function PaymentsPage({ params, searchParams }: { params: P
   const filtered = items.filter((item) => (!projectFilter || item.project_id === projectFilter) && (!statusFilter || item.status === statusFilter));
   const paymentsByItem = new Map<string, Payment[]>();
   for (const payment of payments) paymentsByItem.set(payment.payment_item_id, [...(paymentsByItem.get(payment.payment_item_id) ?? []), payment]);
-  const received = (item: Item) => (paymentsByItem.get(item.id) ?? []).reduce((sum, payment) => sum + Number(payment.amount_paid), 0);
+  const received = (item: Item) => (paymentsByItem.get(item.id) ?? []).reduce((sum, payment) => sum + (payment.voided_at ? 0 : Number(payment.amount_paid)), 0);
   const currencyTotals = new Map<string, { due: number; paid: number }>();
   for (const item of filtered) {
     const totals = currencyTotals.get(item.currency) ?? { due: 0, paid: 0 };
@@ -91,7 +91,7 @@ export default async function PaymentsPage({ params, searchParams }: { params: P
       <FormActions saveLabel={t("schedule.save")} cancelLabel={t("cancel")} cancelHref="/admin/payments" />
     </form></EditorPanel> : <p className="content-message">{t("readOnly")}</p>}
 
-    {canManage && selectedItem && selectedItem.status !== "cancelled" ? <EditorPanel title={selectedPayment ? t("records.edit") : t("records.new")}><form action={savePayment} className="content-form">
+    {canManage && selectedItem && selectedItem.status !== "cancelled" && !selectedPayment?.voided_at ? <EditorPanel title={selectedPayment ? t("records.edit") : t("records.new")}><form action={savePayment} className="content-form">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="id" value={selectedPayment?.id ?? ""} /><input type="hidden" name="payment_item_id" value={selectedItem.id} /><input type="hidden" name="currency" value={selectedItem.currency} />
       <div className="payment-item-context"><strong>{selectedItem.title}</strong><span>{t("records.context", { currency: selectedItem.currency, amount: money(Number(selectedItem.amount_due), selectedItem.currency, locale) })}</span></div>
       <Field label={t("fields.amountPaid")} name="amount_paid" type="number" min="0.01" step="0.01" defaultValue={selectedPayment?.amount_paid} required />
@@ -100,10 +100,10 @@ export default async function PaymentsPage({ params, searchParams }: { params: P
       <Field label={t("fields.reference")} name="reference" defaultValue={selectedPayment?.reference} maxLength={200} />
       <TextareaField label={t("fields.notes")} name="notes" defaultValue={selectedPayment?.notes} rows={3} />
       <FormActions saveLabel={t("records.save")} cancelLabel={t("cancel")} cancelHref={`/admin/payments?item=${selectedItem.id}`} />
-    </form></EditorPanel> : null}
+    </form>{selectedPayment ? <form action={voidPayment} className="content-form payment-void-form"><input type="hidden" name="locale" value={locale} /><input type="hidden" name="payment_item_id" value={selectedItem.id} /><input type="hidden" name="payment_id" value={selectedPayment.id} /><TextareaField label={t("fields.voidReason")} name="reason" required rows={2} maxLength={500} /><button className="content-secondary-button danger" type="submit">{t("records.void")}</button></form> : null}</EditorPanel> : null}
 
     <section className="content-list"><div className="content-list-heading"><h2>{t("schedule.title")}</h2><span>{filtered.length}</span></div><div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.installment")}</th><th>{t("fields.project")}</th><th>{t("fields.due")}</th><th>{t("fields.received")}</th><th>{t("fields.status")}</th><th>{common("actions")}</th></tr></thead><tbody>{filtered.map((item) => { const paid = received(item); return <tr key={item.id}><td><strong>{item.title}</strong><small>{item.due_on || t("noDueDate")}</small></td><td>{projectNames.get(item.project_id) ?? t("unknownProject")}</td><td>{money(Number(item.amount_due), item.currency, locale)}</td><td>{money(paid, item.currency, locale)}</td><td><StatusBadge active={item.status === "paid"} activeLabel={t(`statuses.${item.status}`)} inactiveLabel={t(`statuses.${item.status}`)} warning={item.status === "overdue"} /></td><td><Link href={`/admin/payments?item=${item.id}`}>{canManage ? t("manage") : t("view")}</Link></td></tr>; })}</tbody></table></div></section>
 
-    {selectedItem ? <section className="content-list payment-records"><div className="content-list-heading"><h2>{t("records.title")}</h2><span>{(paymentsByItem.get(selectedItem.id) ?? []).length}</span></div>{(paymentsByItem.get(selectedItem.id) ?? []).length ? <div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.paidAt")}</th><th>{t("fields.amountPaid")}</th><th>{t("fields.method")}</th><th>{t("fields.reference")}</th>{canManage ? <th>{common("actions")}</th> : null}</tr></thead><tbody>{(paymentsByItem.get(selectedItem.id) ?? []).map((payment) => <tr key={payment.id}><td>{date.format(new Date(payment.paid_at))}</td><td><strong>{money(Number(payment.amount_paid), payment.currency, locale)}</strong><small>{payment.notes || "—"}</small></td><td>{payment.method ? t(`methods.${payment.method}`) : "—"}</td><td>{payment.reference || "—"}</td>{canManage ? <td><Link href={`/admin/payments?item=${selectedItem.id}&payment=${payment.id}`}>{t("correct")}</Link></td> : null}</tr>)}</tbody></table></div> : <p className="payment-empty">{t("records.empty")}</p>}</section> : null}
+    {selectedItem ? <section className="content-list payment-records"><div className="content-list-heading"><h2>{t("records.title")}</h2><span>{(paymentsByItem.get(selectedItem.id) ?? []).length}</span></div>{(paymentsByItem.get(selectedItem.id) ?? []).length ? <div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.paidAt")}</th><th>{t("fields.amountPaid")}</th><th>{t("fields.method")}</th><th>{t("fields.reference")}</th>{canManage ? <th>{common("actions")}</th> : null}</tr></thead><tbody>{(paymentsByItem.get(selectedItem.id) ?? []).map((payment) => <tr key={payment.id}><td>{date.format(new Date(payment.paid_at))}</td><td><strong>{money(Number(payment.amount_paid), payment.currency, locale)}</strong><small>{payment.voided_at ? `${t("records.voided")}: ${payment.void_reason ?? "—"}` : payment.notes || "—"}</small></td><td>{payment.method ? t(`methods.${payment.method}`) : "—"}</td><td>{payment.reference || "—"}</td>{canManage ? <td>{payment.voided_at ? <span>{t("records.voided")}</span> : <Link href={`/admin/payments?item=${selectedItem.id}&payment=${payment.id}`}>{t("correct")}</Link>}</td> : null}</tr>)}</tbody></table></div> : <p className="payment-empty">{t("records.empty")}</p>}</section> : null}
   </main>;
 }
