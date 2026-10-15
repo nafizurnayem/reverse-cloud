@@ -6,6 +6,7 @@ import { ArrowRight, Calendar, Clock, Flag } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import { fetchClientProjects } from "@/lib/portal/portal-server";
 import { calculateClientProgress } from "@/lib/portal/portal-calc";
+import { toBanglaDigits } from "@/lib/money";
 
 export default async function PortalProjectsPage({
   params,
@@ -88,7 +89,7 @@ export default async function PortalProjectsPage({
                       {isBn ? "সার্বিক অগ্রগতি" : "Overall Progress"}
                     </span>
                     <span className="font-mono font-bold text-primary">
-                      {progressPercent}%
+                      {isBn ? toBanglaDigits(progressPercent) : progressPercent}%
                     </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -106,7 +107,9 @@ export default async function PortalProjectsPage({
                     </span>
                     <span className="flex items-center gap-1">
                       <Flag className="h-3 w-3" />
-                      <span>{visibleCount} {isBn ? "মাইলফলক" : "Milestones"}</span>
+                      <span>
+                        {isBn ? toBanglaDigits(visibleCount) : visibleCount} {isBn ? "মাইলফলক" : "Milestones"}
+                      </span>
                     </span>
                   </div>
                 </div>

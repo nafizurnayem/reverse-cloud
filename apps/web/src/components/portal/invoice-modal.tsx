@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Printer, X } from "lucide-react";
+import { Download, FileText, Printer, X } from "lucide-react";
 import type { PortalPaymentItem, PortalProject } from "@/lib/portal/types";
 import { formatBdt, formatUsd } from "@/lib/money";
 
@@ -38,10 +38,19 @@ export function InvoiceModal({
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href={payment.invoiceDownloadUrl || `/api/invoices/${payment.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted hover:text-primary transition-colors shadow-sm"
+            >
+              <Download className="h-3.5 w-3.5 text-primary" />
+              <span>{isBn ? "ডাউনলোড" : "Download"}</span>
+            </a>
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-sm"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>{isBn ? "প্রিন্ট" : "Print"}</span>

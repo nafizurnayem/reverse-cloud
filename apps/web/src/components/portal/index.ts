@@ -5,3 +5,10 @@ export { LivePreviewCard } from "./live-preview-card";
 export { ActivityFeed } from "./activity-feed";
 export { PaymentSchedule } from "./payment-schedule";
 export { InvoiceModal } from "./invoice-modal";
+export {
+  PaymentsView,
+  type CurrencyTotal,
+  type PaymentReceipt,
+  type PaymentScheduleItem,
+} from "./payments-view";
+

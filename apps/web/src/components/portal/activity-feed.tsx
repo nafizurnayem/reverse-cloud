@@ -9,6 +9,7 @@ import {
   Rocket,
 } from "lucide-react";
 import type { PortalActivityItem } from "@/lib/portal/types";
+import { toBanglaDigits } from "@/lib/money";
 
 interface ActivityFeedProps {
   activity: PortalActivityItem[];
@@ -55,7 +56,7 @@ export function ActivityFeed({ activity, locale }: ActivityFeedProps) {
           <span>{isBn ? "সাম্প্রতিক কার্যকলাপ ও আপডেট" : "Recent Activity & Feed"}</span>
         </h3>
         <span className="text-[11px] text-muted-foreground">
-          {activity.length} {isBn ? "আপডেট" : "Events"}
+          {isBn ? toBanglaDigits(activity.length) : activity.length} {isBn ? "আপডেট" : "Events"}
         </span>
       </div>
 
