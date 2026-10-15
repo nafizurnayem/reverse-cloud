@@ -437,7 +437,7 @@
     "formTitle": "Project enquiry",
     "formDescription": "Fields marked as required must be completed. Add either an email address or phone number.",
     "contactHint": "Add at least one contact method: email or phone.",
-    "consent": "I agree that Reverse Cloud may use these details to respond to my enquiry.",
+    "consent": "I consent to Reverse Cloud using these details to answer my enquiry as described in the <privacy>Privacy Policy</privacy>. The <terms>Terms</terms> apply.",
     "submit": "Send enquiry",
     "sending": "Sending…",
     "success": "Thank you. Your enquiry was saved and our team has been notified.",
@@ -494,6 +494,8 @@
     "wizard": "Service Finder",
     "contact": "Contact",
     "login": "Staff & Client Login",
+    "privacy": "Privacy",
+    "terms": "Terms",
     "webDev": "Web Development",
     "aiSolutions": "Agentic AI",
     "automation": "Workflow Automation",
@@ -986,6 +988,32 @@
       "paid": "Paid",
       "overdue": "Overdue",
       "cancelled": "Cancelled"
+    }
+  },
+  "Legal": {
+    "privacy": {
+      "metadata": { "title": "Privacy Policy — Reverse Cloud", "description": "How Reverse Cloud collects, uses, protects and retains personal information." },
+      "eyebrow": "Legal", "title": "Privacy Policy",
+      "intro": "This policy explains what information Reverse Cloud receives through this website and client services, why we use it, and the choices available to you.",
+      "effective": "Effective date", "lastUpdated": "Last updated",
+      "sections": {
+        "collection": { "title": "Information we collect and use", "body": "We collect information you submit, including contact, account, project, payment-reference and scheduling details. Limited technical information supports sessions, security and abuse prevention. We use it to answer enquiries, provide services, arrange meetings, document payments, secure the service and meet legal duties." },
+        "sharing": { "title": "Providers and sharing", "body": "We share only what is needed with providers such as Supabase for authentication and data, Google for optional sign-in, Cloudflare for security, Cal.com for scheduling, and configured notification providers. We may disclose information when law requires it or to protect the service. We do not sell personal information." },
+        "retention": { "title": "Retention and security", "body": "We retain records only as long as needed for service delivery, security, disputes and applicable record-keeping duties. Anonymous chat sessions are scheduled to expire after 90 days. Cal.com delivery records store identifiers and hashes rather than full attendee payloads. We use access controls, encrypted transport, signed requests and audit records." },
+        "rights": { "title": "Your choices and contact", "body": "You may ask to access, correct or delete your information, restrict certain processing, or withdraw consent for future use. Some records may remain where contracts, security or law require it. Send a request through the contact page. We may update this policy and will show the revision date here." }
+      }
+    },
+    "terms": {
+      "metadata": { "title": "Terms of Service — Reverse Cloud", "description": "Terms for using Reverse Cloud's website, accounts and professional services." },
+      "eyebrow": "Legal", "title": "Terms of Service",
+      "intro": "These terms govern the Reverse Cloud website, client portal, scheduling tools and professional services. A signed proposal may add project-specific terms.",
+      "effective": "Effective date", "lastUpdated": "Last updated",
+      "sections": {
+        "use": { "title": "Using the service", "body": "You must provide accurate information, protect account credentials and avoid unauthorized access, harmful content, impersonation, interference or unlawful use. We may limit access needed to protect users and the service." },
+        "projects": { "title": "Proposals, work and payments", "body": "Website estimates and preliminary discussions are informational until both parties accept a written proposal. That document controls scope, timing, acceptance, fees, taxes and payment milestones. Portal payment records document amounts acknowledged by Reverse Cloud." },
+        "rights": { "title": "Content and third-party services", "body": "You retain rights in material you provide and authorize its use to perform the service. Each party retains pre-existing intellectual property; deliverable rights follow the accepted proposal. Authentication, scheduling and communications may rely on third parties and their separate terms." },
+        "changes": { "title": "Availability, termination and changes", "body": "Website features may be interrupted or changed. To the extent allowed by law, neither party is liable for indirect or consequential loss; project-specific terms take priority. Account access may be suspended for security, non-payment or material breach. Updated terms show their revision date." }
+      }
     }
   }
 }

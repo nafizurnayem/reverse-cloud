@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
+import { Link } from "@/i18n/navigation";
 
 type Service = { id: string; name: string };
 
@@ -78,7 +79,10 @@ export function ContactForm({ services, siteKey }: { services: Service[]; siteKe
         <label><span>{t("fields.service")}</span><select name="service_id" defaultValue=""><option value="">{t("fields.chooseService")}</option>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
         <label className="contact-wide"><span>{t("fields.message")}</span><textarea name="message" minLength={10} maxLength={5000} rows={7} required /></label>
         <label className="contact-honeypot" aria-hidden="true"><span>Website</span><input name="website" tabIndex={-1} autoComplete="off" /></label>
-        <label className="contact-consent"><input name="consent" type="checkbox" required /><span>{t("consent")}</span></label>
+        <label className="contact-consent"><input name="consent" type="checkbox" required /><span>{t.rich("consent", {
+          privacy: (chunks) => <Link href="/privacy" className="font-semibold underline">{chunks}</Link>,
+          terms: (chunks) => <Link href="/terms" className="font-semibold underline">{chunks}</Link>,
+        })}</span></label>
         {siteKey ? <div className="contact-turnstile"><div className="cf-turnstile" data-sitekey={siteKey} data-action="contact" data-language={locale} /></div> : <p className="contact-alert contact-alert-error" role="alert">{t("errors.not_configured")}</p>}
         {state === "sent" ? <p className="contact-alert contact-alert-success" role="status">{t("success")}</p> : null}
         {state === "error" ? <p className="contact-alert contact-alert-error" role="alert">{t(`errors.${errorCode}`)}</p> : null}
