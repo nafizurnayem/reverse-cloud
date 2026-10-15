@@ -19,6 +19,7 @@ export function FallbackState({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState(initialMessage);
+  const [consent, setConsent] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -35,7 +36,7 @@ export function FallbackState({
           name,
           email,
           message,
-          consent: true,
+          consent,
           locale,
           utm: { utm_source: "chat_fallback" },
         }),
@@ -127,6 +128,13 @@ export function FallbackState({
             className="w-full rounded-md border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
           />
         </div>
+
+        <label className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
+          <input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" />
+          <span>{isBn ? "আমার অনুরোধের উত্তর দিতে আমার তথ্য ব্যবহারে সম্মতি দিচ্ছি। " : "I consent to the use of my details to answer this enquiry. "}
+            <Link href={`/${locale}/privacy`} className="font-semibold text-primary hover:underline">{isBn ? "গোপনীয়তা নীতি" : "Privacy Policy"}</Link>
+          </span>
+        </label>
 
         {state === "error" && (
           <p className="text-[11px] text-destructive font-medium">{errorMessage}</p>

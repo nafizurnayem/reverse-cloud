@@ -81,6 +81,7 @@ test("API endpoints bypass localization", async () => {
     ["/api/estimate", "POST"],
     ["/api/leads", "POST"],
     ["/api/schedule/slots", "GET"],
+    ["/v1/schedule/slots", "GET"],
     ["/api/webhooks/calcom", "POST"],
   ]) {
     const response = await fetch(`${baseURL}${path}`, {
