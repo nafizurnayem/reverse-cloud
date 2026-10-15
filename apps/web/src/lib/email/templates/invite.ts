@@ -1,10 +1,12 @@
-import { toBanglaDigits, wrapEmailLayout } from "../layout";
+import { safeEmailSubject, toBanglaDigits, wrapEmailLayout } from "../layout";
 import type { InviteEmailContext, RenderedEmail } from "../types";
 
 export function renderInviteEmail(context: InviteEmailContext): RenderedEmail {
   const locale = context.locale ?? "en";
   const isBn = locale === "bn";
-  const hours = context.expiresInHours ?? 48;
+  const hours = Number.isFinite(context.expiresInHours)
+    ? Math.min(24 * 14, Math.max(1, Math.round(context.expiresInHours as number)))
+    : 24 * 14;
   const displayHours = isBn ? toBanglaDigits(hours) : String(hours);
 
   const subject = isBn
@@ -51,5 +53,5 @@ export function renderInviteEmail(context: InviteEmailContext): RenderedEmail {
     ctaUrl: context.inviteUrl,
   });
 
-  return { subject, html, text };
+  return { subject: safeEmailSubject(subject), html, text };
 }

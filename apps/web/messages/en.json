@@ -160,25 +160,76 @@
     "public": "Public",
     "private": "Private",
     "resources": {
-      "services": { "title": "Services", "description": "Edit the service catalog, bilingual descriptions and display pricing." },
-      "faqs": { "title": "FAQs", "description": "Maintain general and service-specific questions in both languages." },
-      "portfolio": { "title": "Portfolio", "description": "Create consent-controlled case studies and project summaries." },
-      "blog": { "title": "Blog", "description": "Draft and publish bilingual articles with SEO metadata." },
-      "settings": { "title": "Site settings", "description": "Manage public contact information and operational site settings." }
+      "services": {
+        "title": "Services",
+        "description": "Edit the service catalog, bilingual descriptions and display pricing."
+      },
+      "faqs": {
+        "title": "FAQs",
+        "description": "Maintain general and service-specific questions in both languages."
+      },
+      "portfolio": {
+        "title": "Portfolio",
+        "description": "Create consent-controlled case studies and project summaries."
+      },
+      "blog": {
+        "title": "Blog",
+        "description": "Draft and publish bilingual articles with SEO metadata."
+      },
+      "settings": {
+        "title": "Site settings",
+        "description": "Manage public contact information and operational site settings."
+      }
     },
     "fields": {
-      "nameEn": "English name", "nameBn": "Bangla name", "slug": "Slug", "icon": "Icon",
-      "summaryEn": "English summary", "summaryBn": "Bangla summary", "bodyEn": "English body", "bodyBn": "Bangla body",
-      "pricingModel": "Pricing model", "startingUsd": "Starting price (USD)", "sortOrder": "Sort order", "published": "Published",
-      "service": "Service", "questionEn": "English question", "questionBn": "Bangla question", "answerEn": "English answer", "answerBn": "Bangla answer",
-      "titleEn": "English title", "titleBn": "Bangla title", "clientName": "Public client name",
-      "challengeEn": "English challenge", "challengeBn": "Bangla challenge", "solutionEn": "English solution", "solutionBn": "Bangla solution",
-      "resultEn": "English result", "resultBn": "Bangla result", "coverPath": "Cover image path", "liveUrl": "Live URL",
-      "techStack": "Technology stack", "completedOn": "Completion date", "services": "Related services", "clientConsent": "Client consent recorded", "featured": "Featured",
-      "excerptEn": "English excerpt", "excerptBn": "Bangla excerpt", "tags": "Tags", "seoTitle": "SEO title", "seoDescription": "SEO description",
-      "settingKey": "Setting key", "jsonValue": "JSON value", "publicSetting": "Public setting"
+      "nameEn": "English name",
+      "nameBn": "Bangla name",
+      "slug": "Slug",
+      "icon": "Icon",
+      "summaryEn": "English summary",
+      "summaryBn": "Bangla summary",
+      "bodyEn": "English body",
+      "bodyBn": "Bangla body",
+      "pricingModel": "Pricing model",
+      "startingUsd": "Starting price (USD)",
+      "sortOrder": "Sort order",
+      "published": "Published",
+      "service": "Service",
+      "questionEn": "English question",
+      "questionBn": "Bangla question",
+      "answerEn": "English answer",
+      "answerBn": "Bangla answer",
+      "titleEn": "English title",
+      "titleBn": "Bangla title",
+      "clientName": "Public client name",
+      "challengeEn": "English challenge",
+      "challengeBn": "Bangla challenge",
+      "solutionEn": "English solution",
+      "solutionBn": "Bangla solution",
+      "resultEn": "English result",
+      "resultBn": "Bangla result",
+      "coverPath": "Cover image path",
+      "liveUrl": "Live URL",
+      "techStack": "Technology stack",
+      "completedOn": "Completion date",
+      "services": "Related services",
+      "clientConsent": "Client consent recorded",
+      "featured": "Featured",
+      "excerptEn": "English excerpt",
+      "excerptBn": "Bangla excerpt",
+      "tags": "Tags",
+      "seoTitle": "SEO title",
+      "seoDescription": "SEO description",
+      "settingKey": "Setting key",
+      "jsonValue": "JSON value",
+      "publicSetting": "Public setting"
     },
-    "options": { "fixed": "Fixed", "hourly": "Hourly", "retainer": "Retainer", "custom": "Custom quote" },
+    "options": {
+      "fixed": "Fixed",
+      "hourly": "Hourly",
+      "retainer": "Retainer",
+      "custom": "Custom quote"
+    },
     "hints": {
       "servicePublish": "Publishing requires an English summary and body.",
       "consent": "Confirm that the client approved public use of this case study.",
@@ -186,7 +237,15 @@
       "publicSetting": "Public settings can be read by website visitors.",
       "multiSelect": "Hold Ctrl or Command to select more than one service."
     },
-    "media": { "title": "Portfolio gallery", "file": "Image file", "altEn": "English alternative text", "altBn": "Bangla alternative text", "useAsCover": "Use as cover image", "upload": "Upload image", "empty": "No gallery images have been uploaded." },
+    "media": {
+      "title": "Portfolio gallery",
+      "file": "Image file",
+      "altEn": "English alternative text",
+      "altBn": "Bangla alternative text",
+      "useAsCover": "Use as cover image",
+      "upload": "Upload image",
+      "empty": "No gallery images have been uploaded."
+    },
     "errors": {
       "duplicateSlug": "That slug or unique value is already in use.",
       "publishNeedsEnglish": "Add the required English content before publishing.",
@@ -203,10 +262,23 @@
     "description": "Approve client feedback, reject unsuitable submissions and add verified reviews manually.",
     "newReview": "Add a review",
     "fields": {
-      "name": "Reviewer name", "title": "Reviewer title", "rating": "Rating", "locale": "Language",
-      "source": "Source", "sourceUrl": "Source URL", "body": "Review", "featured": "Featured review"
+      "name": "Reviewer name",
+      "title": "Reviewer title",
+      "rating": "Rating",
+      "locale": "Language",
+      "source": "Source",
+      "sourceUrl": "Source URL",
+      "body": "Review",
+      "featured": "Featured review"
     },
-    "options": { "manual": "Manual", "other": "Other", "portal": "Client portal", "pending": "Pending", "approved": "Approved", "rejected": "Rejected" }
+    "options": {
+      "manual": "Manual",
+      "other": "Other",
+      "portal": "Client portal",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
   },
   "AdminLeads": {
     "eyebrow": "Sales inbox",
@@ -229,13 +301,134 @@
       "status": "Status",
       "received": "Received"
     },
-    "filters": { "allStatuses": "All statuses", "allSources": "All sources", "apply": "Apply filters", "clear": "Clear" },
-    "statuses": { "new": "New", "contacted": "Contacted", "qualified": "Qualified", "converted": "Converted", "lost": "Lost" },
-    "sources": { "contact_form": "Contact form", "chat": "Chat", "estimator": "Estimator", "handoff": "Human handoff", "manual": "Manual" },
-    "errors": { "invalidInput": "Choose a valid lead and status.", "saveFailed": "The lead could not be updated. Please try again." }
+    "filters": {
+      "allStatuses": "All statuses",
+      "allSources": "All sources",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "statuses": {
+      "new": "New",
+      "contacted": "Contacted",
+      "qualified": "Qualified",
+      "converted": "Converted",
+      "lost": "Lost"
+    },
+    "sources": {
+      "contact_form": "Contact form",
+      "chat": "Chat",
+      "estimator": "Estimator",
+      "handoff": "Human handoff",
+      "manual": "Manual"
+    },
+    "errors": {
+      "invalidInput": "Choose a valid lead and status.",
+      "saveFailed": "The lead could not be updated. Please try again."
+    }
+  },
+  "AdminClients": {
+    "eyebrow": "Client operations",
+    "title": "Clients and invitations",
+    "description": "Create client records, maintain account details and issue secure portal invitations.",
+    "newClient": "Add a client",
+    "editClient": "Edit client",
+    "save": "Save client",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "archive": "Archive",
+    "restore": "Restore",
+    "allClients": "Clients",
+    "saved": {
+      "client": "The client record was saved.",
+      "archived": "The client was archived.",
+      "restored": "The client was restored.",
+      "inviteRevoked": "The invitation was revoked."
+    },
+    "fields": {
+      "client": "Client",
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "country": "Country",
+      "timezone": "Timezone",
+      "locale": "Preferred language",
+      "stage": "Stage",
+      "source": "Source",
+      "sourceRef": "Source reference",
+      "recordStatus": "Record status",
+      "account": "Account",
+      "invite": "Invitation"
+    },
+    "filters": {
+      "allStages": "All stages",
+      "allSources": "All sources",
+      "activeRecords": "Active records",
+      "archivedRecords": "Archived records",
+      "allRecords": "All records",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "stages": {
+      "prospect": "Prospect",
+      "active": "Active",
+      "past": "Past"
+    },
+    "sources": {
+      "website": "Website",
+      "fiverr": "Fiverr",
+      "upwork": "Upwork",
+      "referral": "Referral",
+      "walk_in": "Walk-in",
+      "other": "Other"
+    },
+    "locales": {
+      "en": "English",
+      "bn": "Bangla"
+    },
+    "account": {
+      "linked": "Linked",
+      "unlinked": "Not linked",
+      "archived": "Archived"
+    },
+    "invite": {
+      "eyebrow": "Portal access",
+      "title": "Client invitation",
+      "description": "Create a secure 14-day invitation for the saved client email. Creating a new invitation revokes any previous open invitation.",
+      "latest": "Latest invitation",
+      "none": "No invitation has been created for this client.",
+      "create": "Create invitation link",
+      "creating": "Creating link…",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "copyFailed": "Copy failed. Select and copy the link manually.",
+      "oneTimeHint": "Copy this link now. The raw token is shown only once.",
+      "expires": "Expires {date}",
+      "revoke": "Revoke invitation",
+      "needsEmail": "Save a valid client email before creating an invitation.",
+      "alreadyLinked": "This client already has a linked portal account.",
+      "archived": "Restore this client before creating an invitation.",
+      "statuses": {
+        "none": "None",
+        "open": "Open",
+        "accepted": "Accepted",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      }
+    },
+    "errors": {
+      "invalidInput": "Complete the required fields with valid values.",
+      "duplicateEmail": "Another client already uses that email address.",
+      "saveFailed": "The client could not be saved. Please try again.",
+      "inviteFailed": "The invitation could not be changed. Refresh and try again.",
+      "alreadyLinked": "This client already has a linked account."
+    }
   },
   "Contact": {
-    "metadata": { "title": "Contact — Reverse Cloud", "description": "Tell Reverse Cloud about your web, AI, automation or data project." },
+    "metadata": {
+      "title": "Contact — Reverse Cloud",
+      "description": "Tell Reverse Cloud about your web, AI, automation or data project."
+    },
     "eyebrow": "Start a conversation",
     "title": "Tell us what you want to build.",
     "description": "Share the goal, the problem and any timing you already have in mind. We will review it and reply with a practical next step.",
@@ -307,7 +500,6 @@
     "scraping": "Python & Scraping",
     "rights": "All rights reserved."
   },
-
   "Services": {
     "metadata": {
       "title": "Services — Reverse Cloud",
@@ -580,10 +772,212 @@
     "startDate": "Start Date",
     "invoice": "Invoice",
     "print": "Print"
+  },
+  "AdminProjects": {
+    "eyebrow": "Project operations",
+    "title": "Projects",
+    "description": "Create projects, plan weighted milestones, assign staff and publish client updates.",
+    "newProject": "Create a project",
+    "editProject": "Edit project",
+    "save": "Save project",
+    "cancel": "Cancel",
+    "edit": "Manage",
+    "allProjects": "Projects",
+    "unknownClient": "Client details unavailable",
+    "openPreview": "Open preview",
+    "saved": {
+      "project": "The project was saved.",
+      "milestones": "The milestone plan was saved.",
+      "member": "The staff assignment was saved.",
+      "memberRemoved": "The staff member was removed.",
+      "update": "The project update was published.",
+      "updateRemoved": "The project update was deleted."
+    },
+    "errors": {
+      "invalidInput": "Complete the required fields with valid values.",
+      "saveFailed": "The project could not be saved.",
+      "activationNeedsMilestones": "A project can become active only after its milestone weights total exactly 100%.",
+      "invalidMilestones": "Add at least one valid milestone and make the weights total exactly 100%.",
+      "milestoneSaveFailed": "The milestone plan could not be saved. Refresh and try again.",
+      "memberSaveFailed": "The staff assignment could not be changed.",
+      "invalidUpdate": "Enter a valid project update.",
+      "updateSaveFailed": "The project update could not be changed."
+    },
+    "fields": {
+      "client": "Client",
+      "selectClient": "Select a client",
+      "projectTitle": "Project title",
+      "description": "Description",
+      "status": "Status",
+      "previewUrl": "Preview URL",
+      "startsOn": "Start date",
+      "dueOn": "Due date",
+      "progress": "Progress",
+      "milestoneTitle": "Milestone title",
+      "weight": "Weight (%)",
+      "done": "Completed",
+      "clientVisible": "Visible to client",
+      "staffMember": "Staff member",
+      "projectRole": "Project role",
+      "updateBody": "Update"
+    },
+    "filters": {
+      "allStatuses": "All statuses",
+      "apply": "Apply filter",
+      "clear": "Clear"
+    },
+    "statuses": {
+      "on_hold": "On hold",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "summary": {
+      "staffProgress": "Overall progress",
+      "clientProgress": "Client-visible progress",
+      "milestones": "Milestones complete",
+      "preview": "Project preview"
+    },
+    "milestones": {
+      "eyebrow": "Delivery plan",
+      "title": "Milestones",
+      "description": "Save the whole plan together. Weights must total 100% before the project can be activated.",
+      "add": "Add milestone",
+      "remove": "Remove",
+      "save": "Save milestone plan",
+      "total": "Total weight",
+      "totalHint": "The total must be exactly 100%."
+    },
+    "team": {
+      "eyebrow": "Delivery team",
+      "title": "Staff assignments",
+      "description": "Assign active staff to this project and choose their project role.",
+      "selectStaff": "Select staff",
+      "assign": "Assign staff",
+      "remove": "Remove",
+      "empty": "No staff members are assigned yet.",
+      "unnamed": "Unnamed staff member"
+    },
+    "roles": {
+      "lead": "Lead",
+      "developer": "Developer",
+      "designer": "Designer",
+      "qa": "QA",
+      "observer": "Observer"
+    },
+    "updates": {
+      "eyebrow": "Client communication",
+      "title": "Updates feed",
+      "description": "Publish progress notes and choose whether each one appears in the client portal.",
+      "visibilityHint": "The client can read this update in their portal.",
+      "publish": "Publish update",
+      "visible": "Client visible",
+      "internal": "Staff only",
+      "delete": "Delete",
+      "empty": "No project updates have been published yet."
+    }
+  },
+  "AdminPayments": {
+    "eyebrow": "Finance operations",
+    "title": "Payment schedules",
+    "description": "Plan project installments, record external payments and review acknowledged receipts.",
+    "cancel": "Cancel",
+    "manage": "Manage",
+    "view": "View",
+    "correct": "Correct",
+    "readOnly": "You have read-only payment access.",
+    "unknownProject": "Project details unavailable",
+    "noDueDate": "No due date",
+    "saved": {
+      "item": "The payment schedule item was saved.",
+      "payment": "The payment record was saved."
+    },
+    "errors": {
+      "invalidItem": "Enter valid installment details.",
+      "itemSaveFailed": "The installment could not be saved.",
+      "invalidPayment": "Enter valid payment details.",
+      "paymentSaveFailed": "The payment record could not be saved.",
+      "currencyMismatch": "The payment currency must match the installment currency."
+    },
+    "summary": {
+      "scheduled": "Scheduled",
+      "received": "Received",
+      "outstanding": "Outstanding"
+    },
+    "filters": {
+      "allProjects": "All projects",
+      "allStatuses": "All statuses",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "fields": {
+      "project": "Project",
+      "selectProject": "Select a project",
+      "title": "Installment title",
+      "description": "Description",
+      "amountDue": "Amount due",
+      "currency": "Currency",
+      "status": "Status",
+      "dueOn": "Due date",
+      "sortOrder": "Display order",
+      "installment": "Installment",
+      "due": "Due",
+      "received": "Received",
+      "amountPaid": "Amount received",
+      "paidAt": "Received at",
+      "method": "Payment method",
+      "reference": "Reference",
+      "notes": "Notes"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    },
+    "methods": {
+      "bank_transfer": "Bank transfer",
+      "card": "Card",
+      "mobile_banking": "Mobile banking",
+      "cash": "Cash",
+      "crypto": "Crypto",
+      "other": "Other"
+    },
+    "schedule": {
+      "title": "Installment schedule",
+      "new": "Add an installment",
+      "edit": "Edit installment",
+      "save": "Save installment"
+    },
+    "records": {
+      "title": "Payment records",
+      "new": "Record a payment",
+      "edit": "Correct payment record",
+      "save": "Save payment",
+      "context": "{amount} due in {currency}",
+      "empty": "No payments have been recorded for this installment."
+    }
+  },
+  "PortalPayments": {
+    "back": "Back to projects",
+    "title": "Payments and receipts",
+    "description": "Review your project payment schedule and every payment acknowledged by Reverse Cloud.",
+    "scheduled": "Scheduled",
+    "received": "Received",
+    "outstanding": "Outstanding",
+    "project": "Project",
+    "amountDue": "Amount due",
+    "amountReceived": "Received",
+    "dueDate": "Due date",
+    "notSet": "Not set",
+    "receipts": "Acknowledged payments",
+    "emptyTitle": "No payment schedule yet",
+    "emptyDescription": "Your payment schedule will appear here after it is prepared.",
+    "statuses": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    }
   }
 }
-
-
-
-
-

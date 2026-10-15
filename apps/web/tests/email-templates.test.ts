@@ -180,5 +180,34 @@ describe("Transactional Email Templates (Wave 3 / Task 3.7)", () => {
       expect(email.html.length).toBeGreaterThan(100);
       expect(email.text.length).toBeGreaterThan(50);
     });
+
+    it("escapes dynamic HTML and rejects unsafe CTA URLs", () => {
+      const email = renderInviteEmail({
+        recipientName: '<img src=x onerror="alert(1)">',
+        inviteUrl: "javascript:alert(1)",
+        locale: "en",
+      });
+
+      expect(email.html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+      expect(email.html).not.toContain("<img src=x");
+      expect(email.html).not.toContain("javascript:");
+      expect(email.text).not.toContain("javascript:");
+      expect(email.text).toContain("336 hours");
+    });
+
+    it("sanitizes subject control characters and clamps percentages", () => {
+      const email = renderMilestoneUpdatedEmail({
+        recipientName: "Client",
+        projectTitle: "Project",
+        milestoneTitle: "Build\r\nBcc: attacker@example.com",
+        progressPercent: 900,
+        status: "in_progress",
+        portalUrl: "https://revcloud.dev/en/portal",
+        locale: "en",
+      });
+
+      expect(email.subject).not.toMatch(/[\r\n]/);
+      expect(email.html).toContain("100%");
+    });
   });
 });

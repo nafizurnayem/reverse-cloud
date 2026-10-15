@@ -1,5 +1,29 @@
 import type { EmailLocale } from "./types";
 
+export function escapeEmailHtml(value: unknown): string {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] ?? character);
+}
+
+export function safeEmailUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function safeEmailSubject(value: unknown): string {
+  return String(value ?? "").replace(/[\r\n\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 200);
+}
+
 export function toBanglaDigits(value: number | string): string {
   const bnDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
   return String(value).replace(/\d/g, (d) => bnDigits[Number(d)]);
@@ -25,6 +49,11 @@ export function wrapEmailLayout({
   ctaUrl,
 }: EmailLayoutOptions): { html: string; text: string } {
   const isBn = locale === "bn";
+  const escapedPreheader = escapeEmailHtml(preheader);
+  const escapedHeading = escapeEmailHtml(heading);
+  const escapedCtaText = ctaText ? escapeEmailHtml(ctaText) : undefined;
+  const validCtaUrl = safeEmailUrl(ctaUrl);
+  const escapedCtaUrl = validCtaUrl ? escapeEmailHtml(validCtaUrl) : undefined;
 
   const footerCompany = isBn
     ? "রিভার্স ক্লাউড ইঞ্জিনিয়ারিং • ঢাকা, বাংলাদেশ এবং ডেলাওয়্যার, যুক্তরাষ্ট্র"
@@ -39,7 +68,7 @@ export function wrapEmailLayout({
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${heading}</title>
+  <title>${escapedHeading}</title>
   <style>
     body { margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
     table { border-collapse: collapse; }
@@ -56,7 +85,7 @@ export function wrapEmailLayout({
   </style>
 </head>
 <body style="background-color: #0f172a; padding: 12px;">
-  <span class="preheader">${preheader}</span>
+  <span class="preheader">${escapedPreheader}</span>
   <table width="100%" border="0" cellspacing="0" cellpadding="0">
     <tr>
       <td align="center">
@@ -69,11 +98,11 @@ export function wrapEmailLayout({
           </tr>
           <tr>
             <td class="content">
-              <h2 class="heading">${heading}</h2>
+              <h2 class="heading">${escapedHeading}</h2>
               ${bodyHtml}
               ${
-                ctaText && ctaUrl
-                  ? `<div class="btn-container"><a href="${ctaUrl}" class="btn" target="_blank">${ctaText}</a></div>`
+                escapedCtaText && escapedCtaUrl
+                  ? `<div class="btn-container"><a href="${escapedCtaUrl}" class="btn" target="_blank" rel="noopener noreferrer">${escapedCtaText}</a></div>`
                   : ""
               }
             </td>
@@ -98,7 +127,7 @@ export function wrapEmailLayout({
     heading,
     `-----------------------------------------------`,
     bodyText,
-    ctaText && ctaUrl ? `\n>> ${ctaText}: ${ctaUrl}\n` : "",
+    ctaText && validCtaUrl ? `\n>> ${ctaText}: ${validCtaUrl}\n` : "",
     `-----------------------------------------------`,
     footerCompany,
     footerSupport,

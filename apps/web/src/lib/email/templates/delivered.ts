@@ -1,4 +1,4 @@
-import { toBanglaDigits, wrapEmailLayout } from "../layout";
+import { escapeEmailHtml, safeEmailSubject, toBanglaDigits, wrapEmailLayout } from "../layout";
 import type { DeliveredEmailContext, RenderedEmail } from "../types";
 
 export function renderDeliveredEmail(
@@ -6,8 +6,12 @@ export function renderDeliveredEmail(
 ): RenderedEmail {
   const locale = context.locale ?? "en";
   const isBn = locale === "bn";
-  const warranty = context.warrantyDays ?? 60;
+  const warranty = Number.isFinite(context.warrantyDays)
+    ? Math.min(3650, Math.max(0, Math.round(context.warrantyDays as number)))
+    : 60;
   const displayWarranty = isBn ? toBanglaDigits(warranty) : String(warranty);
+  const recipientName = escapeEmailHtml(context.recipientName);
+  const projectTitle = escapeEmailHtml(context.projectTitle);
 
   const subject = isBn
     ? `প্রজেক্ট সফলভাবে সমাপ্ত ও হস্তান্তরিত: ${context.projectTitle}`
@@ -35,13 +39,13 @@ export function renderDeliveredEmail(
   </div>`;
 
   const bodyHtml = isBn
-    ? `<p>প্রিয় <strong>${context.recipientName}</strong>,</p>
-       <p>আমরা গর্বের সাথে জানাচ্ছি যে <strong>${context.projectTitle}</strong> প্রজেক্টের সমস্ত ফাইনাল মাইলফলক সফলভাবে সম্পন্ন হয়েছে এবং সম্পূর্ণ সিস্টেম প্রোডাকশনে সফলভাবে হস্তান্তরিত হয়েছে।</p>
+    ? `<p>প্রিয় <strong>${recipientName}</strong>,</p>
+       <p>আমরা গর্বের সাথে জানাচ্ছি যে <strong>${projectTitle}</strong> প্রজেক্টের সমস্ত ফাইনাল মাইলফলক সফলভাবে সম্পন্ন হয়েছে এবং সম্পূর্ণ সিস্টেম প্রোডাকশনে সফলভাবে হস্তান্তরিত হয়েছে।</p>
        ${warrantyBox}
        <p>ক্লাউড আর্কিটেকচার ব্লুপ্রিন্ট, সিআই/সিডি অটোমেশন, সিকিউরিটি ক্রেডেনশিয়াল এবং বিস্তারিত ডকুমেন্টেশন আপনার ক্লায়েন্ট পোর্টালে যুক্ত করা হয়েছে।</p>
        <p>রিভার্স ক্লাউডকে বেছে নেওয়ার জন্য আন্তরিক ধন্যবাদ। ভবিষ্যতে আপনার যেকোনো প্রযুক্তিগত সম্প্রসারণে আমরা পাশে থাকতে প্রস্তুত।</p>`
-    : `<p>Hello <strong>${context.recipientName}</strong>,</p>
-       <p>We are thrilled to announce that all milestones for <strong>${context.projectTitle}</strong> have been completed, verified, and successfully transitioned to live production.</p>
+    : `<p>Hello <strong>${recipientName}</strong>,</p>
+       <p>We are thrilled to announce that all milestones for <strong>${projectTitle}</strong> have been completed, verified, and successfully transitioned to live production.</p>
        ${warrantyBox}
        <p>All IaC repositories, production telemetry dashboards, and developer handoff documentation are accessible in your portal.</p>
        <p>Thank you for partnering with Reverse Cloud. We look forward to powering your next engineering phase.</p>`;
@@ -62,5 +66,5 @@ export function renderDeliveredEmail(
     ctaUrl: context.portalUrl,
   });
 
-  return { subject, html, text };
+  return { subject: safeEmailSubject(subject), html, text };
 }

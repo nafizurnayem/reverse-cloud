@@ -125,15 +125,150 @@ async def _send_telegram(client: httpx.AsyncClient, row: asyncpg.Record, setting
         raise RuntimeError("Telegram rejected the notification")
 
 
-async def _deliver(client: httpx.AsyncClient, row: asyncpg.Record, settings: Settings) -> None:
-    if row["template"] != "new_lead":
-        raise RuntimeError(f"Unsupported notification template: {row['template']}")
-    if row["channel"] == "email":
-        await _send_email(client, row, settings)
-    elif row["channel"] == "telegram":
-        await _send_telegram(client, row, settings)
+def _invite_email(payload: dict[str, Any], settings: Settings) -> tuple[str, str, str]:
+    locale = payload.get("locale") or "en"
+    client_name = payload.get("client_name") or "Valued Client"
+    token = payload.get("token") or ""
+    site_url = getattr(settings, "site_url", "https://reversecloud.io").rstrip("/")
+    invite_url = f"{site_url}/{locale}/accept-invite?token={token}"
+
+    if locale == "bn":
+        subject = "রিভার্স ক্লাউড ক্লায়েন্ট পোর্টালে আপনার আমন্ত্রণ"
+        text = (
+            f"প্রিয় {client_name},\n\n"
+            "আমাদের ইঞ্জিনিয়ারিং দল আপনার প্রজেক্টের জন্য ক্লায়েন্ট পোর্টাল প্রস্তুত করেছে। এই পোর্টালের মাধ্যমে আপনি রিয়েল-টাইমে দেখতে পারবেন:\n"
+            "- মাইলফলক অগ্রগতি ও টাইমলাইন\n"
+            "- লাইভ স্টেজিং প্রিভিউ লিংক\n"
+            "- পেমেন্ট শিডিউল ও ইনভয়েস\n\n"
+            f"পোর্টালে প্রবেশ করুন:\n{invite_url}\n\n"
+            "আমন্ত্রণ লিঙ্কটি ৩৩৬ ঘণ্টা সক্রিয় থাকবে।"
+        )
+        html_content = (
+            f'<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">\n'
+            f'  <h2 style="color: #0f172a;">স্বাগতম, {html.escape(client_name)}!</h2>\n'
+            f'  <p>আমাদের ইঞ্জিনিয়ারিং দল আপনার প্রজেক্টের জন্য ক্লায়েন্ট পোর্টাল প্রস্তুত করেছে। এই পোর্টালের মাধ্যমে আপনি সরাসরি দেখতে পারবেন:</p>\n'
+            f'  <ul style="padding-left: 20px; color: #475569;">\n'
+            f'    <li>রিয়েল-টাইম মাইলফলক এবং ডেলিভারি অগ্রগতি</li>\n'
+            f'    <li>লাইভ স্টেজিং প্রিভিউ পরিবেশ এবং টেস্ট লিংক</li>\n'
+            f'    <li>পেমেন্ট শিডিউল এবং অফিশিয়াল ইনভয়েস ডাউনলোড</li>\n'
+            f'  </ul>\n'
+            f'  <p style="margin: 24px 0;">\n'
+            f'    <a href="{html.escape(invite_url)}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">পোর্টালে প্রবেশ করুন</a>\n'
+            f'  </p>\n'
+            f'  <p style="font-size: 14px; color: #64748b;">নিরাপত্তার স্বার্থে এই আমন্ত্রণ লিঙ্কটি ৩৩৬ ঘণ্টার মধ্যে ব্যবহার করতে হবে।</p>\n'
+            f'</div>'
+        )
     else:
-        raise RuntimeError(f"Unsupported notification channel: {row['channel']}")
+        subject = "Invitation: Access your Reverse Cloud Client Portal"
+        text = (
+            f"Hello {client_name},\n\n"
+            "Our engineering team has provisioned your dedicated client portal. You can now access:\n"
+            "- Real-time milestone progress and timeline\n"
+            "- Live staging preview links\n"
+            "- Payment disbursements and downloadable invoices\n\n"
+            f"Activate your client portal:\n{invite_url}\n\n"
+            "This invitation link is valid for 14 days (336 hours)."
+        )
+        html_content = (
+            f'<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">\n'
+            f'  <h2 style="color: #0f172a;">Welcome to Reverse Cloud, {html.escape(client_name)}!</h2>\n'
+            f'  <p>Our engineering team has provisioned your dedicated client portal. Through this portal, you have real-time read-only access to:</p>\n'
+            f'  <ul style="padding-left: 20px; color: #475569;">\n'
+            f'    <li>Real-time milestone timelines and delivery weights</li>\n'
+            f'    <li>Isolated live staging preview deployments</li>\n'
+            f'    <li>Milestone payment disbursements and official invoices</li>\n'
+            f'  </ul>\n'
+            f'  <p style="margin: 24px 0;">\n'
+            f'    <a href="{html.escape(invite_url)}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Access Client Portal</a>\n'
+            f'  </p>\n'
+            f'  <p style="font-size: 14px; color: #64748b;">For your security, this invitation link remains valid for 336 hours.</p>\n'
+            f'</div>'
+        )
+
+    return subject, text, html_content
+
+
+def _payment_reminder_email(payload: dict[str, Any]) -> tuple[str, str, str]:
+    title = payload.get("title") or "Milestone Payment"
+    amount = payload.get("amount_due") or 0
+    currency = payload.get("currency") or "USD"
+    due_on = payload.get("due_on") or "soon"
+    client_name = payload.get("client_name") or "Valued Client"
+
+    subject = f"Payment Reminder: {title} ({amount} {currency})"
+    text = (
+        f"Hello {client_name},\n\n"
+        f"This is a reminder that payment for '{title}' ({amount} {currency}) is due on {due_on}.\n"
+        "Please visit your client portal to review payment instructions and invoice details."
+    )
+    html_content = (
+        f'<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">\n'
+        f'  <h2 style="color: #0f172a;">Payment Reminder</h2>\n'
+        f'  <p>Hello {html.escape(client_name)},</p>\n'
+        f'  <p>Payment for <strong>{html.escape(str(title))}</strong> ({amount} {currency}) is scheduled for <strong>{html.escape(str(due_on))}</strong>.</p>\n'
+        f'  <p>Please log in to your portal to review and disburse payment.</p>\n'
+        f'</div>'
+    )
+    return subject, text, html_content
+
+
+async def _send_invite_email(client: httpx.AsyncClient, row: asyncpg.Record, settings: Settings) -> None:
+    if not settings.email_api_key or not settings.email_from:
+        raise RuntimeError("EMAIL_API_KEY and EMAIL_FROM are required")
+    payload = _payload(row["payload"])
+    subject, text, html_content = _invite_email(payload, settings)
+    response = await client.post(
+        settings.email_api_url,
+        headers={"authorization": f"Bearer {settings.email_api_key}"},
+        json={
+            "from": settings.email_from,
+            "to": [row["to_address"]],
+            "subject": subject,
+            "text": text,
+            "html": html_content,
+        },
+    )
+    response.raise_for_status()
+
+
+async def _send_payment_reminder_email(client: httpx.AsyncClient, row: asyncpg.Record, settings: Settings) -> None:
+    if not settings.email_api_key or not settings.email_from:
+        raise RuntimeError("EMAIL_API_KEY and EMAIL_FROM are required")
+    payload = _payload(row["payload"])
+    subject, text, html_content = _payment_reminder_email(payload)
+    response = await client.post(
+        settings.email_api_url,
+        headers={"authorization": f"Bearer {settings.email_api_key}"},
+        json={
+            "from": settings.email_from,
+            "to": [row["to_address"]],
+            "subject": subject,
+            "text": text,
+            "html": html_content,
+        },
+    )
+    response.raise_for_status()
+
+
+async def _deliver(client: httpx.AsyncClient, row: asyncpg.Record, settings: Settings) -> None:
+    template = row["template"]
+    if template == "new_lead":
+        if row["channel"] == "email":
+            await _send_email(client, row, settings)
+        elif row["channel"] == "telegram":
+            await _send_telegram(client, row, settings)
+        else:
+            raise RuntimeError(f"Unsupported notification channel: {row['channel']}")
+    elif template == "client_invite":
+        if row["channel"] != "email":
+            raise RuntimeError("client_invite only supports email delivery")
+        await _send_invite_email(client, row, settings)
+    elif template == "payment_due_reminder":
+        if row["channel"] != "email":
+            raise RuntimeError("payment_due_reminder only supports email delivery")
+        await _send_payment_reminder_email(client, row, settings)
+    else:
+        raise RuntimeError(f"Unsupported notification template: {template}")
 
 
 async def process_outbox(settings: Settings | None = None) -> tuple[int, int]:

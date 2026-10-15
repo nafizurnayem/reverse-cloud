@@ -25,11 +25,18 @@ class Settings(BaseSettings):
 	database_min_size: int = Field(default=1, ge=1)
 	database_max_size: int = Field(default=5, ge=1)
 	ai_hmac_secret_current: str | None = None
+	ai_enabled: bool = True
+	ai_daily_token_budget: int = Field(default=1_000_000, ge=1)
+	ai_stream_timeout_seconds: float = Field(default=60.0, ge=1.0)
 	llm_api_key: str | None = None
 	llm_model: str = "gpt-4o-mini"
 	email_api_key: str | None = None
 	email_api_url: str = "https://api.resend.com/emails"
 	email_from: str | None = None
+	site_url: str = Field(
+		default="https://reversecloud.io",
+		validation_alias=AliasChoices("SITE_URL", "NEXT_PUBLIC_SITE_URL"),
+	)
 	telegram_bot_token: str | None = None
 	telegram_chat_id: str | None = None
 	outbox_batch_size: int = Field(default=20, ge=1, le=100)

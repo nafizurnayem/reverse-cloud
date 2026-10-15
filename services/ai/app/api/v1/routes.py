@@ -8,6 +8,13 @@ from ...config import get_settings
 from ...estimator.engine import EstimateInput, estimate_project
 from ...schemas.chat import ChatRequest
 from ...schemas.estimate import EstimateRequest, EstimateResponse
+from ...security.guardrails import (
+    GuardrailViolation,
+    StreamTimeoutError,
+    cap_message_history,
+    detect_prompt_injection,
+    stream_with_timeout,
+)
 from ...security.signing import InvalidSignature, verify_request_signature
 
 router = APIRouter(prefix="/v1")
@@ -19,9 +26,45 @@ def _sse(event: str, payload: dict[str, str]) -> str:
 
 async def _chat_events(payload: ChatRequest):
     yield _sse("message_start", {"conversation_id": payload.conversation_id or ""})
+    settings = get_settings()
+
+    # 1. Kill switch check
+    if not getattr(settings, "ai_enabled", True):
+        yield _sse(
+            "error",
+            {
+                "code": "service_disabled",
+                "message": "AI chat is temporarily disabled. Please reach us through the contact form.",
+            },
+        )
+        return
+
+    # 2. History capping (max 20 messages)
+    payload.messages = cap_message_history(payload.messages)
+
+    # 3. Prompt injection detection
+    latest_user_message = next(
+        (m.content for m in reversed(payload.messages) if m.role == "user"), ""
+    )
+    if detect_prompt_injection(latest_user_message):
+        yield _sse(
+            "error",
+            {
+                "code": "guardrail_blocked",
+                "message": "Your message cannot be processed by the AI system.",
+            },
+        )
+        return
+
     try:
-        async for text in stream_chat_completion(payload):
+        stream = stream_chat_completion(payload)
+        timeout_seconds = getattr(settings, "ai_stream_timeout_seconds", 60.0)
+        async for text in stream_with_timeout(stream, timeout_seconds=timeout_seconds):
             yield _sse("text_delta", {"text": text})
+    except StreamTimeoutError:
+        yield _sse("error", {"code": "timeout", "message": "Response generation timed out."})
+    except GuardrailViolation as error:
+        yield _sse("error", {"code": error.code, "message": error.message})
     except Exception as error:
         yield _sse("error", {"code": "provider_error", "message": str(error)})
     else:

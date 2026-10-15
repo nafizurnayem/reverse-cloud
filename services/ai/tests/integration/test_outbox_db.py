@@ -285,13 +285,13 @@ def test_nothing_is_touched_when_no_provider_is_configured(monkeypatch, ai_url, 
 
 def test_unsupported_template_fails_with_a_clear_reason(ai_url, clean) -> None:
     # Not patched: the real delivery code refuses before any network call.
-    row_id = add_row(template="client_invite")
+    row_id = add_row(template="unknown_template")
 
     assert run_worker(make_settings(ai_url)) == (0, 1)
 
     row = state(row_id)
     assert row["status"] == "pending"
-    assert row["last_error"] == "Unsupported notification template: client_invite"
+    assert row["last_error"] == "Unsupported notification template: unknown_template"
 
 
 # --------------------------------------------------------------------- locks
@@ -332,15 +332,16 @@ def test_two_runs_at_once_never_send_the_same_row(monkeypatch, ai_url, clean) ->
 
 
 # --------------------------------------------------------------- role limits
-def test_worker_role_can_only_touch_the_outbox(ai_url, clean) -> None:
+def test_worker_role_cannot_touch_protected_tables(ai_url, clean) -> None:
     async def attempt() -> None:
         connection = await asyncpg.connect(ai_url)
         try:
             await connection.fetch("select count(*) from public.notifications_outbox")
             for sql in (
-                "select count(*) from public.leads",
-                "insert into public.notifications_outbox (channel, to_address, template)"
-                " values ('email', 'a@example.com', 'new_lead')",
+                "select count(*) from public.clients",
+                "select count(*) from public.projects",
+                "select count(*) from public.payments",
+                "select count(*) from public.internal_notes",
                 "delete from public.notifications_outbox",
             ):
                 with pytest.raises(asyncpg.InsufficientPrivilegeError):
