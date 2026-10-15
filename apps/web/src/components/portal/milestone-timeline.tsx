@@ -2,6 +2,7 @@
 
 import { Calendar, CheckCircle2, Flag } from "lucide-react";
 import type { PortalMilestone } from "@/lib/portal/types";
+import { toBanglaDigits } from "@/lib/money";
 
 interface MilestoneTimelineProps {
   milestones: PortalMilestone[];
@@ -28,7 +29,7 @@ export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps
           </p>
         </div>
         <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-          {visibleMilestones.length} {isBn ? "মাইলফলক" : "Milestones"}
+          {isBn ? toBanglaDigits(visibleMilestones.length) : visibleMilestones.length} {isBn ? "মাইলফলক" : "Milestones"}
         </span>
       </div>
 
@@ -52,7 +53,9 @@ export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps
                 {isDone ? (
                   <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 ) : (
-                  <span className="font-mono text-[11px] font-bold">{index + 1}</span>
+                  <span className="font-mono text-[11px] font-bold">
+                    {isBn ? toBanglaDigits(index + 1) : index + 1}
+                  </span>
                 )}
               </div>
 
@@ -94,10 +97,10 @@ export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps
                   <div className="flex flex-wrap sm:flex-col items-end gap-1.5 shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground">
-                        {isBn ? "ওজন:" : "Weight:"} {m.weight}%
+                        {isBn ? "ওজন:" : "Weight:"} {isBn ? toBanglaDigits(m.weight) : m.weight}%
                       </span>
                       <span className="rounded bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary font-mono">
-                        {m.progress}%
+                        {isBn ? toBanglaDigits(m.progress) : m.progress}%
                       </span>
                     </div>
 

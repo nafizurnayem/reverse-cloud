@@ -3,6 +3,7 @@
 import { Calendar, CheckCircle, Clock } from "lucide-react";
 import type { PortalProject } from "@/lib/portal/types";
 import { calculateClientProgress } from "@/lib/portal/portal-calc";
+import { toBanglaDigits } from "@/lib/money";
 
 interface ProjectProgressBarProps {
   project: PortalProject;
@@ -23,7 +24,7 @@ export function ProjectProgressBar({ project, locale }: ProjectProgressBarProps)
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-extrabold tracking-tight text-foreground font-mono">
-              {progressPercent}%
+              {isBn ? toBanglaDigits(progressPercent) : progressPercent}%
             </span>
             <span className="text-xs text-muted-foreground">
               {isCompleted

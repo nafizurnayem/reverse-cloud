@@ -20,6 +20,7 @@ interface DbMilestoneRow {
   preview_url: string | null;
   due_on: string | null;
   done_at: string | null;
+  sort_order?: number;
 }
 
 interface DbUpdateRow {
@@ -66,17 +67,19 @@ export interface DbProjectRow {
 }
 
 export function mapDbProjectToPortalProject(p: DbProjectRow): PortalProject {
-  const milestones: PortalMilestone[] = (p.milestones ?? []).map((m) => ({
-    id: m.id,
-    title: m.title,
-    description: m.description ?? "",
-    weight: Number(m.weight),
-    progress: m.is_done ? 100 : 0,
-    isClientVisible: m.is_client_visible,
-    status: m.is_done ? "completed" : "in_progress",
-    targetDate: m.due_on ?? "",
-    completedAt: m.done_at ?? undefined,
-  }));
+  const milestones: PortalMilestone[] = [...(p.milestones ?? [])]
+    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+    .map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description ?? "",
+      weight: Number(m.weight),
+      progress: m.is_done ? 100 : 0,
+      isClientVisible: m.is_client_visible,
+      status: m.is_done ? "completed" : "in_progress",
+      targetDate: m.due_on ?? "",
+      completedAt: m.done_at ?? undefined,
+    }));
 
   const visibleMilestones = milestones.filter((m) => m.isClientVisible);
   const nextIncomplete = visibleMilestones.find((m) => m.progress < 100);
@@ -127,14 +130,17 @@ export function mapDbProjectToPortalProject(p: DbProjectRow): PortalProject {
     ? (isBdt ? rawBudget : Math.round(rawBudget * 120))
     : totalBdtFromPayments;
 
-  const activity: PortalActivityItem[] = (p.project_updates ?? []).map((u) => ({
-    id: u.id,
-    type: "status_update",
-    title: "Project Progress Update",
-    description: u.body,
-    author: "Engineering Lead",
-    timestamp: u.created_at,
-  }));
+  const activity: PortalActivityItem[] = [...(p.project_updates ?? [])]
+    .filter((u) => u.is_client_visible)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map((u) => ({
+      id: u.id,
+      type: "status_update",
+      title: "Project Progress Update",
+      description: u.body,
+      author: "Engineering Lead",
+      timestamp: u.created_at,
+    }));
 
   return {
     id: p.id,
@@ -168,7 +174,8 @@ export async function fetchClientProjects(): Promise<PortalProject[]> {
       .select(`
         *,
         clients:client_id(full_name, company),
-        milestones(id, title, description, weight, is_done, is_client_visible, preview_url, due_on, done_at)
+        milestones(id, title, description, weight, is_done, is_client_visible, preview_url, due_on, done_at, sort_order),
+        payment_items(id, title, description, amount_due, currency, status, due_on, paid_at)
       `)
       .order("created_at", { ascending: false });
 

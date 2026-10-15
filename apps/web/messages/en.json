@@ -977,6 +977,8 @@
     "dueDate": "Due date",
     "notSet": "Not set",
     "receipts": "Acknowledged payments",
+    "invoice": "Invoice",
+    "downloadInvoice": "Download Invoice",
     "emptyTitle": "No payment schedule yet",
     "emptyDescription": "Your payment schedule will appear here after it is prepared.",
     "statuses": {

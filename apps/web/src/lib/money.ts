@@ -25,3 +25,9 @@ export function formatPriceRange(
     bdt: `${formatBdt(minBdt)} - ${formatBdt(maxBdt)}`,
   };
 }
+
+export function toBanglaDigits(value: number | string): string {
+  const bnDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+  return String(value).replace(/[0-9]/g, (digit) => bnDigits[Number(digit)] ?? digit);
+}
+
