@@ -34,3 +34,6 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local member work-tracking (never committed)
+.member-progress.md
