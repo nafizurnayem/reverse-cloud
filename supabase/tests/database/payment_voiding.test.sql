@@ -36,6 +36,16 @@ insert into public.payment_items (
   '00000000-0000-0000-0000-000000002401'
 );
 
+-- Fixed IDs belong in privileged fixture setup. The authenticated role has a
+-- deliberately narrow column grant and cannot override the generated id.
+insert into public.payments (
+  id, payment_item_id, currency, amount_paid, recorded_by
+) values (
+  '00000000-0000-0000-0000-000000243001',
+  '00000000-0000-0000-0000-000000242001', 'USD', 500,
+  '00000000-0000-0000-0000-000000002401'
+);
+
 select has_column('public', 'payments', 'voided_at', 'payments.voided_at exists');
 select has_column('public', 'payments', 'voided_by', 'payments.voided_by exists');
 select has_column('public', 'payments', 'void_reason', 'payments.void_reason exists');
@@ -45,14 +55,6 @@ reset role;
 set local role authenticated;
 do $$ begin perform set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000002401","role":"authenticated"}', true); end $$;
-
-insert into public.payments (
-  id, payment_item_id, currency, amount_paid, recorded_by
-) values (
-  '00000000-0000-0000-0000-000000243001',
-  '00000000-0000-0000-0000-000000242001', 'USD', 500,
-  '00000000-0000-0000-0000-000000002401'
-);
 
 select is(
   (select status from public.payment_items where id = '00000000-0000-0000-0000-000000242001'),
