@@ -1015,5 +1015,38 @@
         "changes": { "title": "Availability, termination and changes", "body": "Website features may be interrupted or changed. To the extent allowed by law, neither party is liable for indirect or consequential loss; project-specific terms take priority. Account access may be suspended for security, non-payment or material breach. Updated terms show their revision date." }
       }
     }
+  },
+  "AdminStaff": {
+    "eyebrow": "Access control",
+    "title": "Staff access",
+    "description": "Assign existing roles to signed-in users. Changes take effect on the next authorized request.",
+    "rolesTitle": "Available roles",
+    "peopleTitle": "User access",
+    "peopleDescription": "Only authenticated users appear here. Deactivation preserves the assignment and its audit history.",
+    "noDescription": "No role description",
+    "unknownUser": "Unnamed user",
+    "unknownEmail": "Email unavailable",
+    "joined": "Joined {date}",
+    "you": "Your account",
+    "activeStaff": "Staff",
+    "notStaff": "Not staff",
+    "assigned": "Active",
+    "unassigned": "Inactive",
+    "assign": "Assign",
+    "reactivate": "Reactivate",
+    "deactivate": "Deactivate",
+    "columns": {
+      "person": "Person",
+      "status": "Staff status"
+    },
+    "saved": {
+      "activated": "The role assignment is active.",
+      "deactivated": "The role assignment was deactivated."
+    },
+    "errors": {
+      "invalidInput": "Choose a valid user and role.",
+      "lastActiveAdmin": "The final active administrator cannot be deactivated.",
+      "saveFailed": "The role assignment could not be updated."
+    }
   }
 }
