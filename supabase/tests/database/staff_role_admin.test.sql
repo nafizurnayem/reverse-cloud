@@ -118,6 +118,16 @@ select ok(
     (select id from public.roles where key = 'admin'), false),
   'an administrator can be deactivated when another active admin remains'
 );
+
+-- The first administrator no longer has staff access, so RLS correctly hides
+-- other assignments from that session. Verify the result as the administrator
+-- who remains active.
+reset role;
+set local role authenticated;
+do $$ begin
+  perform set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-4000-8000-000000002702","role":"authenticated"}', true);
+end $$;
 select is(
   (select count(*)::integer
      from public.staff_roles sr
