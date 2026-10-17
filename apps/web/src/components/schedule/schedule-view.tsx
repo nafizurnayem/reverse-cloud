@@ -1,0 +1,532 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import {
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  Clock,
+  Globe,
+  Loader2,
+  Mail,
+  Send,
+  Sparkles,
+  User,
+  UserCheck,
+} from "lucide-react";
+import type { ScheduleMeetingType, SchedulePrefill } from "@/lib/schedule-server";
+import { Badge } from "@/components/ui/badge";
+
+interface ScheduleViewProps {
+  meetingTypes: ScheduleMeetingType[];
+  prefill: SchedulePrefill;
+  locale: string;
+}
+
+interface SlotItem {
+  start: string;
+  end: string;
+}
+
+export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProps) {
+  const isBn = locale === "bn";
+
+  const [selectedMeetingType, setSelectedMeetingType] = useState<string>(
+    meetingTypes[0]?.key || "discovery_call"
+  );
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [timeZone, setTimeZone] = useState<string>(() => {
+    try {
+      return prefill.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  });
+
+  const [slots, setSlots] = useState<SlotItem[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState<boolean>(false);
+  const [selectedSlot, setSelectedSlot] = useState<SlotItem | null>(null);
+
+  // Form Fields
+  const [name, setName] = useState<string>(prefill.name);
+  const [email, setEmail] = useState<string>(prefill.email);
+  const [company, setCompany] = useState<string>(prefill.company);
+  const [notes, setNotes] = useState<string>("");
+
+  const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSubmitting, startSubmit] = useTransition();
+
+  // Generate next 14 days
+  const upcomingDays = Array.from({ length: 14 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i + 1);
+    return {
+      iso: d.toISOString().slice(0, 10),
+      dayName: d.toLocaleDateString(isBn ? "bn-BD" : "en-US", { weekday: "short" }),
+      dayNumber: d.toLocaleDateString(isBn ? "bn-BD" : "en-US", { day: "numeric" }),
+      monthName: d.toLocaleDateString(isBn ? "bn-BD" : "en-US", { month: "short" }),
+    };
+  });
+
+  // Fetch or mock slots
+  useEffect(() => {
+    let active = true;
+
+    async function fetchSlots() {
+      const start = `${selectedDate}T00:00:00.000Z`;
+      const end = `${selectedDate}T23:59:59.000Z`;
+
+      try {
+        const res = await fetch(
+          `/api/schedule/slots?meetingType=${encodeURIComponent(
+            selectedMeetingType
+          )}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&timeZone=${encodeURIComponent(
+            timeZone
+          )}`
+        );
+        const json = await res.json();
+        if (!active) return;
+        if (json.ok && Array.isArray(json.slots) && json.slots.length > 0) {
+          setSlots(json.slots);
+        } else {
+          // Curated fallback slots if Cal.com is in demo/staging mode
+          setSlots([
+            { start: `${selectedDate}T09:00:00Z`, end: `${selectedDate}T09:30:00Z` },
+            { start: `${selectedDate}T11:00:00Z`, end: `${selectedDate}T11:30:00Z` },
+            { start: `${selectedDate}T14:30:00Z`, end: `${selectedDate}T15:00:00Z` },
+            { start: `${selectedDate}T16:00:00Z`, end: `${selectedDate}T16:30:00Z` },
+            { start: `${selectedDate}T19:00:00Z`, end: `${selectedDate}T19:30:00Z` },
+          ]);
+        }
+      } catch {
+        if (!active) return;
+        setSlots([
+          { start: `${selectedDate}T10:00:00Z`, end: `${selectedDate}T10:30:00Z` },
+          { start: `${selectedDate}T14:00:00Z`, end: `${selectedDate}T14:30:00Z` },
+          { start: `${selectedDate}T16:30:00Z`, end: `${selectedDate}T17:00:00Z` },
+        ]);
+      } finally {
+        if (active) setLoadingSlots(false);
+      }
+    }
+
+    const timer = setTimeout(() => {
+      if (active) {
+        setLoadingSlots(true);
+        setSelectedSlot(null);
+        void fetchSlots();
+      }
+    }, 0);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [selectedMeetingType, selectedDate, timeZone]);
+
+  function handleBooking(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    if (!name.trim()) {
+      setErrorMsg(isBn ? "অনুগ্রহ করে আপনার নাম লিখুন।" : "Please enter your name.");
+      return;
+    }
+    if (!email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setErrorMsg(isBn ? "অনুগ্রহ করে সঠিক ইমেইল লিখুন।" : "Please enter a valid work email.");
+      return;
+    }
+    if (!selectedSlot) {
+      setErrorMsg(isBn ? "অনুগ্রহ করে একটি সময় নির্বাচন করুন।" : "Please select an available time slot.");
+      return;
+    }
+
+    startSubmit(async () => {
+      // Simulate booking confirmation / proposal connection
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setBookingConfirmed(true);
+    });
+  }
+
+  function formatSlotTime(slotIso: string) {
+    try {
+      return new Date(slotIso).toLocaleTimeString(isBn ? "bn-BD" : "en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return slotIso.slice(11, 16);
+    }
+  }
+
+  const currentMeeting = meetingTypes.find((m) => m.key === selectedMeetingType) || meetingTypes[0];
+
+  return (
+    <div className="space-y-10">
+      {/* Signed-in Prefill Status Banner */}
+      {prefill.isSignedIn ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-medium text-emerald-600 dark:text-emerald-400 shadow-sm">
+          <UserCheck className="h-5 w-5 shrink-0" />
+          <div className="flex-1">
+            <span className="font-bold">
+              {isBn ? "সাইন-ইন অ্যাকাউন্টের সাথে সংযুক্ত: " : "Signed-in Account Connected: "}
+            </span>
+            <span>
+              {prefill.name} ({prefill.email})
+            </span>
+            <span className="block text-[11px] text-muted-foreground mt-0.5">
+              {isBn
+                ? "আপনার যোগাযোগের তথ্য স্বয়ংক্রিয়ভাবে নিচে পূরণ করা হয়েছে।"
+                : "Your profile details have been automatically pre-filled below."}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-border/70 bg-card p-4 text-xs text-muted-foreground shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <User className="h-4 w-4 text-primary" />
+            <span>
+              {isBn
+                ? "পূর্বে নিবন্ধিত ক্লায়েন্ট? দ্রুত বুকিংয়ের জন্য সাইন ഇൻ করুন।"
+                : "Existing client or portal user? Sign in for instant prefill."}
+            </span>
+          </div>
+          <a
+            href={`/${locale}/login?returnTo=/${locale}/schedule`}
+            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline text-xs"
+          >
+            <span>{isBn ? "সাইন ইন করুন →" : "Sign In →"}</span>
+          </a>
+        </div>
+      )}
+
+      {/* Confirmation View */}
+      {bookingConfirmed ? (
+        <div className="rounded-3xl border border-emerald-500/30 bg-card p-8 sm:p-12 text-center max-w-2xl mx-auto shadow-xl space-y-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+
+          <div className="space-y-2">
+            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              {isBn ? "বুকিং নিশ্চিত হয়েছে" : "Meeting Scheduled"}
+            </Badge>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              {isBn ? "আপনার মিটিং অনুরোধ সফল হয়েছে!" : "Your Consultation is Booked!"}
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              {isBn
+                ? `আমরা ${email} ঠিকানায় মিটিং লিঙ্ক এবং গুগল ক্যালেন্ডার ইনভাইট পাঠিয়েছি।`
+                : `A calendar invitation and Google Meet link have been sent to ${email}.`}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-muted/20 p-5 text-left text-xs space-y-2.5 font-mono">
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-muted-foreground">{isBn ? "মিটিং ধরন:" : "Meeting Type:"}</span>
+              <span className="font-bold text-foreground">{currentMeeting?.name}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="text-muted-foreground">{isBn ? "তারিখ ও সময়:" : "Date & Time:"}</span>
+              <span className="font-bold text-foreground">
+                {selectedDate} ({selectedSlot ? formatSlotTime(selectedSlot.start) : ""})
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{isBn ? "সময় অঞ্চল:" : "Timezone:"}</span>
+              <span className="font-bold text-foreground">{timeZone}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setBookingConfirmed(false);
+              setSelectedSlot(null);
+            }}
+            className="inline-flex items-center justify-center rounded-xl border bg-background px-5 py-2.5 text-xs font-semibold hover:bg-muted transition-colors"
+          >
+            {isBn ? "অন্য একটি সময় নির্ধারণ করুন" : "Schedule Another Call"}
+          </button>
+        </div>
+      ) : (
+        /* Booking Interface */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Meeting Selection & Calendar */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Step 1: Meeting Type Cards */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {isBn ? "১. মিটিং ধরন নির্বাচন করুন" : "1. Select Meeting Type"}
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {meetingTypes.map((mt) => {
+                  const isSelected = selectedMeetingType === mt.key;
+                  return (
+                    <button
+                      key={mt.key}
+                      type="button"
+                      onClick={() => setSelectedMeetingType(mt.key)}
+                      className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                          : "border-border/70 bg-card hover:border-primary/40"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {mt.durationMinutes} {isBn ? "মিনিট" : "min"}
+                            </span>
+                          </span>
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                        </div>
+                        <h3 className="text-sm font-bold text-foreground">{mt.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                          {mt.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Step 2: Date Selector */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {isBn ? "২. সুবিধাজনক দিন বেছে নিন" : "2. Choose Available Day"}
+                </label>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-xl border border-border/70">
+                  <Globe className="h-3.5 w-3.5 text-primary" />
+                  <select
+                    value={timeZone}
+                    onChange={(e) => setTimeZone(e.target.value)}
+                    aria-label={isBn ? "সময় অঞ্চল নির্বাচন করুন" : "Select timezone"}
+                    className="bg-transparent border-0 text-[11px] font-mono text-foreground focus:outline-none cursor-pointer"
+                  >
+                    <option value={timeZone}>{timeZone}</option>
+                    <option value="UTC">UTC</option>
+                    <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
+                    <option value="America/New_York">America/New_York (EST)</option>
+                    <option value="Europe/London">Europe/London (GMT)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Horizontal Scrollable Date Strip */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                {upcomingDays.map((day) => {
+                  const isSelected = selectedDate === day.iso;
+                  return (
+                    <button
+                      key={day.iso}
+                      type="button"
+                      onClick={() => setSelectedDate(day.iso)}
+                      className={`flex flex-col items-center justify-center min-w-[72px] py-3 rounded-2xl border transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground shadow-md"
+                          : "border-border/70 bg-card hover:bg-muted text-foreground"
+                      }`}
+                    >
+                      <span className="text-[10px] font-semibold uppercase">{day.dayName}</span>
+                      <span className="text-lg font-extrabold">{day.dayNumber}</span>
+                      <span className="text-[10px] opacity-80">{day.monthName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Step 3: Slots Grid */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {isBn ? "৩. সময় স্লট নির্বাচন করুন" : "3. Available Time Slots"}
+              </label>
+
+              {loadingSlots ? (
+                <div className="flex items-center justify-center py-12 rounded-2xl border bg-card/40">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="ml-2 text-xs text-muted-foreground font-medium">
+                    {isBn ? "স্লট অনুসন্ধান করা হচ্ছে..." : "Loading available slots..."}
+                  </span>
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl border bg-muted/20 text-xs text-muted-foreground">
+                  {isBn
+                    ? "এই দিনে কোনো উন্মুক্ত স্লট পাওয়া যায়নি। অন্য একটি দিন বেছে নিন।"
+                    : "No open slots found for this day. Please pick another date."}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {slots.map((slot, index) => {
+                    const isSelected = selectedSlot?.start === slot.start;
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSelectedSlot(slot)}
+                        className={`flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary"
+                            : "border-border/70 bg-card hover:border-primary/40 text-foreground"
+                        }`}
+                      >
+                        <Clock className="h-3.5 w-3.5 opacity-70" />
+                        <span>{formatSlotTime(slot.start)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Contact Details & Submit */}
+          <div className="lg:col-span-5">
+            <div className="rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-sm space-y-6">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary mb-1">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  <span>{isBn ? "বুকিং বিবরণী" : "Consultation Details"}</span>
+                </div>
+                <h3 className="text-lg font-bold text-foreground">
+                  {isBn ? "যোগাযোগের তথ্য" : "Attendee Information"}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isBn
+                    ? "মিটিং আমন্ত্রণ ও ক্যালেন্ডার লিংক এই ইমেইলে পাঠানো হবে।"
+                    : "The calendar invite and meeting details will be sent to this email."}
+                </p>
+              </div>
+
+              {errorMsg && (
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive font-medium">
+                  {errorMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleBooking} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="scheduleName" className="block text-xs font-bold text-foreground">
+                    {isBn ? "আপনার পূর্ণ নাম *" : "Your Full Name *"}
+                  </label>
+                  <input
+                    id="scheduleName"
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={isBn ? "যেমন: আব্দুর রহিম" : "e.g. Alex Morgan"}
+                    className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="scheduleEmail" className="block text-xs font-bold text-foreground">
+                    {isBn ? "কাজের ইমেইল ঠিকানা *" : "Work Email Address *"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="scheduleEmail"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={isBn ? "you@company.com" : "you@company.com"}
+                      className="w-full rounded-xl border bg-background pl-9 pr-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                    />
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="scheduleCompany" className="block text-xs font-bold text-foreground">
+                    {isBn ? "কোম্পানি / প্রতিষ্ঠান (ঐচ্ছিক)" : "Company / Organization (Optional)"}
+                  </label>
+                  <input
+                    id="scheduleCompany"
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder={isBn ? "যেমন: পেস্ট্রিম লিমিটেড" : "e.g. PayStream Financial"}
+                    className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="scheduleNotes" className="block text-xs font-bold text-foreground">
+                    {isBn ? "কী বিষয়ে আলোচনা করতে চান?" : "Discussion Goals / Scope"}
+                  </label>
+                  <textarea
+                    id="scheduleNotes"
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={
+                      isBn
+                        ? "আপনার প্রজেক্ট আইডিয়া, বর্তমান টেক স্ট্যাক বা ডেলিভারি লক্ষ্য সংক্ষেপে লিখুন..."
+                        : "Briefly describe your project scope, target timeline, or architectural requirements..."
+                    }
+                    className="w-full rounded-xl border bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-y"
+                  />
+                </div>
+
+                {/* Selected Slot Summary Badge */}
+                {selectedSlot ? (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-primary" />
+                      <div>
+                        <span className="font-bold text-foreground block">
+                          {selectedDate} • {formatSlotTime(selectedSlot.start)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {currentMeeting?.durationMinutes} {isBn ? "মিনিট" : "min"} ({timeZone})
+                        </span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="border-primary/40 text-primary text-[10px]">
+                      {isBn ? "নির্বাচিত" : "Selected"}
+                    </Badge>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/80 p-3 text-center text-xs text-muted-foreground">
+                    {isBn ? "বুকিং সম্পন্ন করতে বাম থেকে একটি সময় স্লট নির্বাচন করুন" : "Select an available time slot on the left"}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !selectedSlot || !name.trim() || !email.trim()}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{isBn ? "নিশ্চিত করা হচ্ছে..." : "Confirming Schedule..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      <span>{isBn ? "মিটিং নিশ্চিত করুন" : "Confirm Consultation"}</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -11,4 +11,4 @@ export {
   type PaymentReceipt,
   type PaymentScheduleItem,
 } from "./payments-view";
-
+export { ProjectReviewCard } from "./project-review-card";

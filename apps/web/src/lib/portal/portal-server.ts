@@ -7,6 +7,7 @@ import type {
   PortalMilestone,
   PortalPaymentItem,
   PortalProject,
+  PortalReview,
 } from "./types";
 
 interface DbMilestoneRow {
@@ -213,3 +214,40 @@ export async function fetchClientProjectById(id: string): Promise<PortalProject 
     return getPortalProjectById(id) ?? null;
   }
 }
+
+export async function fetchProjectReview(projectId: string): Promise<PortalReview | null> {
+  try {
+    const supabase = await createClient();
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes?.user) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("id, project_id, client_id, reviewer_name, reviewer_title, rating, body, locale, status, created_at")
+      .eq("project_id", projectId)
+      .eq("source", "portal")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      projectId: data.project_id,
+      clientId: data.client_id,
+      reviewerName: data.reviewer_name,
+      reviewerTitle: data.reviewer_title,
+      rating: Number(data.rating),
+      body: data.body,
+      locale: data.locale === "bn" ? "bn" : "en",
+      status: data.status,
+      createdAt: data.created_at,
+    };
+  } catch {
+    return null;
+  }
+}
+

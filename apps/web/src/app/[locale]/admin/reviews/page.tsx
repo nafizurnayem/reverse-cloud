@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { requirePermission } from "@/lib/auth/guards";
 import { ActionMessage, CheckboxField, ContentHeader, EditorPanel, Field, FormActions, SelectField, StatusBadge, TextareaField } from "@/components/admin-content";
-import { saveReview } from "./actions";
+import { moderateReview, saveReview } from "./actions";
 
 type Search = { edit?: string; saved?: string; error?: string };
 
@@ -31,7 +31,7 @@ export default async function ReviewsPage({ params, searchParams }: { params: Pr
           <CheckboxField label={t("fields.featured")} name="is_featured" defaultChecked={selected?.is_featured}/><FormActions saveLabel={tc("save")} cancelLabel={tc("cancel")} cancelHref="/admin/reviews" />
         </form>
       </EditorPanel>
-      <section className="content-list"><div className="content-list-heading"><h2>{tc("allItems")}</h2><span>{items.length}</span></div><div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.name")}</th><th>{t("fields.rating")}</th><th>{tc("status")}</th><th>{tc("actions")}</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.reviewer_name}</strong><small>{item.body}</small></td><td>{"★".repeat(item.rating)}</td><td><StatusBadge active={item.status !== "pending"} activeLabel={item.status === "approved" ? t("options.approved") : t("options.rejected")} inactiveLabel={t("options.pending")} warning={item.status === "rejected"}/></td><td><div className="content-row-actions"><Link href={`/admin/reviews?edit=${item.id}`}>{tc("edit")}</Link></div></td></tr>)}</tbody></table></div></section>
+      <section className="content-list"><div className="content-list-heading"><h2>{tc("allItems")}</h2><span>{items.length}</span></div><div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.name")}</th><th>{t("fields.rating")}</th><th>{tc("status")}</th><th>{tc("actions")}</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.reviewer_name}</strong><small>{item.body}</small></td><td>{"★".repeat(item.rating)}</td><td><StatusBadge active={item.status !== "pending"} activeLabel={item.status === "approved" ? t("options.approved") : t("options.rejected")} inactiveLabel={t("options.pending")} warning={item.status === "rejected"}/></td><td><div className="content-row-actions"><Link href={`/admin/reviews?edit=${item.id}`}>{tc("edit")}</Link>{item.status === "pending" && (<><form action={moderateReview} className="inline"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={item.id}/><input type="hidden" name="status" value="approved"/><button type="submit" className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline bg-transparent border-0 p-0 cursor-pointer">{t("options.approved")}</button></form><form action={moderateReview} className="inline"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={item.id}/><input type="hidden" name="status" value="rejected"/><button type="submit" className="text-xs text-rose-600 dark:text-rose-400 font-semibold hover:underline bg-transparent border-0 p-0 cursor-pointer">{t("options.rejected")}</button></form></>)}</div></td></tr>)}</tbody></table></div></section>
     </main>
   );
 }

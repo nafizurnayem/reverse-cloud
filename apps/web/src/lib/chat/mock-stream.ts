@@ -1,4 +1,5 @@
 import type {
+  BookingProposalCardData,
   ChatStreamEvent,
   EstimateCardData,
   HumanHandoffCardData,
@@ -10,6 +11,7 @@ export type MockStreamScenario =
   | "estimate"
   | "lead_saved"
   | "human_handoff"
+  | "booking_proposal"
   | "kill_switch_error";
 
 export interface MockStreamOptions {
@@ -52,6 +54,19 @@ export const sampleHumanHandoff: HumanHandoffCardData = {
   suggestedAction: "contact_form",
   contactEmail: "solutions@revcloud.dev",
   supportHours: "Sun - Thu, 9:00 AM - 6:00 PM BST (UTC+6)",
+};
+
+export const sampleBookingProposal: BookingProposalCardData = {
+  proposalId: "prop-mock-4401",
+  meetingTypeKey: "technical_consult",
+  meetingTypeName: "Technical Architecture Consultation",
+  durationMinutes: 45,
+  startsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000 + 45 * 60 * 1000).toISOString(),
+  timezone: "Asia/Dhaka",
+  intakeSummary: "Review architecture diagram, cloud cost optimization, and migration checklist.",
+  status: "open",
+  expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
 };
 
 function formatSseEvent(event: string, data: Record<string, unknown>): string {
@@ -101,6 +116,10 @@ export function getMockEvents(
     text = isBn
       ? "আপনার এই বিশেষ রিকয়ারমেন্টের জন্য আমি আমাদের সিনিয়র ক্লাউড আর্কিটেক্টের সাথে যোগাযোগ করিয়ে দিচ্ছি:"
       : "For these specialized enterprise requirements, let's connect you directly with a Senior Solutions Architect:";
+  } else if (scenario === "booking_proposal") {
+    text = isBn
+      ? "আপনার সুবিধাজনক আলোচনার জন্য আমরা একটি কনসালটেশন স্লট প্রস্তাব করেছি। অনুগ্রহ করে নিচের কার্ড থেকে সময় নিশ্চিত করুন:"
+      : "I have held a tentative consultation slot based on our discussion. Please review and confirm below:";
   }
 
   // Split into token chunks (words or characters)
@@ -118,6 +137,8 @@ export function getMockEvents(
     events.push({ event: "card", data: { type: "lead_saved", data: sampleLeadSaved } });
   } else if (scenario === "human_handoff") {
     events.push({ event: "card", data: { type: "human_handoff", data: sampleHumanHandoff } });
+  } else if (scenario === "booking_proposal") {
+    events.push({ event: "card", data: { type: "booking_proposal", data: sampleBookingProposal } });
   }
 
   events.push({ event: "message_end", data: { reason: "stop" } });

@@ -3,7 +3,13 @@
 import { useEffect, useRef } from "react";
 import { Bot, User } from "lucide-react";
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
-import { EstimateCard, FallbackState, HumanHandoffCard, LeadSavedCard } from "./cards";
+import {
+  ConfirmationCard,
+  EstimateCard,
+  FallbackState,
+  HumanHandoffCard,
+  LeadSavedCard,
+} from "./cards";
 
 interface ChatMessageListProps {
   messages: ChatMessageItem[];
@@ -89,6 +95,15 @@ export function ChatMessageList({
                           data={card.data}
                           locale={locale}
                           onTriggerFallback={onTriggerFallback}
+                        />
+                      );
+                    }
+                    if (card.type === "booking_proposal") {
+                      return (
+                        <ConfirmationCard
+                          key={idx}
+                          data={card.data}
+                          locale={locale}
                         />
                       );
                     }
