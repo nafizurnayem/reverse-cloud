@@ -48,5 +48,7 @@ describe("Blog Catalog", () => {
     expect(slugs).toContain("building-production-agentic-workflows-pydantic-ai");
     expect(slugs).toContain("scaling-nextjs-with-postgres-rls");
     expect(slugs).toContain("optimizing-core-web-vitals-with-monetization");
+    expect(slugs).toContain("event-driven-microservices-fastapi-temporal");
+    expect(slugs).toContain("bilingual-ai-rag-pipeline-bangla-nlp");
   });
 });

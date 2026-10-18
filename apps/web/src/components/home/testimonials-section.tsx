@@ -1,4 +1,14 @@
-import { CheckCircle2, MessageSquareQuote, ShieldCheck, Sparkles, Star } from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  CheckCircle2,
+  Filter,
+  MessageSquareQuote,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from "lucide-react";
 import type { PublicReviewItem } from "@/lib/reviews-catalog";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,12 +27,25 @@ interface TestimonialsSectionProps {
   };
 }
 
+type ReviewCategoryFilter = "all" | "five_star" | "portal_verified";
+
 export function TestimonialsSection({
   reviews,
   locale,
   translations,
 }: TestimonialsSectionProps) {
   const isBn = locale === "bn";
+  const [activeFilter, setActiveFilter] = useState<ReviewCategoryFilter>("all");
+
+  const filteredReviews = useMemo(() => {
+    if (activeFilter === "five_star") {
+      return reviews.filter((r) => r.rating === 5);
+    }
+    if (activeFilter === "portal_verified") {
+      return reviews.filter((r) => r.source === "portal");
+    }
+    return reviews;
+  }, [reviews, activeFilter]);
 
   if (reviews.length === 0) return null;
 
@@ -36,7 +59,7 @@ export function TestimonialsSection({
 
       <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-16">
+        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-12 sm:mb-16">
           <Badge
             variant="outline"
             className="mb-4 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-3.5 py-1 text-xs font-semibold gap-1.5 shadow-sm"
@@ -87,22 +110,74 @@ export function TestimonialsSection({
               </div>
             </div>
           </div>
+
+          {/* User Feedback Improvement: Testimonials Category Filters */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1 mr-1">
+              <Filter className="h-3 w-3" />
+              <span>{isBn ? "ফিল্টার:" : "Filter:"}</span>
+            </span>
+
+            {(
+              [
+                { key: "all", en: "All Testimonials", bn: "সকল মতামত" },
+                { key: "five_star", en: "5-Star Rating", bn: "৫-তারকা রেটিং" },
+                { key: "portal_verified", en: "Verified Clients", bn: "ভেরিফায়েড ক্লায়েন্ট" },
+              ] as const
+            ).map((filter) => {
+              const isActive = activeFilter === filter.key;
+              return (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.key)}
+                  className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60"
+                  }`}
+                >
+                  {isBn ? filter.bn : filter.en}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Reviews Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-          {reviews.map((item) => {
-            const initials = item.reviewer_name
-              .split(" ")
-              .map((w) => w[0])
-              .filter(Boolean)
-              .slice(0, 2)
-              .join("")
-              .toUpperCase();
+        {filteredReviews.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border/80 bg-card/40 p-12 text-center backdrop-blur-sm max-w-md mx-auto">
+            <MessageSquareQuote className="mx-auto h-8 w-8 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-semibold text-foreground">
+              {isBn ? "কোনো রিভিউ পাওয়া যায়নি" : "No testimonials found"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isBn
+                ? "এই ফিল্টারের সাথে মিলে এমন কোনো রিভিউ নেই।"
+                : "No reviews match the selected filter criterion."}
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveFilter("all")}
+              className="mt-4 inline-flex items-center rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+            >
+              {isBn ? "সকল রিভিউ দেখুন" : "View all testimonials"}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {filteredReviews.map((item) => {
+              const initials = item.reviewer_name
+                .split(" ")
+                .map((w) => w[0])
+                .filter(Boolean)
+                .slice(0, 2)
+                .join("")
+                .toUpperCase();
 
-            return (
-              <div
-                key={item.id}
+              return (
+                <div
+                  key={item.id}
                 className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-6 sm:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
               >
                 {/* Decorative quote icon */}
@@ -165,6 +240,7 @@ export function TestimonialsSection({
             );
           })}
         </div>
+      )}
       </div>
     </section>
   );

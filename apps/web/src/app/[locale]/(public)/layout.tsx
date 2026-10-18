@@ -11,7 +11,9 @@ export default function PublicLayout({ children }: Props) {
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+        {children}
+      </main>
       <Footer />
       <ChatWidget />
     </div>
