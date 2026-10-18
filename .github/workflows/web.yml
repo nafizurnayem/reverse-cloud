@@ -1,0 +1,56 @@
+name: Web Application
+
+on:
+  pull_request:
+    branches: [Dev, main]
+  push:
+    branches: [Dev, main]
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Lint, typecheck, vitest & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linter
+        run: pnpm lint
+
+      - name: Run TypeScript typecheck
+        run: pnpm typecheck
+
+      - name: Run Vitest unit & integration tests
+        run: pnpm test
+
+      - name: Verify Next.js production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://mock-supabase.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.mock
+          SUPABASE_SERVICE_ROLE_KEY: mock_service_role_key_for_ci_build
+          CHAT_COOKIE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          AI_HMAC_SECRET_CURRENT: mock_ai_hmac_secret_for_ci_build_32_characters_long
+        run: pnpm build

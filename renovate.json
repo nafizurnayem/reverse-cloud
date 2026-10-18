@@ -1,8 +1,46 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "schedule": ["before 5am on the first day of the month"],
-  "vulnerabilityAlerts": {
-    "enabled": true
-  }
+  "description": "Automated dependency update policy for Reverse Cloud monorepo",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":rebaseStalePrs"
+  ],
+  "timezone": "Asia/Dhaka",
+  "schedule": ["before 6am on monday"],
+  "prHourlyLimit": 3,
+  "prConcurrentLimit": 10,
+  "labels": ["dependencies", "maintenance"],
+  "packageRules": [
+    {
+      "description": "Group all non-major npm/pnpm updates into a single PR",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "pnpm non-major dependencies",
+      "groupSlug": "pnpm-minor-patch"
+    },
+    {
+      "description": "Group all non-major python dependencies into a single PR",
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "python non-major dependencies",
+      "groupSlug": "python-minor-patch"
+    },
+    {
+      "description": "Keep Supabase CLI pinned to tested stable version (avoid 2.121.0 win32-x64 binary issue)",
+      "matchPackageNames": ["supabase", "@supabase/cli"],
+      "enabled": false
+    },
+    {
+      "description": "Node engine pinning across web app",
+      "matchPackageNames": ["node"],
+      "allowedVersions": ">=22.0.0 <23.0.0"
+    },
+    {
+      "description": "Separate PRs for all major framework bumps (Next.js, FastAPI, Pydantic, Vitest, Pytest)",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "breaking-change"]
+    }
+  ]
 }

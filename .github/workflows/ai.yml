@@ -1,0 +1,46 @@
+name: AI Service
+
+on:
+  pull_request:
+    branches: [Dev, main]
+  push:
+    branches: [Dev, main]
+
+concurrency:
+  group: ai-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai:
+    name: Pytest suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'services/ai/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/ai/requirements.txt
+
+      - name: Run Pytest suite
+        env:
+          OPENAI_API_KEY: mock-openai-api-key-for-ci
+          AI_HMAC_SECRET_CURRENT: mock_ai_hmac_secret_for_ci_build_32_characters_long
+          SUPABASE_URL: http://127.0.0.1:54321
+          SUPABASE_SERVICE_ROLE_KEY: mock-service-role-key
+          AI_DATABASE_URL: postgresql://ai_service:postgres@127.0.0.1:54322/postgres
+        run: |
+          pytest services/ai
