@@ -99,6 +99,15 @@ export function ChatWidget({
           scenario = "lead_saved";
         } else if (lower.includes("human") || lower.includes("architect") || lower.includes("দল") || lower.includes("মানুষ")) {
           scenario = "human_handoff";
+        } else if (
+          lower.includes("booking") ||
+          lower.includes("schedule") ||
+          lower.includes("consult") ||
+          lower.includes("meeting") ||
+          lower.includes("মিটিং") ||
+          lower.includes("সময়")
+        ) {
+          scenario = "booking_proposal";
         } else if (lower.includes("error") || lower.includes("fail") || lower.includes("ত্রুটি")) {
           scenario = "kill_switch_error";
         }
@@ -303,7 +312,7 @@ export function ChatWidget({
                     <Sparkles className="h-3 w-3 text-amber-500" />
                     <span>Scenario:</span>
                   </span>
-                  {(["greeting", "estimate", "lead_saved", "human_handoff", "kill_switch_error"] as MockStreamScenario[]).map(
+                  {(["greeting", "estimate", "lead_saved", "human_handoff", "booking_proposal", "kill_switch_error"] as MockStreamScenario[]).map(
                     (sc) => (
                       <button
                         key={sc}

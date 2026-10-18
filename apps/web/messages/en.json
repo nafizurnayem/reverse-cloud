@@ -13,7 +13,15 @@
     "servicesTitle": "Core Specializations",
     "servicesSubtitle": "From bespoke digital products to production agentic AI, we engineer solutions designed to lead.",
     "whyUsTitle": "Built with Precision",
-    "whyUsSubtitle": "Modern architecture, security by default, and uncompromising code quality."
+    "whyUsSubtitle": "Modern architecture, security by default, and uncompromising code quality.",
+    "testimonialsEyebrow": "Client Stories",
+    "testimonialsTitle": "Trusted by forward-thinking teams",
+    "testimonialsSubtitle": "Verified reviews from founders, enterprise clients, and engineering leads who build their production platforms with Reverse Cloud.",
+    "verifiedClient": "Verified Client",
+    "satisfactionScore": "4.9 / 5.0 Rating",
+    "satisfactionDesc": "Average client satisfaction across completed milestones",
+    "onTimeDelivery": "100% On-Time",
+    "onTimeDesc": "Milestone delivery tracked live via client portal"
   },
   "LanguageSwitcher": {
     "label": "Choose language",
@@ -477,6 +485,7 @@
     "pricing": "Pricing",
     "about": "About",
     "wizard": "Service Finder",
+    "schedule": "Schedule",
     "contact": "Contact",
     "login": "Sign in"
   },
@@ -773,7 +782,12 @@
     "contractValue": "Contract Value",
     "startDate": "Start Date",
     "invoice": "Invoice",
-    "print": "Print"
+    "print": "Print",
+    "reviewTitle": "Project Experience Review",
+    "reviewEyebrow": "Client Feedback & Review",
+    "reviewDescription": "Share your experience working with Reverse Cloud on this project. Verified testimonials are showcased after moderation.",
+    "reviewSubmit": "Submit Review",
+    "reviewUpdate": "Update Review"
   },
   "AdminProjects": {
     "eyebrow": "Project operations",
@@ -1047,6 +1061,15 @@
       "invalidInput": "Choose a valid user and role.",
       "lastActiveAdmin": "The final active administrator cannot be deactivated.",
       "saveFailed": "The role assignment could not be updated."
+    }
+  },
+  "Schedule": {
+    "eyebrow": "Book a Consultation",
+    "title": "Schedule a Call with Our Engineers",
+    "description": "Choose a meeting type and available time slot to discuss your architecture, AI workflows, or cloud infrastructure requirements.",
+    "metadata": {
+      "title": "Schedule a Consultation | Reverse Cloud",
+      "description": "Book a 30-minute discovery call or 45-minute technical consultation with our engineering team."
     }
   }
 }

@@ -54,3 +54,17 @@ export interface PortalProject {
   activity: PortalActivityItem[];
   payments: PortalPaymentItem[];
 }
+
+export interface PortalReview {
+  id: string;
+  projectId: string;
+  clientId?: string | null;
+  reviewerName: string;
+  reviewerTitle?: string | null;
+  rating: number;
+  body: string;
+  locale: "en" | "bn";
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+}
+

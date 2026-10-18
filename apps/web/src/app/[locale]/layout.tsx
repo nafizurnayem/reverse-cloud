@@ -37,8 +37,48 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const t = await getTranslations({ locale, namespace: "Metadata" });
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://revcloud.dev";
+  const isBn = locale === "bn";
 
-  return { title: t("title"), description: t("description") };
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: t("title"),
+      template: "%s | Reverse Cloud",
+    },
+    description: t("description"),
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        en: "/en",
+        bn: "/bn",
+      },
+    },
+    openGraph: {
+      type: "website",
+      locale: isBn ? "bn_BD" : "en_US",
+      url: `/${locale}`,
+      siteName: "Reverse Cloud",
+      title: t("title"),
+      description: t("description"),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("description"),
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+  };
 }
 
 export default async function LocaleLayout({ children, params }: Props) {
@@ -48,12 +88,48 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://revcloud.dev";
+  const schemaOrg = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}#organization`,
+        name: "Reverse Cloud",
+        url: siteUrl,
+        logo: `${siteUrl}/icon.png`,
+        description:
+          "Full-stack web engineering, custom agentic AI systems, and cloud infrastructure.",
+        sameAs: [
+          "https://github.com/reverse-cloud",
+          "https://linkedin.com/company/reverse-cloud",
+        ],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}#website`,
+        url: siteUrl,
+        name: "Reverse Cloud",
+        publisher: {
+          "@id": `${siteUrl}#organization`,
+        },
+        inLanguage: [locale === "bn" ? "bn-BD" : "en-US"],
+      },
+    ],
+  };
+
   return (
     <html lang={locale}>
-      <body className={`${sansFont.variable} ${bengaliFont.variable} ${locale === "bn" ? "font-bengali" : "font-sans"} antialiased`}>
-        <NextIntlClientProvider>
-          {children}
-        </NextIntlClientProvider>
+      <body
+        className={`${sansFont.variable} ${bengaliFont.variable} ${
+          locale === "bn" ? "font-bengali" : "font-sans"
+        } antialiased`}
+      >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+        />
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

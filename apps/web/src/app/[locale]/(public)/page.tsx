@@ -1,11 +1,43 @@
+import type { Metadata } from "next";
+import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getApprovedReviews } from "@/lib/reviews-catalog";
+import { TestimonialsSection } from "@/components/home/testimonials-section";
 
-export default async function HomePage() {
-  const t = await getTranslations("Home");
-  const tFooter = await getTranslations("Footer");
+type Props = {
+  params?: Promise<{ locale: string }>;
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale = "en" } = (await params) ?? {};
+  if (!hasLocale(routing.locales, locale)) notFound();
+
+  const t = await getTranslations({ locale, namespace: "Home" });
+  return {
+    title: `${t("brand")} — ${t("heading")}`,
+    description: t("description"),
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        en: "/en",
+        bn: "/bn",
+      },
+    },
+  };
+}
+
+export default async function HomePage({ params }: Props) {
+  const { locale = "en" } = (await params) ?? {};
+  const [t, tFooter, reviews] = await Promise.all([
+    getTranslations({ locale, namespace: "Home" }),
+    getTranslations({ locale, namespace: "Footer" }),
+    getApprovedReviews(locale),
+  ]);
 
   const previews = [
     {
@@ -100,6 +132,22 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Client Testimonials Section */}
+      <TestimonialsSection
+        reviews={reviews}
+        locale={locale}
+        translations={{
+          eyebrow: t("testimonialsEyebrow"),
+          title: t("testimonialsTitle"),
+          subtitle: t("testimonialsSubtitle"),
+          verifiedClient: t("verifiedClient"),
+          satisfactionScore: t("satisfactionScore"),
+          satisfactionDesc: t("satisfactionDesc"),
+          onTimeDelivery: t("onTimeDelivery"),
+          onTimeDesc: t("onTimeDesc"),
+        }}
+      />
 
       {/* Engineering Principles Section */}
       <section className="py-20">

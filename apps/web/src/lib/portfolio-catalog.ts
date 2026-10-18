@@ -215,6 +215,39 @@ export const PORTFOLIO_CATALOG: PortfolioDetailItem[] = [
       { label_en: "Checkout Lift", label_bn: "কনভার্সন বৃদ্ধি", value: "+34%" },
     ],
   },
+  {
+    slug: "edtech-ai-assessment-platform",
+    title_en: "Autonomous AI-Driven Examination & Proctoring Platform",
+    title_bn: "স্বয়ংক্রিয় এআই পরীক্ষা মূল্যায়ন ও প্রক্টরিং প্ল্যাটফর্ম",
+    summary_en:
+      "Scalable assessment engine processing 100,000+ concurrent students with automated subjective grading, fraud anomaly detection, and sub-second feedback.",
+    summary_bn:
+      "স্বয়ংক্রিয় খাতা মূল্যায়ন ও অসদুপায় সনাক্তকরণ সহ ১,০০,০০০+ শিক্ষার্থীর জন্য স্কেলেবল এআই অ্যাসেসমেন্ট ইঞ্জিন।",
+    challenge_en:
+      "An online certification academy faced massive delays grading 50,000 weekly subjective programming and analytical assessments, relying on 40 human graders with high variance in score fairness.",
+    challenge_bn:
+      "সাপ্তাহিক ৫০,০০০ বর্ণনামূলক ও প্রোগ্রামিং পরীক্ষার খাতা দেখতে গিয়ে ৪০ জন শিক্ষকের ৩ সপ্তাহের বেশি সময় লাগত এবং মূল্যায়নের মান সমান থাকত না।",
+    solution_en:
+      "Architected a distributed evaluation platform utilizing Next.js 16, Python 3.12, LangGraph, and PostgreSQL. Integrated rubric-based structured LLM grading with verifiable reasoning chains and deterministic score bounds.",
+    solution_bn:
+      "Next.js ১৬, পাইথন ৩.১২, LangGraph ও PostgreSQL ব্যবহার করে রুব্রিক-ভিত্তিক এআই মূল্যায়ন ব্যবস্থা চালু করা হয়েছে যা প্রতিটি নম্বরের পেছনে সুনির্দিষ্ট কারণ ব্যাখ্যা করে।",
+    result_en:
+      "Reduced assessment grading turnaround from 21 days to under 4 minutes with a 99.4% correlation against senior human examiner baselines, cutting institutional operational costs by 68%.",
+    result_bn:
+      "পরীক্ষার ফলাফল প্রকাশের সময় ২১ দিন থেকে মাত্র ৪ মিনিটে নেমে এসেছে এবং অভিজ্ঞ শিক্ষকদের সাথে ফলাফলের ৯৯.৪% সামঞ্জস্য বজায় রেখে প্রাতিষ্ঠানিক খরচ ৬৮% হ্রাস পেয়েছে।",
+    tech_stack: ["Next.js 16", "Python 3.12", "LangGraph", "FastAPI", "PostgreSQL RLS", "Docker", "Tailwind CSS"],
+    public_client_name: "Apex Learning International",
+    client_consent: true,
+    completed_on: "2026-09-10",
+    is_featured: false,
+    is_published: true,
+    category: "ai",
+    metrics: [
+      { label_en: "Turnaround Time", label_bn: "মূল্যায়ন সময়", value: "-99%" },
+      { label_en: "Monthly Exams", label_bn: "মাসিক মূল্যায়ন", value: "200k+" },
+      { label_en: "Examiner Match", label_bn: "ফলাফলের নির্ভুলতা", value: "99.4%" },
+    ],
+  },
 ];
 
 export async function getPortfolioItems(): Promise<PortfolioDetailItem[]> {

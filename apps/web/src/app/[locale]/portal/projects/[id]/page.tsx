@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
 import { routing } from "@/i18n/routing";
-import { fetchClientProjectById } from "@/lib/portal/portal-server";
+import { fetchClientProjectById, fetchProjectReview } from "@/lib/portal/portal-server";
 import { formatBdt, formatUsd } from "@/lib/money";
 import {
   ActivityFeed,
@@ -11,6 +11,7 @@ import {
   MilestoneTimeline,
   PaymentSchedule,
   ProjectProgressBar,
+  ProjectReviewCard,
 } from "@/components/portal";
 
 export default async function ProjectDetailPage({
@@ -22,7 +23,10 @@ export default async function ProjectDetailPage({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   const isBn = locale === "bn";
-  const project = await fetchClientProjectById(id);
+  const [project, existingReview] = await Promise.all([
+    fetchClientProjectById(id),
+    fetchProjectReview(id),
+  ]);
   if (!project) notFound();
 
   const isCompleted = project.status === "completed";
@@ -76,10 +80,17 @@ export default async function ProjectDetailPage({
 
       {/* Main Grid: Milestones & Payments on Left, Preview & Activity on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Column: Milestones & Payment Schedule */}
+        {/* Left Column: Milestones, Payment Schedule & Review */}
         <div className="lg:col-span-2 space-y-8">
           <MilestoneTimeline milestones={project.milestones} locale={locale} />
           <PaymentSchedule project={project} locale={locale} />
+          <ProjectReviewCard
+            projectId={project.id}
+            locale={locale}
+            clientName={project.clientName}
+            companyName={project.companyName}
+            existingReview={existingReview}
+          />
         </div>
 
         {/* Right Column: Live Preview & Activity Feed */}

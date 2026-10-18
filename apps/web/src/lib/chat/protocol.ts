@@ -31,10 +31,24 @@ export interface HumanHandoffCardData {
   supportHours?: string;
 }
 
+export interface BookingProposalCardData {
+  proposalId: string;
+  meetingTypeKey: string;
+  meetingTypeName: string;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  durationMinutes: number;
+  intakeSummary?: string;
+  status?: "open" | "confirmed" | "expired" | "failed" | "cancelled";
+  expiresAt?: string;
+}
+
 export type ChatCard =
   | { type: "estimate"; data: EstimateCardData }
   | { type: "lead_saved"; data: LeadSavedCardData }
-  | { type: "human_handoff"; data: HumanHandoffCardData };
+  | { type: "human_handoff"; data: HumanHandoffCardData }
+  | { type: "booking_proposal"; data: BookingProposalCardData };
 
 export interface ChatMessageItem {
   id: string;

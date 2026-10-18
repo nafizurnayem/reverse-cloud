@@ -38,3 +38,30 @@ export async function saveReview(formData: FormData) {
   revalidatePath(path);
   redirect(`${path}?saved=1`);
 }
+
+export async function moderateReview(formData: FormData) {
+  const locale = formLocale(formData);
+  const path = `/${locale}/admin/reviews`;
+  const { supabase, user } = await requirePermission(locale, "reviews.moderate");
+  const id = text(formData, "id");
+  const targetStatus = text(formData, "status");
+
+  if (!id || !["approved", "rejected", "pending"].includes(targetStatus)) {
+    redirect(`${path}?error=invalidInput`);
+  }
+
+  const result = await supabase
+    .from("reviews")
+    .update({
+      status: targetStatus,
+      moderated_by: targetStatus === "pending" ? null : user.id,
+      moderated_at: targetStatus === "pending" ? null : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (result.error) redirect(`${path}?error=saveFailed`);
+  revalidatePath(path);
+  redirect(`${path}?saved=1`);
+}
+

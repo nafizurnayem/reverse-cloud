@@ -2,7 +2,7 @@ import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Calendar, Clock, Flag } from "lucide-react";
+import { ArrowRight, Briefcase, Calendar, Clock, Flag } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import { fetchClientProjects } from "@/lib/portal/portal-server";
 import { calculateClientProgress } from "@/lib/portal/portal-calc";
@@ -43,8 +43,28 @@ export default async function PortalProjectsPage({
         </p>
       ) : null}
 
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Projects Grid or Empty State */}
+      {projects.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card/40 p-12 text-center max-w-lg mx-auto">
+          <Briefcase className="mx-auto h-10 w-10 text-muted-foreground/40 mb-3" />
+          <h2 className="text-base font-bold text-foreground">
+            {isBn ? "কোনো প্রজেক্ট খুঁজে পাওয়া যায়নি" : "No Active Projects Assigned"}
+          </h2>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            {isBn
+              ? "আপনার অ্যাকাউন্টে এখনো কোনো ক্লায়েন্ট প্রজেক্ট যুক্ত করা হয়নি। আমাদের সাপোর্ট বা আপনার একাউন্ট ম্যানেজারের সাথে যোগাযোগ করুন।"
+              : "No active client projects are assigned to your portal profile yet. Once onboarding is complete, real-time milestones and deliverables will appear here."}
+          </p>
+          <Link
+            href={`/${locale}/contact`}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
+          >
+            <span>{isBn ? "সাপোর্টে যোগাযোগ করুন" : "Contact Support"}</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {projects.map((project) => {
           const progressPercent = calculateClientProgress(project.milestones);
           const isCompleted = project.status === "completed";
@@ -134,6 +154,7 @@ export default async function PortalProjectsPage({
           );
         })}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

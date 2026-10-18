@@ -54,5 +54,6 @@ describe("Portfolio Catalog", () => {
     expect(slugs).toContain("cloud-logistics-ai");
     expect(slugs).toContain("fintech-payment-portal");
     expect(slugs).toContain("bilingual-ecommerce-platform");
+    expect(slugs).toContain("edtech-ai-assessment-platform");
   });
 });
