@@ -37,3 +37,6 @@ Thumbs.db
 
 # Local member work-tracking (never committed)
 .member-progress.md
+
+# Database backup and drill dumps
+supabase/backup_*.sql
