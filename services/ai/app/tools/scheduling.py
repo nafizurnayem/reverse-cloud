@@ -66,7 +66,7 @@ async def get_available_slots(
         List of slot objects with 'start' and 'end' ISO-8601 strings.
     """
     settings = get_settings()
-    api_key = (ctx.deps.calcom_api_key if ctx else None) or getattr(settings, "calcom_api_key", None)
+    api_key = (ctx.deps.calcom_api_key if ctx else None) or settings.calcom_api_key
 
     now = datetime.now(timezone.utc)
     start_dt = now + timedelta(days=1)

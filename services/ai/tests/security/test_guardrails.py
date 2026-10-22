@@ -178,7 +178,7 @@ def test_chat_caps_history_before_streaming(monkeypatch):
 
     received_messages = []
 
-    async def fake_stream(payload):
+    async def fake_stream(payload, pool=None):
         nonlocal received_messages
         received_messages = list(payload.messages)
         yield "Response"
@@ -192,7 +192,7 @@ def test_chat_caps_history_before_streaming(monkeypatch):
             ai_enabled=True,
         ),
     )
-    monkeypatch.setattr(routes, "stream_chat_completion", fake_stream)
+    monkeypatch.setattr(routes, "run_agent_stream", fake_stream)
 
     with TestClient(app) as client:
         response = client.post(

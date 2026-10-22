@@ -12,3 +12,4 @@ class ChatRequest(BaseModel):
 	messages: list[ChatMessage] = Field(min_length=1, max_length=50)
 	locale: Literal["en", "bn"] = "en"
 	conversation_id: str | None = Field(default=None, max_length=100)
+	client_id: str | None = Field(default=None, max_length=100)

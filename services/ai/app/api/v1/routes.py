@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from ...chat import stream_chat_completion
+from ...agents.chat_agent import run_agent_stream
 from ...config import get_settings
 from ...estimator.engine import EstimateInput, estimate_project
 from ...schemas.chat import ChatRequest
@@ -15,6 +15,7 @@ from ...security.guardrails import (
     detect_prompt_injection,
     stream_with_timeout,
 )
+from ...jobs.cost_report import generate_cost_report
 from ...security.signing import InvalidSignature, verify_request_signature
 
 router = APIRouter(prefix="/v1")
@@ -24,7 +25,7 @@ def _sse(event: str, payload: dict[str, str]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
-async def _chat_events(payload: ChatRequest):
+async def _chat_events(payload: ChatRequest, db_pool=None):
     yield _sse("message_start", {"conversation_id": payload.conversation_id or ""})
     settings = get_settings()
 
@@ -57,7 +58,7 @@ async def _chat_events(payload: ChatRequest):
         return
 
     try:
-        stream = stream_chat_completion(payload)
+        stream = run_agent_stream(payload, pool=db_pool, client_id=payload.client_id)
         timeout_seconds = getattr(settings, "ai_stream_timeout_seconds", 60.0)
         async for text in stream_with_timeout(stream, timeout_seconds=timeout_seconds):
             yield _sse("text_delta", {"text": text})
@@ -90,8 +91,9 @@ async def create_chat(
 
     if not get_settings().llm_api_key:
         raise HTTPException(status_code=503, detail="chat service is not configured")
+    db_pool = getattr(request.app.state, "db_pool", None)
     return StreamingResponse(
-        _chat_events(payload),
+        _chat_events(payload, db_pool=db_pool),
         media_type="text/event-stream",
         headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
     )
@@ -128,3 +130,28 @@ async def create_estimate(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return EstimateResponse(**estimate.as_dict())
+
+
+@router.get("/cost-report")
+async def cost_report(
+    request: Request,
+    x_ai_timestamp: str | None = Header(default=None),
+    x_ai_signature: str | None = Header(default=None),
+) -> dict:
+    """Internal endpoint returning AI cost-vs-budget report (Phase 5, Wave 1)."""
+    secret = get_settings().ai_hmac_secret_current
+    if not secret or not x_ai_timestamp or not x_ai_signature:
+        raise HTTPException(status_code=401, detail="missing service authentication")
+    try:
+        verify_request_signature(
+            b"", x_ai_timestamp, x_ai_signature, secret
+        )
+    except InvalidSignature as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+
+    db_pool = getattr(request.app.state, "db_pool", None)
+    if db_pool is None:
+        raise HTTPException(status_code=503, detail="database not available")
+
+    async with db_pool.acquire() as conn:
+        return await generate_cost_report(conn)

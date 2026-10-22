@@ -39,6 +39,7 @@ class Settings(BaseSettings):
 	)
 	telegram_bot_token: str | None = None
 	telegram_chat_id: str | None = None
+	calcom_api_key: str | None = None
 	outbox_batch_size: int = Field(default=20, ge=1, le=100)
 	outbox_max_attempts: int = Field(default=5, ge=1, le=20)
 	outbox_lock_timeout_seconds: int = Field(default=900, ge=60, le=3600)

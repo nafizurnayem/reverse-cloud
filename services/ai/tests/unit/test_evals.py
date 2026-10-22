@@ -14,6 +14,7 @@ def test_eval_dataset_integrity():
         "booking",
         "handoff",
         "banglish",
+        "project_status",
     }
     categories_found = {q.get("category") for q in questions}
     assert required_categories.issubset(categories_found), f"Missing categories: {required_categories - categories_found}"

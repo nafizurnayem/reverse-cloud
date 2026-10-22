@@ -67,7 +67,7 @@ def test_chat_stream_timeout_emits_sse_error(monkeypatch):
     body = {"messages": [{"role": "user", "content": "Tell me a long story"}], "locale": "en"}
     body_text = json.dumps(body, separators=(",", ":"))
 
-    async def hanging_stream(_payload):
+    async def hanging_stream(_payload, pool=None):
         yield "First part"
         await asyncio.sleep(0.2)  # Delay longer than the configured timeout
         yield "Never reached"
@@ -82,7 +82,7 @@ def test_chat_stream_timeout_emits_sse_error(monkeypatch):
             ai_stream_timeout_seconds=0.05,  # Short timeout for test
         ),
     )
-    monkeypatch.setattr(routes, "stream_chat_completion", hanging_stream)
+    monkeypatch.setattr(routes, "run_agent_stream", hanging_stream)
 
     with TestClient(app) as client:
         response = client.post(

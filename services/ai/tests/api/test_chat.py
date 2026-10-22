@@ -34,16 +34,16 @@ def test_chat_streams_contract_events(monkeypatch):
 	body = {"messages": [{"role": "user", "content": "Hello"}], "locale": "en"}
 	body_text = json.dumps(body, separators=(",", ":"))
 
-	async def fake_stream(_payload):
+	async def fake_stream(_payload, pool=None):
 		yield "Hi"
 		yield " there"
 
 	monkeypatch.setattr(
 		routes,
 		"get_settings",
-		lambda: SimpleNamespace(ai_hmac_secret_current=secret, llm_api_key="test-key"),
+		lambda: SimpleNamespace(ai_hmac_secret_current=secret, llm_api_key="test-key", ai_enabled=True),
 	)
-	monkeypatch.setattr(routes, "stream_chat_completion", fake_stream)
+	monkeypatch.setattr(routes, "run_agent_stream", fake_stream)
 
 	with TestClient(app) as client:
 		response = client.post(

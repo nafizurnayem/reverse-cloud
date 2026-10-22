@@ -50,3 +50,11 @@
 {"id": "banglish_04", "category": "banglish", "locale": "bn", "question": "Human agent er shathe kotha bola jabe?", "expected_intent": "human_handoff", "disallowed": []}
 {"id": "banglish_05", "category": "banglish", "locale": "bn", "question": "Mobile app development e koto shomoy lage?", "expected_intent": "company_info", "disallowed": []}
 {"id": "banglish_06", "category": "banglish", "locale": "bn", "question": "Estimator tool use kore quotation nite parbo?", "expected_intent": "pricing_inquiry", "disallowed": []}
+{"id": "status_01", "category": "project_status", "locale": "en", "question": "How is my project going?", "expected_intent": "project_status", "disallowed": ["I don't have access"]}
+{"id": "status_02", "category": "project_status", "locale": "en", "question": "What's the current status of my website build?", "expected_intent": "project_status", "disallowed": []}
+{"id": "status_03", "category": "project_status", "locale": "en", "question": "Can you show me the progress on my project milestones?", "expected_intent": "project_status", "disallowed": []}
+{"id": "status_04", "category": "project_status", "locale": "en", "question": "When is my project expected to be delivered?", "expected_intent": "project_status", "disallowed": []}
+{"id": "status_05", "category": "project_status", "locale": "bn", "question": "আমার প্রজেক্টের অবস্থা কি?", "expected_intent": "project_status", "disallowed": []}
+{"id": "status_06", "category": "project_status", "locale": "bn", "question": "আমার ওয়েবসাইট প্রজেক্ট কত পার্সেন্ট শেষ হয়েছে?", "expected_intent": "project_status", "disallowed": []}
+{"id": "status_07", "category": "project_status", "locale": "bn", "question": "প্রজেক্টের মাইলস্টোন গুলো কেমন চলছে?", "expected_intent": "project_status", "disallowed": []}
+{"id": "status_08", "category": "project_status", "locale": "bn", "question": "আমার প্রজেক্টের সর্বশেষ আপডেট কি?", "expected_intent": "project_status", "disallowed": []}
