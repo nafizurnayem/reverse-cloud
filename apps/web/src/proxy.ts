@@ -9,6 +9,17 @@ import { refreshSession } from "./lib/supabase/session";
 const handleLocale = createMiddleware(routing);
 
 export async function proxy(request: NextRequest) {
+  const segments = request.nextUrl.pathname.split("/").filter(Boolean);
+  if (
+    segments.length > 1 &&
+    hasLocale(routing.locales, segments[0]) &&
+    segments[0] === segments[1]
+  ) {
+    const canonical = request.nextUrl.clone();
+    canonical.pathname = `/${segments[0]}/${segments.slice(2).join("/")}`;
+    return NextResponse.redirect(canonical);
+  }
+
   const session = await refreshSession(request);
   const localeResponse = handleLocale(request);
   const area = protectedArea(request.nextUrl.pathname);

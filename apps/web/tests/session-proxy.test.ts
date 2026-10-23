@@ -40,6 +40,14 @@ function request(path: string, headers: Record<string, string> = {}) {
 }
 
 describe("session proxy", () => {
+  it("canonicalizes duplicate locale prefixes", async () => {
+    const response = await proxy(request("/en/en/portal?tab=active"));
+
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/en/portal");
+    expect(new URL(response.headers.get("location")!).search).toBe("?tab=active");
+  });
+
   it("matches protected dotted paths while excluding APIs and assets", () => {
     for (const url of ["/admin/user.json", "/bn/portal/file.pdf", "/en/admin"]) {
       expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);

@@ -130,6 +130,15 @@ describe("OAuth callback", () => {
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
+  it("uses the configured public site URL for callback redirects", async () => {
+    const response = await GET(
+      new NextRequest("http://0.0.0.0:3000/en/auth/callback?code=once&next=%2Fen%2Fportal"),
+      context("en"),
+    );
+
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+  });
+
   it("does not exchange a provider error and preserves the locale", async () => {
     const response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?error=access_denied&next=%2Fen%2Fadmin"),

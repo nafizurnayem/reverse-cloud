@@ -5,15 +5,17 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const publicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   let dbOk = false;
   let dbLatencyMs = 0;
 
-  if (url && anonKey) {
+  if (url && publicKey) {
     const start = Date.now();
     try {
-      const supabase = createClient(url, anonKey, { auth: { persistSession: false } });
+      const supabase = createClient(url, publicKey, { auth: { persistSession: false } });
       const { error } = await supabase.from("services").select("id").limit(1);
       dbLatencyMs = Date.now() - start;
       dbOk = !error;
