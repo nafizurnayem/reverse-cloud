@@ -67,7 +67,7 @@ def test_chat_stream_timeout_emits_sse_error(monkeypatch):
     body = {"messages": [{"role": "user", "content": "Tell me a long story"}], "locale": "en"}
     body_text = json.dumps(body, separators=(",", ":"))
 
-    async def hanging_stream(_payload, pool=None):
+    async def hanging_stream(_payload, pool=None, **kwargs):
         yield "First part"
         await asyncio.sleep(0.2)  # Delay longer than the configured timeout
         yield "Never reached"

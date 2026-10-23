@@ -34,7 +34,7 @@ def test_chat_streams_contract_events(monkeypatch):
 	body = {"messages": [{"role": "user", "content": "Hello"}], "locale": "en"}
 	body_text = json.dumps(body, separators=(",", ":"))
 
-	async def fake_stream(_payload, pool=None):
+	async def fake_stream(_payload, pool=None, **kwargs):
 		yield "Hi"
 		yield " there"
 

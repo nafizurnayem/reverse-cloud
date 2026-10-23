@@ -178,7 +178,7 @@ def test_chat_caps_history_before_streaming(monkeypatch):
 
     received_messages = []
 
-    async def fake_stream(payload, pool=None):
+    async def fake_stream(payload, pool=None, **kwargs):
         nonlocal received_messages
         received_messages = list(payload.messages)
         yield "Response"
