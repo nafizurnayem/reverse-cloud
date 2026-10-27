@@ -200,7 +200,10 @@ begin
     raise exception 'invalid_or_expired_invite';
   end if;
 
+  perform set_config('app.allow_client_link', 'true', true);
   update public.clients set user_id = v_uid where id = v_client.id;
+  perform set_config('app.allow_client_link', 'false', true);
+
   update public.client_invites
      set accepted_at = now(), accepted_by = v_uid
    where id = v_invite.id;
@@ -213,6 +216,80 @@ revoke execute on function public.accept_client_invite(text) from public, anon;
 grant execute on function public.accept_client_invite(text) to authenticated;
 
 -- -----------------------------------------------------------------------------
+-- Link authenticated account with allow_client_link flag
+-- -----------------------------------------------------------------------------
+create or replace function public.link_my_client_account()
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid        uuid := (select auth.uid());
+  v_auth_email text;
+  v_confirmed  timestamptz;
+  v_meta       jsonb;
+  v_email      extensions.citext;
+  v_client     public.clients;
+  v_client_id  uuid;
+  v_name       text;
+begin
+  if v_uid is null then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
+
+  select c.id into v_client_id from public.clients c where c.user_id = v_uid;
+  if found then
+    return v_client_id;
+  end if;
+
+  select u.email, u.email_confirmed_at, u.raw_user_meta_data
+    into v_auth_email, v_confirmed, v_meta
+    from auth.users u where u.id = v_uid;
+  if not found or v_confirmed is null or nullif(btrim(v_auth_email), '') is null then
+    raise exception 'email_not_confirmed';
+  end if;
+  v_email := btrim(v_auth_email);
+
+  select * into v_client from public.clients c where c.email = v_email for update;
+  if found then
+    if v_client.user_id = v_uid then
+      return v_client.id;
+    end if;
+    if v_client.user_id is not null or v_client.archived_at is not null then
+      raise exception 'email_already_linked';
+    end if;
+    perform set_config('app.allow_client_link', 'true', true);
+    update public.clients set user_id = v_uid where id = v_client.id;
+    perform set_config('app.allow_client_link', 'false', true);
+    return v_client.id;
+  end if;
+
+  v_name := left(coalesce(
+    nullif(btrim(v_meta ->> 'full_name'), ''),
+    nullif(btrim(v_meta ->> 'name'), ''),
+    split_part(btrim(v_auth_email), '@', 1)
+  ), 200);
+
+  begin
+    insert into public.clients (user_id, full_name, email, stage, source, created_by)
+    values (v_uid, v_name, v_email, 'prospect', 'website', null)
+    returning id into v_client_id;
+  exception when unique_violation then
+    select c.id into v_client_id from public.clients c where c.user_id = v_uid;
+    if v_client_id is null then
+      raise;
+    end if;
+  end;
+
+  return v_client_id;
+end;
+$$;
+
+revoke execute on function public.link_my_client_account() from public, anon;
+grant execute on function public.link_my_client_account() to authenticated;
+
+-- -----------------------------------------------------------------------------
 -- FX-19: guard_client_self_update: add security definer and set search_path = ''
 -- -----------------------------------------------------------------------------
 create or replace function app.guard_client_self_update()
@@ -222,6 +299,21 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Allow authorized account linking through accept_client_invite / link_my_client_account
+  if coalesce(current_setting('app.allow_client_link', true), 'false') = 'true'
+     and new.user_id is not null
+     and old.user_id is null
+     and (   new.email       is not distinct from old.email
+          and new.country     is not distinct from old.country
+          and new.stage       is not distinct from old.stage
+          and new.source      is not distinct from old.source
+          and new.source_ref  is not distinct from old.source_ref
+          and new.archived_at is not distinct from old.archived_at
+          and new.created_by  is not distinct from old.created_by)
+  then
+    return new;
+  end if;
+
   if (coalesce(current_setting('role', true), '') in ('anon', 'authenticated')
       or coalesce(current_setting('request.jwt.claim.role', true), '') in ('anon', 'authenticated')
       or (select auth.role()) in ('anon', 'authenticated')

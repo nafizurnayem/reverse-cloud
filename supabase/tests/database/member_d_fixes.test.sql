@@ -30,8 +30,8 @@ insert into public.clients (id, user_id, full_name, email, stage, source) values
 
 -- Projects
 insert into public.projects (id, client_id, title, created_by) values
-  ('11111111-1111-1111-1111-1111111111p1', '11111111-1111-1111-1111-1111111111c1', 'Alice Project', '11111111-1111-1111-1111-111111111101'),
-  ('11111111-1111-1111-1111-1111111111p2', '11111111-1111-1111-1111-1111111111c2', 'Bob Project', '11111111-1111-1111-1111-111111111101');
+  ('11111111-1111-1111-1111-1111111111a1', '11111111-1111-1111-1111-1111111111c1', 'Alice Project', '11111111-1111-1111-1111-111111111101'),
+  ('11111111-1111-1111-1111-1111111111a2', '11111111-1111-1111-1111-1111111111c2', 'Bob Project', '11111111-1111-1111-1111-111111111101');
 
 -- ------------------------------------------------------------- 2. FX-05: list_staff_directory & lookup
 -- Run as admin
@@ -68,14 +68,14 @@ select throws_ok(
 -- ------------------------------------------------------------- 3. FX-09: submit_project_review
 -- Customer Alice reviews Alice Project
 select lives_ok(
-  $$select public.submit_project_review('11111111-1111-1111-1111-1111111111p1'::uuid, 5::smallint, 'Alice', 'CEO', 'Great team', 'en')$$,
+  $$select public.submit_project_review('11111111-1111-1111-1111-1111111111a1'::uuid, 5::smallint, 'Alice', 'CEO', 'Great team', 'en')$$,
   'FX-09: Project owner successfully submits review'
 );
 
 -- Review is pending and hidden from anon and public
 set local role anon;
 select is(
-  (select count(*)::int from public.reviews where project_id = '11111111-1111-1111-1111-1111111111p1'),
+  (select count(*)::int from public.reviews where project_id = '11111111-1111-1111-1111-1111111111a1'),
   0,
   'FX-09: Pending review is hidden from public / unmoderated reads'
 );
@@ -85,7 +85,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111103","role":"authenticated"}', true);
 
 select throws_ok(
-  $$select public.submit_project_review('11111111-1111-1111-1111-1111111111p1'::uuid, 5::smallint, 'Bob', null, 'Intruder review', 'en')$$,
+  $$select public.submit_project_review('11111111-1111-1111-1111-1111111111a1'::uuid, 5::smallint, 'Bob', null, 'Intruder review', 'en')$$,
   '42501',
   'project_not_found_or_forbidden',
   'FX-09: Non-owner client cannot review another client project'
@@ -95,10 +95,10 @@ select throws_ok(
 -- Seed meeting type & chat session for Alice
 reset role;
 insert into public.chat_sessions (id, user_id, client_id, status) values
-  ('11111111-1111-1111-1111-1111111111s1', '11111111-1111-1111-1111-111111111102', '11111111-1111-1111-1111-1111111111c1', 'active');
+  ('11111111-1111-1111-1111-1111111111e1', '11111111-1111-1111-1111-111111111102', '11111111-1111-1111-1111-1111111111c1', 'active');
 
 insert into public.booking_proposals (id, session_id, meeting_type_id, starts_at, ends_at, timezone, status, expires_at)
-select '11111111-1111-1111-1111-1111111111b1', '11111111-1111-1111-1111-1111111111s1', mt.id, now() + interval '1 day', now() + interval '1 day 30 min', 'UTC', 'open', now() + interval '15 min'
+select '11111111-1111-1111-1111-1111111111b1', '11111111-1111-1111-1111-1111111111e1', mt.id, now() + interval '1 day', now() + interval '1 day 30 min', 'UTC', 'open', now() + interval '15 min'
   from public.meeting_types mt where mt.key = 'discovery_call';
 
 -- Customer Bob tries to confirm Alice proposal -> rejected
@@ -134,7 +134,7 @@ insert into public.notifications_outbox (channel, to_address, template, payload)
 
 -- Insert an overdue payment item
 insert into public.payment_items (id, project_id, title, amount_due, currency, status, due_on) values
-  ('11111111-1111-1111-1111-1111111111i1', '11111111-1111-1111-1111-1111111111p1', 'Overdue Milestone', 1000.00, 'USD', 'pending', current_date - interval '3 days');
+  ('11111111-1111-1111-1111-1111111111d1', '11111111-1111-1111-1111-1111111111a1', 'Overdue Milestone', 1000.00, 'USD', 'pending', current_date - interval '3 days');
 
 -- Run maintenance
 select lives_ok(
@@ -143,7 +143,7 @@ select lives_ok(
 );
 
 select is(
-  (select status from public.payment_items where id = '11111111-1111-1111-1111-1111111111i1'),
+  (select status from public.payment_items where id = '11111111-1111-1111-1111-1111111111d1'),
   'overdue',
   'FX-12: Overdue items are successfully updated despite bad outbox payload'
 );
@@ -190,7 +190,7 @@ select throws_ok(
 reset role;
 -- Seed an expired invite for Alice
 insert into public.client_invites (id, client_id, email, token_hash, expires_at) values
-  ('11111111-1111-1111-1111-1111111111v1', '11111111-1111-1111-1111-1111111111c1', 'customer-a@test.local', encode(extensions.digest('expired-token', 'sha256'), 'hex'), now() - interval '1 hour');
+  ('11111111-1111-1111-1111-1111111111f1', '11111111-1111-1111-1111-1111111111c1', 'customer-a@test.local', encode(extensions.digest('expired-token', 'sha256'), 'hex'), now() - interval '1 hour');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111102","role":"authenticated"}', true);
