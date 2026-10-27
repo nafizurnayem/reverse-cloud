@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
     throw new Error(`redirect:${url}`);
   }),
   from: vi.fn(),
+  userRpc: vi.fn(),
+  adminRpc: vi.fn(),
+  adminFrom: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -19,7 +22,11 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: () => ({
     auth: { getUser: mocks.getUser },
     from: mocks.from,
+    rpc: mocks.userRpc,
   }),
+}));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({ rpc: mocks.adminRpc, from: mocks.adminFrom }),
 }));
 
 import { getApprovedReviews, REVIEWS_CATALOG } from "@/lib/reviews-catalog";
@@ -34,6 +41,12 @@ import { calculateClientProgress } from "@/lib/portal/portal-calc";
 describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubEnv("CALCOM_API_KEY", "cal_test_key");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   describe("1. Public Site & Homepage Reviews Display (Task 4.4)", () => {
@@ -104,30 +117,34 @@ describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
     });
 
     it("atomically confirms an open booking proposal for a signed-in user", async () => {
+      const proposalId = "00000000-0000-4000-8000-000000000031";
       mocks.getUser.mockResolvedValue({
-        data: { user: { id: "user-client-1", email: "client@example.com" } },
+        data: { user: { id: "user-client-1", email: "client@example.com", user_metadata: {} } },
         error: null,
       });
-
-      const updateChain: Record<string, unknown> = {};
-      updateChain.eq = vi.fn().mockReturnValue(updateChain);
-      updateChain.gt = vi.fn().mockReturnValue(updateChain);
-      updateChain.select = vi.fn().mockReturnValue(updateChain);
-      updateChain.maybeSingle = vi.fn().mockResolvedValue({
-        data: {
-          id: sampleBookingProposal.proposalId,
-          status: "confirmed",
-          starts_at: sampleBookingProposal.startsAt,
-        },
-        error: null,
-      });
-
-      mocks.from.mockReturnValue({ update: vi.fn().mockReturnValue(updateChain) });
+      mocks.userRpc.mockResolvedValue({ data: {
+        proposal_id: proposalId,
+        status: "confirmed",
+        starts_at: "2027-01-10T10:00:00Z",
+        ends_at: "2027-01-10T10:30:00Z",
+        timezone: "Asia/Dhaka",
+        intake_summary: "Project discussion",
+        meeting_type_id: "00000000-0000-4000-8000-000000000018",
+        meeting_type_key: "discovery_call",
+        meeting_name: "Discovery Call",
+        calcom_event_type_id: "12345",
+      }, error: null });
+      mocks.adminRpc.mockResolvedValue({ data: true, error: null });
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        status: "success",
+        data: { uid: "booking-uid-123", status: "accepted",
+          start: "2027-01-10T10:00:00Z", end: "2027-01-10T10:30:00Z" },
+      }), { status: 201 })));
 
       const req = new NextRequest("http://localhost/api/chat/confirm-booking", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ proposalId: sampleBookingProposal.proposalId }),
+        body: JSON.stringify({ proposalId }),
       });
 
       const res = await confirmBookingPost(req);
@@ -135,6 +152,10 @@ describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
       const json = await res.json();
       expect(json.ok).toBe(true);
       expect(json.status).toBe("confirmed");
+      expect(json.booking.uid).toBe("booking-uid-123");
+      expect(mocks.userRpc).toHaveBeenCalledWith("confirm_booking_proposal", {
+        p_proposal_id: proposalId,
+      });
     });
   });
 

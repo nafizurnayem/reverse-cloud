@@ -63,3 +63,11 @@ export function safePostLoginPath(
     return fallback;
   }
 }
+
+export function postLoginPathFromQuery(
+  next: string | readonly string[] | null | undefined,
+  returnTo: string | readonly string[] | null | undefined,
+  locale: Locale,
+) {
+  return safePostLoginPath(next ?? returnTo, locale);
+}

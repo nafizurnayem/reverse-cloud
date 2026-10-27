@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { needsClientAccountLink, safePostLoginPath } from "../src/lib/auth/routes";
+import {
+  needsClientAccountLink,
+  postLoginPathFromQuery,
+  safePostLoginPath,
+} from "../src/lib/auth/routes";
 
 describe("post-login destination validation", () => {
   it.each([
@@ -17,6 +21,20 @@ describe("post-login destination validation", () => {
     [["/en/admin"], "en", "/en/portal"],
   ] as const)("maps %j for %s to %s", (value, locale, expected) => {
     expect(safePostLoginPath(value, locale)).toBe(expected);
+  });
+});
+
+describe("postLoginPathFromQuery", () => {
+  it("uses returnTo only as a legacy fallback when next is absent", () => {
+    expect(postLoginPathFromQuery(undefined, "/en/schedule?slot=1", "en"))
+      .toBe("/en/schedule?slot=1");
+    expect(postLoginPathFromQuery("/en/portal", "/en/schedule", "en"))
+      .toBe("/en/portal");
+  });
+
+  it("applies the same open-redirect protection to returnTo", () => {
+    expect(postLoginPathFromQuery(undefined, "https://evil.example", "en"))
+      .toBe("/en/portal");
   });
 });
 

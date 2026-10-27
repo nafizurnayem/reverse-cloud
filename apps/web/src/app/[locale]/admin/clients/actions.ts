@@ -84,12 +84,12 @@ export async function createClientInvite(
     return { status: "error", error: "invalidInput" };
   }
 
-  const sendEmail = formData.get("send_email") === "true";
-
   const result = await supabase.rpc("create_client_invite", {
     p_client_id: clientId,
     p_email: email,
-    p_send_email: sendEmail,
+    // The raw token is intentionally returned once and never stored in the
+    // notification outbox. Staff copy this one-time link from the result UI.
+    p_send_email: false,
   });
   if (result.error) {
     return {

@@ -19,7 +19,11 @@ import {
   saveClient,
   setClientArchived,
 } from "../src/app/[locale]/admin/clients/actions";
-import { clientPayload } from "../src/lib/admin/client-values";
+import {
+  clientListPage,
+  clientsPageSize,
+  clientPayload,
+} from "../src/lib/admin/client-values";
 
 const clientId = "00000000-0000-4000-8000-000000000010";
 const inviteId = "00000000-0000-4000-8000-000000000020";
@@ -69,6 +73,14 @@ beforeEach(() => {
 });
 
 describe("client values", () => {
+  it("uses bounded 25-row list pages", () => {
+    expect(clientsPageSize).toBe(25);
+    expect(clientListPage(undefined)).toBe(1);
+    expect(clientListPage("2")).toBe(2);
+    expect(clientListPage("0")).toBe(1);
+    expect(clientListPage("not-a-page")).toBe(1);
+  });
+
   it("normalizes valid client input without allowing user_id writes", () => {
     expect(clientPayload(clientForm())).toEqual({
       full_name: "Example Client",
@@ -154,7 +166,7 @@ describe("Clients admin actions", () => {
     });
   });
 
-  it("passes p_send_email: true when send_email is set to true in formData", async () => {
+  it("cannot be coerced into queuing a token-less invite email", async () => {
     const token = "b".repeat(43);
     mocks.rpc.mockResolvedValue({
       data: [{ invite_id: inviteId, token, expires_at: "2026-10-28T00:00:00.000Z" }],
@@ -171,7 +183,7 @@ describe("Clients admin actions", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("create_client_invite", {
       p_client_id: clientId,
       p_email: "client@example.com",
-      p_send_email: true,
+      p_send_email: false,
     });
     expect(state.status).toBe("success");
   });

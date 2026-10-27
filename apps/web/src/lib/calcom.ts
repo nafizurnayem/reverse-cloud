@@ -10,6 +10,24 @@ export type ScheduleQuery = { meetingType: string; start: string; end: string; t
 export type AvailableSlot = { start: string; end: string };
 type CalSlot = { time?: unknown; start?: unknown; end?: unknown };
 
+export type CreatedCalcomBooking = {
+  uid: string;
+  start: string;
+  end: string;
+  status: string;
+  meetingUrl: string | null;
+};
+
+export class CalcomBookingError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | null = null,
+  ) {
+    super(message);
+    this.name = "CalcomBookingError";
+  }
+}
+
 function isValidTimeZone(value: string) {
   try {
     new Intl.DateTimeFormat("en", { timeZone: value }).format();
@@ -84,6 +102,87 @@ export async function fetchAvailableSlots(options: {
     });
     if (!response.ok) throw new Error(`calcom_${response.status}`);
     return normalizeSlots(await response.json(), options.durationMinutes);
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", abort);
+  }
+}
+
+export async function createCalcomBooking(options: {
+  apiKey: string;
+  eventTypeId: string;
+  start: string;
+  attendee: { name: string; email: string; timeZone: string; language: "en" | "bn" };
+  proposalId?: string;
+  source?: string;
+  metadata?: Record<string, string>;
+  signal?: AbortSignal;
+  fetcher?: typeof fetch;
+  timeoutMs?: number;
+}): Promise<CreatedCalcomBooking> {
+  if (!/^\d+$/.test(options.eventTypeId)) {
+    throw new CalcomBookingError("invalid_event_type_id");
+  }
+
+  const start = new Date(options.start);
+  if (!Number.isFinite(start.getTime())) {
+    throw new CalcomBookingError("invalid_start_time");
+  }
+
+  const baseUrl = (process.env.CALCOM_API_BASE_URL ?? "https://api.cal.com/v2").replace(/\/$/, "");
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  options.signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, options.timeoutMs ?? 10_000);
+
+  try {
+    const response = await (options.fetcher ?? fetch)(`${baseUrl}/bookings`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${options.apiKey}`,
+        "cal-api-version": process.env.CALCOM_API_VERSION ?? CALCOM_API_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        start: start.toISOString(),
+        attendee: options.attendee,
+        eventTypeId: Number(options.eventTypeId),
+        metadata: {
+          ...options.metadata,
+          ...(options.proposalId ? { bookingProposalId: options.proposalId } : {}),
+          source: options.source ?? "reverse_cloud_chat",
+        },
+      }),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // Cal.com errors are intentionally converted to stable application codes.
+    }
+    if (!response.ok) {
+      throw new CalcomBookingError("calcom_booking_failed", response.status);
+    }
+
+    const root = record(payload);
+    const data = record(root.data);
+    const uid = optionalString(data.uid, 200);
+    const bookingStart = optionalDate(data.start);
+    const bookingEnd = optionalDate(data.end);
+    if (!uid || !bookingStart || !bookingEnd) {
+      throw new CalcomBookingError("calcom_invalid_response", response.status);
+    }
+
+    return {
+      uid,
+      start: bookingStart,
+      end: bookingEnd,
+      status: optionalString(data.status, 50) ?? "accepted",
+      meetingUrl: optionalString(data.meetingUrl ?? data.location, 2_000),
+    };
   } finally {
     clearTimeout(timer);
     options.signal?.removeEventListener("abort", abort);

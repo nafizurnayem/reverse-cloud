@@ -11,6 +11,8 @@ export const clientSources = [
 export type ClientStage = (typeof clientStages)[number];
 export type ClientSource = (typeof clientSources)[number];
 
+export const clientsPageSize = 25;
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,8 +33,16 @@ export function validClientEmail(input: string) {
   return input.length <= 254 && emailPattern.test(input);
 }
 
+export function clientListPage(input: string | undefined) {
+  if (!input || !/^\d+$/.test(input)) return 1;
+  const page = Number(input);
+  return Number.isSafeInteger(page) && page >= 1 ? page : 1;
+}
+
 export function clientPayload(formData: FormData) {
   const fullName = value(formData, "full_name");
+  // Client emails are normalized before writes; the database stores them as
+  // citext so uniqueness and exact-email account linking stay case-insensitive.
   const email = value(formData, "email").toLowerCase();
   const phone = value(formData, "phone");
   const company = value(formData, "company");
