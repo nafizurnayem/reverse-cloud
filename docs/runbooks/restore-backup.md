@@ -43,7 +43,11 @@ To test recovery without affecting production or development databases:
 2. **Restore into target database:**
    ```bash
    psql "$TARGET_DATABASE_URL" -f supabase/backup_schema_drill.sql
-   psql "$TARGET_DATABASE_URL" -f supabase/backup_data_drill.sql
+   # Circular foreign keys between public.leads and public.estimates are configured
+   # as DEFERRABLE INITIALLY DEFERRED (migration 0029).
+   # When doing logical data-only restores, wrap with session_replication_role = replica
+   # if restoring plain un-deferred inserts or legacy dumps:
+   psql "$TARGET_DATABASE_URL" -c "SET session_replication_role = replica;" -f supabase/backup_data_drill.sql -c "SET session_replication_role = DEFAULT;"
    ```
 
 ---
