@@ -4,7 +4,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(18);
 
 -- ------------------------------------------------------------- 1. Setup Test Users & Roles
 insert into auth.users (id, email, email_confirmed_at) values
@@ -174,8 +174,9 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111102","role":"authenticated"}', true);
 
 select throws_ok(
-  $$select app.get_client_project_status('11111111-1111-1111-1111-1111111111c2'::uuid)$$,
+  $$select public.get_client_project_status('11111111-1111-1111-1111-1111111111c2'::uuid)$$,
   '42501',
+  'permission_denied',
   'FX-03: Ordinary client cannot query project status of another client'
 );
 
@@ -183,6 +184,7 @@ select throws_ok(
 select throws_ok(
   $$update public.clients set email = 'hacked@test.local' where id = '11111111-1111-1111-1111-1111111111c1'$$,
   '42501',
+  null,
   'FX-19: Client cannot change protected columns'
 );
 
@@ -197,6 +199,7 @@ select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-1111111
 
 select throws_ok(
   $$select public.accept_client_invite('expired-token')$$,
+  'P0001',
   'invalid_or_expired_invite',
   'FX-18: Already linked user cannot accept expired invite'
 );
