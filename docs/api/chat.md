@@ -22,6 +22,13 @@ The browser must not own `conversation_id`. The web proxy generates it and store
 it in the `HttpOnly`, signed `rc_chat_session` cookie for 24 hours. The direct AI
 service contract still accepts `conversation_id` and echoes it in the first event.
 
+The browser must not send or choose `client_id`. For a signed-in user, the web
+route resolves the matching client record through the user's authenticated
+Supabase session and adds that ID to the HMAC-signed upstream body. Signed-out
+visitors and users without a linked client record send no `client_id`. The AI
+service must treat this signed field as the only client identity for client-scoped
+tools.
+
 The first request for a new or expired chat session must include a successful
 Cloudflare Turnstile token in `X-Turnstile-Token`. Configure the widget with the
 `chat` action. Later requests with the valid signed cookie do not repeat the

@@ -6,6 +6,10 @@ const mocks = vi.hoisted(() => ({
   limit: vi.fn(),
   verify: vi.fn(),
   fetch: vi.fn(),
+  createClient: vi.fn(),
+  getUser: vi.fn(),
+  from: vi.fn(),
+  maybeSingle: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -14,6 +18,7 @@ vi.mock("@/lib/ratelimit", () => ({
   limitChatRequests: mocks.limit,
 }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.verify }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 
 import { POST } from "../src/app/api/chat/route";
 
@@ -21,6 +26,7 @@ const payload = {
   messages: [{ role: "user", content: "Hello" }],
   locale: "bn",
   conversation_id: "browser-controlled",
+  client_id: "99999999-9999-4999-8999-999999999999",
 };
 
 function request(
@@ -55,6 +61,20 @@ beforeEach(() => {
   vi.stubEnv("CHAT_COOKIE_SECRET", "0123456789abcdef0123456789abcdef");
   mocks.limit.mockResolvedValue(allowedRate());
   mocks.verify.mockResolvedValue({ success: true, errors: [] });
+  const clientQuery = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    maybeSingle: mocks.maybeSingle,
+  };
+  clientQuery.select.mockReturnValue(clientQuery);
+  clientQuery.eq.mockReturnValue(clientQuery);
+  mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+  mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
+  mocks.from.mockReturnValue(clientQuery);
+  mocks.createClient.mockResolvedValue({
+    auth: { getUser: mocks.getUser },
+    from: mocks.from,
+  });
   mocks.fetch.mockResolvedValue(new Response(
     'event: message_start\ndata: {"conversation_id":"id"}\n\n',
     { status: 200, headers: { "content-type": "text/event-stream" } },
@@ -89,12 +109,39 @@ describe("POST /api/chat", () => {
     expect(parsed).toMatchObject({ messages: payload.messages, locale: "bn" });
     expect(parsed.conversation_id).toMatch(/^[0-9a-f-]{36}$/);
     expect(parsed.conversation_id).not.toBe("browser-controlled");
+    expect(parsed.client_id).toBeUndefined();
+    expect(mocks.getUser).toHaveBeenCalledOnce();
+    expect(mocks.from).not.toHaveBeenCalled();
     expect(mocks.limit).toHaveBeenCalledWith("192.0.2.20", parsed.conversation_id);
     const headers = new Headers(init.headers);
     const timestamp = headers.get("x-ai-timestamp")!;
     expect(headers.get("x-ai-signature")).toBe(
       createHmac("sha256", "service-secret")
         .update(`${timestamp}.${upstreamBody}`)
+        .digest("hex"),
+    );
+  });
+
+  it("adds only the signed-in user's server-resolved client ID to the signed body", async () => {
+    const verifiedClientId = "22222222-2222-4222-8222-222222222222";
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "user-client-a" } }, error: null });
+    mocks.maybeSingle.mockResolvedValue({ data: { id: verifiedClientId }, error: null });
+
+    const response = await POST(request(payload, { token: "turnstile-token" }));
+
+    expect(response.status).toBe(200);
+    const [, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    const upstreamBody = String(init.body);
+    const parsed = JSON.parse(upstreamBody);
+    expect(parsed.client_id).toBe(verifiedClientId);
+    expect(parsed.client_id).not.toBe(payload.client_id);
+    expect(mocks.from).toHaveBeenCalledWith("clients");
+    const clientQuery = mocks.from.mock.results[0].value;
+    expect(clientQuery.select).toHaveBeenCalledWith("id");
+    expect(clientQuery.eq).toHaveBeenCalledWith("user_id", "user-client-a");
+    expect(new Headers(init.headers).get("x-ai-signature")).toBe(
+      createHmac("sha256", "service-secret")
+        .update(`${new Headers(init.headers).get("x-ai-timestamp")}.${upstreamBody}`)
         .digest("hex"),
     );
   });

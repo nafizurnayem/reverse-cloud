@@ -12,12 +12,37 @@ import {
   type ChatRateLimitResult,
   type RateLimitResult,
 } from "@/lib/ratelimit";
+import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
 const maxRequestBytes = 625_000;
 const defaultConnectTimeoutMs = 10_000;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function authenticatedClientId() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) return null;
+
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    return !error && typeof data?.id === "string" && uuidPattern.test(data.id)
+      ? data.id
+      : null;
+  } catch {
+    // Chat remains public, but project-status access fails closed without a verified client ID.
+    return null;
+  }
+}
 
 function connectTimeoutMs() {
   const raw = process.env.AI_CHAT_CONNECT_TIMEOUT_MS?.trim();
@@ -150,7 +175,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const body = JSON.stringify({ ...validated.data, conversation_id: session.id });
+  const clientId = await authenticatedClientId();
+  const body = JSON.stringify({
+    ...validated.data,
+    conversation_id: session.id,
+    ...(clientId ? { client_id: clientId } : {}),
+  });
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = createHmac("sha256", serviceSecret)
     .update(`${timestamp}.${body}`)

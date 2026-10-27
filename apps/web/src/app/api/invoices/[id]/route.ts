@@ -1,9 +1,25 @@
+import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getPortalProjects } from "@/lib/portal/portal-catalog";
 import { formatBdt, formatUsd } from "@/lib/money";
 
 export const runtime = "nodejs";
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function invoiceCsp(nonce: string) {
+  return [
+    "default-src 'none'",
+    `script-src 'nonce-${nonce}'`,
+    "style-src 'unsafe-inline'",
+    "img-src 'none'",
+    "font-src 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
 
 interface PaymentItemDbRow {
   id: string;
@@ -29,12 +45,12 @@ interface PaymentItemDbRow {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  if (!id || typeof id !== "string") {
-    return NextResponse.json({ error: "Invalid invoice ID" }, { status: 400 });
+  if (!uuidPattern.test(id)) {
+    return invoiceNotFound();
   }
 
   const supabase = await createClient();
@@ -101,7 +117,7 @@ export async function GET(
     const isOwner = Boolean(userClientId && projectClientId && userClientId === projectClientId);
 
     if (!isStaffWithAccess && !isOwner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return invoiceNotFound();
     }
 
     // Try finding pre-generated PDF in private 'invoices' bucket
@@ -131,6 +147,7 @@ export async function GET(
     const amountBdt = isBdt ? amountNum : Math.round(amountNum * 120);
     const invoiceNumber = `INV-${id.slice(0, 8).toUpperCase()}`;
 
+    const nonce = randomBytes(18).toString("base64");
     const html = generateInvoiceHtml({
       invoiceNumber,
       clientName: item.projects?.clients?.full_name ?? "Client",
@@ -143,68 +160,73 @@ export async function GET(
       status: item.status,
       dueDate: item.due_on ?? "On Receipt",
       paidAt: item.paid_at,
-    });
+    }, nonce);
 
     return new NextResponse(html, {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
-        "cache-control": "private, no-cache",
+        "cache-control": "private, no-store, max-age=0",
+        "content-security-policy": invoiceCsp(nonce),
+        "x-content-type-options": "nosniff",
       },
     });
   }
 
-  // 2. Catalog fallback for demo / test IDs
-  const allProjects = getPortalProjects();
-  for (const proj of allProjects) {
-    const pay = proj.payments.find((p) => p.id === id || p.invoiceNumber === id);
-    if (pay) {
-      const html = generateInvoiceHtml({
-        invoiceNumber: pay.invoiceNumber,
-        clientName: proj.clientName,
-        companyName: proj.companyName,
-        projectTitle: proj.title,
-        itemTitle: pay.title,
-        description: `Milestone payment for ${proj.title}`,
-        amountUsd: pay.amountUsd,
-        amountBdt: pay.amountBdt,
-        status: pay.status,
-        dueDate: pay.dueDate,
-        paidAt: pay.paidAt,
-      });
+  return invoiceNotFound();
+}
 
-      return new NextResponse(html, {
-        status: 200,
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "cache-control": "private, no-cache",
-        },
-      });
-    }
-  }
-
+function invoiceNotFound() {
   return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 }
 
-function generateInvoiceHtml(data: {
-  invoiceNumber: string;
-  clientName: string;
-  companyName: string;
-  projectTitle: string;
-  itemTitle: string;
-  description: string;
-  amountUsd: number;
-  amountBdt: number;
-  status: string;
-  dueDate: string;
-  paidAt?: string | null;
-}): string {
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
+}
+
+function generateInvoiceHtml(
+  data: {
+    invoiceNumber: string;
+    clientName: string;
+    companyName: string;
+    projectTitle: string;
+    itemTitle: string;
+    description: string;
+    amountUsd: number;
+    amountBdt: number;
+    status: string;
+    dueDate: string;
+    paidAt?: string | null;
+  },
+  nonce: string,
+): string {
   const isPaid = data.status === "paid";
+  const invoiceNumber = escapeHtml(data.invoiceNumber);
+  const clientName = escapeHtml(data.clientName);
+  const companyName = escapeHtml(data.companyName);
+  const projectTitle = escapeHtml(data.projectTitle);
+  const itemTitle = escapeHtml(data.itemTitle);
+  const description = escapeHtml(data.description);
+  const status = escapeHtml(data.status);
+  const dueDate = escapeHtml(data.dueDate);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Invoice ${data.invoiceNumber} — Reverse Cloud</title>
+  <title>Invoice ${invoiceNumber} — Reverse Cloud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     @media print {
@@ -234,17 +256,16 @@ function generateInvoiceHtml(data: {
     .total-val { font-size: 24px; font-weight: 800; font-family: monospace; color: #38bdf8; text-align: right; }
     .total-bdt { font-size: 12px; color: #94a3b8; font-family: monospace; margin-top: 4px; }
     .footer { font-size: 11px; color: #64748b; text-align: center; border-top: 1px solid #1e293b; padding-top: 24px; }
-    .actions { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 24px; }
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; border: 1px solid #334155; background: #1e293b; color: #f8fafc; }
+    .actions { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+    .btn { padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #334155; background: #1e293b; color: #f8fafc; }
     .btn:hover { background: #334155; }
-    .btn-primary { background: #0284c7; border-color: #0284c7; color: #fff; }
-    .btn-primary:hover { background: #0369a1; }
   </style>
 </head>
 <body>
   <div class="actions no-print">
-    <button class="btn" onclick="window.print()">Print Invoice</button>
+    <button class="btn" id="print-invoice" type="button">Print Invoice</button>
   </div>
+  <script nonce="${nonce}">document.getElementById("print-invoice")?.addEventListener("click", () => window.print());</script>
   <div class="container">
     <div class="header">
       <div>
@@ -252,18 +273,18 @@ function generateInvoiceHtml(data: {
         <div class="brand-sub">Enterprise Engineering & Cloud Operations</div>
       </div>
       <div class="inv-meta">
-        <div class="inv-num">${data.invoiceNumber}</div>
-        <span class="badge ${isPaid ? "badge-paid" : "badge-due"}">${data.status}</span>
-        <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">Due: ${data.dueDate}</div>
+        <div class="inv-num">${invoiceNumber}</div>
+        <span class="badge ${isPaid ? "badge-paid" : "badge-due"}">${status}</span>
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">Due: ${dueDate}</div>
       </div>
     </div>
 
     <div class="parties">
       <div>
         <div class="section-title">Billed To</div>
-        <div class="party-name">${data.clientName}</div>
-        <div class="party-sub">${data.companyName}</div>
-        <div class="party-sub" style="margin-top: 4px;">Project: ${data.projectTitle}</div>
+        <div class="party-name">${clientName}</div>
+        <div class="party-sub">${companyName}</div>
+        <div class="party-sub" style="margin-top: 4px;">Project: ${projectTitle}</div>
       </div>
       <div style="text-align: right;">
         <div class="section-title">Payable To</div>
@@ -284,8 +305,8 @@ function generateInvoiceHtml(data: {
       <tbody>
         <tr>
           <td>
-            <strong style="color: #f8fafc; display: block; margin-bottom: 4px;">${data.itemTitle}</strong>
-            <span style="color: #94a3b8; font-size: 12px;">${data.description}</span>
+            <strong style="color: #f8fafc; display: block; margin-bottom: 4px;">${itemTitle}</strong>
+            <span style="color: #94a3b8; font-size: 12px;">${description}</span>
           </td>
           <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatUsd(data.amountUsd)}</td>
           <td style="text-align: right; font-family: monospace; color: #94a3b8;">${formatBdt(data.amountBdt)}</td>
