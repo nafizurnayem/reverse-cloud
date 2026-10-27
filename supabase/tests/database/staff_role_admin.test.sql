@@ -65,7 +65,7 @@ select is(
       '00000000-0000-4000-8000-000000002703',
       '00000000-0000-4000-8000-000000002704'
     )),
-  4, 'an administrator can list authenticated users'
+  1, 'an administrator lists only users with staff roles'
 );
 
 select throws_ok(

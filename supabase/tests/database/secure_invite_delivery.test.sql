@@ -92,9 +92,9 @@ select is(
   '00000000-0000-0000-0000-00000000c002'::uuid, 'payload contains correct client_id');
 
 select is(
-  (select payload ->> 'token' from public.notifications_outbox
+  (select (payload ? 'token') from public.notifications_outbox
     where to_address = 'invitee2@example.com' and template = 'client_invite'),
-  current_setting('rc.res_with_email'), 'payload contains matching raw token');
+  false, 'payload never contains raw token');
 
 select is(
   (select payload ->> 'locale' from public.notifications_outbox

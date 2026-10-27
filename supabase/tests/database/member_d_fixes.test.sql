@@ -15,7 +15,8 @@ insert into auth.users (id, email, email_confirmed_at) values
 insert into public.profiles (id, full_name) values
   ('11111111-1111-1111-1111-111111111101', 'Staff Admin'),
   ('11111111-1111-1111-1111-111111111102', 'Customer Alice'),
-  ('11111111-1111-1111-1111-111111111103', 'Customer Bob');
+  ('11111111-1111-1111-1111-111111111103', 'Customer Bob')
+on conflict (id) do update set full_name = excluded.full_name;
 
 -- Make user 1 an admin
 insert into public.staff_roles (user_id, role_id, is_active)

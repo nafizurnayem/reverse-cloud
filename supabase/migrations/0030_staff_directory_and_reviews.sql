@@ -24,10 +24,13 @@ begin
   end if;
 
   return query
-  select distinct u.id, u.email::text, p.full_name, u.created_at
-    from public.staff_roles sr
-    join auth.users u on u.id = sr.user_id
+  select u.id, u.email::text, p.full_name, u.created_at
+    from auth.users u
     left join public.profiles p on p.id = u.id
+   where exists (
+     select 1 from public.staff_roles sr
+      where sr.user_id = u.id
+   )
    order by coalesce(p.full_name, u.email::text, u.id::text), u.id;
 end;
 $$;

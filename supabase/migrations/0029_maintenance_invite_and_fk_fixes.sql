@@ -175,13 +175,15 @@ begin
 
   -- If already linked to this same person: only succeed if the invite is valid, unexpired, unrevoked and matches email
   if v_client.user_id = v_uid then
-    if v_invite.accepted_at is null
+    if (v_invite.accepted_at is null or v_invite.accepted_by = v_uid)
        and v_invite.revoked_at is null
        and v_invite.expires_at > now()
        and v_matches then
-      update public.client_invites
-         set accepted_at = now(), accepted_by = v_uid
-       where id = v_invite.id;
+      if v_invite.accepted_at is null then
+        update public.client_invites
+           set accepted_at = now(), accepted_by = v_uid
+         where id = v_invite.id;
+      end if;
       return v_client.id;
     else
       raise exception 'invalid_or_expired_invite';
@@ -220,7 +222,10 @@ security definer
 set search_path = ''
 as $$
 begin
-  if current_user in ('anon', 'authenticated')
+  if (coalesce(current_setting('role', true), '') in ('anon', 'authenticated')
+      or coalesce(current_setting('request.jwt.claim.role', true), '') in ('anon', 'authenticated')
+      or (select auth.role()) in ('anon', 'authenticated')
+      or (select auth.uid()) is not null)
      and not app.has_permission('clients.manage')
      and (   new.email       is distinct from old.email
           or new.country     is distinct from old.country
