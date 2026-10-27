@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { needsClientAccountLink, safePostLoginPath } from "@/lib/auth/routes";
+import { needsClientAccountLink, postLoginPathFromQuery } from "@/lib/auth/routes";
 import { createClient } from "@/lib/supabase/server";
 import {
   continueWithClientAccount,
@@ -16,6 +16,7 @@ type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{
     next?: string | string[];
+    returnTo?: string | string[];
     error?: string | string[];
     logged_out?: string | string[];
     magic_link_sent?: string | string[];
@@ -39,7 +40,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
   if (!hasLocale(routing.locales, locale)) notFound();
 
   const query = await searchParams;
-  const next = safePostLoginPath(query.next, locale);
+  const next = postLoginPathFromQuery(query.next, query.returnTo, locale);
   const error = typeof query.error === "string" && errorKeys.has(query.error)
     ? query.error
     : null;

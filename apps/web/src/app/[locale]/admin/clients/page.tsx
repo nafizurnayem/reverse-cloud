@@ -12,7 +12,13 @@ import {
 } from "@/components/admin-content";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { clientSources, clientStages, validClientId } from "@/lib/admin/client-values";
+import {
+  clientListPage,
+  clientsPageSize,
+  clientSources,
+  clientStages,
+  validClientId,
+} from "@/lib/admin/client-values";
 import { requirePermission } from "@/lib/auth/guards";
 import { revokeClientInvite, saveClient, setClientArchived } from "./actions";
 import { InviteForm } from "./invite-form";
@@ -22,6 +28,7 @@ type Search = {
   stage?: string;
   source?: string;
   archived?: string;
+  page?: string;
   saved?: string;
   error?: string;
 };
@@ -79,32 +86,59 @@ export default async function ClientsPage({ params, searchParams }: {
     getTranslations({ locale, namespace: "AdminClients" }),
     getTranslations({ locale, namespace: "AdminContent" }),
   ]);
-  const [clientsResult, invitesResult] = await Promise.all([
-    supabase.from("clients").select("*").order("updated_at", { ascending: false }).limit(200),
-    supabase.from("client_invites")
-      .select("id,client_id,email,expires_at,accepted_at,revoked_at,created_at")
-      .order("created_at", { ascending: false })
-      .limit(500),
-  ]);
-  if (clientsResult.error || invitesResult.error) throw new Error("Unable to load clients");
-
-  const clients = (clientsResult.data ?? []) as Client[];
-  const invites = (invitesResult.data ?? []) as Invite[];
-  const selected = validClientId(search.edit ?? "")
-    ? clients.find((client) => client.id === search.edit)
-    : undefined;
   const selectedStage = clientStages.includes(search.stage as Client["stage"]) ? search.stage : "";
   const selectedSource = clientSources.includes(search.source as Client["source"]) ? search.source : "";
-  const archivedFilter = ["active", "archived", "all"].includes(search.archived ?? "")
-    ? search.archived
-    : "active";
-  const filteredClients = clients.filter((client) => {
-    if (selectedStage && client.stage !== selectedStage) return false;
-    if (selectedSource && client.source !== selectedSource) return false;
-    if (archivedFilter === "active" && client.archived_at) return false;
-    if (archivedFilter === "archived" && !client.archived_at) return false;
-    return true;
-  });
+  const archivedFilter: "active" | "archived" | "all" =
+    search.archived === "archived" || search.archived === "all"
+      ? search.archived
+      : "active";
+  const page = clientListPage(search.page);
+  const from = (page - 1) * clientsPageSize;
+  const to = from + clientsPageSize - 1;
+
+  let clientsQuery = supabase.from("clients").select("*", { count: "exact" });
+  if (selectedStage) clientsQuery = clientsQuery.eq("stage", selectedStage);
+  if (selectedSource) clientsQuery = clientsQuery.eq("source", selectedSource);
+  if (archivedFilter === "active") clientsQuery = clientsQuery.is("archived_at", null);
+  if (archivedFilter === "archived") clientsQuery = clientsQuery.not("archived_at", "is", null);
+  const clientsResult = await clientsQuery
+    .order("updated_at", { ascending: false })
+    .range(from, to);
+  if (clientsResult.error) throw new Error("Unable to load clients");
+
+  const clients = (clientsResult.data ?? []) as Client[];
+  const selectedId = validClientId(search.edit ?? "") ? search.edit! : null;
+  let selected = selectedId ? clients.find((client) => client.id === selectedId) : undefined;
+  if (selectedId && !selected) {
+    const selectedResult = await supabase.from("clients").select("*").eq("id", selectedId).maybeSingle();
+    if (selectedResult.error) throw new Error("Unable to load selected client");
+    selected = (selectedResult.data as Client | null) ?? undefined;
+  }
+
+  const relevantClientIds = [...new Set([
+    ...clients.map((client) => client.id),
+    ...(selected ? [selected.id] : []),
+  ])];
+  const invitesResult = relevantClientIds.length > 0
+    ? await supabase.from("client_invites")
+      .select("id,client_id,email,expires_at,accepted_at,revoked_at,created_at")
+      .in("client_id", relevantClientIds)
+      .order("created_at", { ascending: false })
+    : { data: [], error: null };
+  if (invitesResult.error) throw new Error("Unable to load client invitations");
+  const invites = (invitesResult.data ?? []) as Invite[];
+  const totalClients = clientsResult.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalClients / clientsPageSize));
+  const listParams = new URLSearchParams();
+  if (selectedStage) listParams.set("stage", selectedStage);
+  if (selectedSource) listParams.set("source", selectedSource);
+  if (archivedFilter !== "active") listParams.set("archived", archivedFilter);
+  const pageHref = (target: number) => {
+    const params = new URLSearchParams(listParams);
+    if (target > 1) params.set("page", String(target));
+    const query = params.toString();
+    return `/admin/clients${query ? `?${query}` : ""}`;
+  };
   const latestInvite = new Map<string, Invite>();
   for (const invite of invites) {
     if (!latestInvite.has(invite.client_id)) latestInvite.set(invite.client_id, invite);
@@ -120,6 +154,12 @@ export default async function ClientsPage({ params, searchParams }: {
   const error = typeof search.error === "string" && errorKeys.has(search.error)
     ? t(`errors.${search.error}`)
     : null;
+  const pagination = locale === "bn"
+    ? { label: "ক্লায়েন্ট তালিকার পৃষ্ঠা", previous: "আগের পৃষ্ঠা", next: "পরের পৃষ্ঠা" }
+    : { label: "Client list pages", previous: "Previous", next: "Next" };
+  const paginationStatus = locale === "bn"
+    ? `পৃষ্ঠা ${page} / ${totalPages}`
+    : `Page ${page} of ${totalPages}`;
 
   return (
     <main className="admin-page content-page">
@@ -256,11 +296,11 @@ export default async function ClientsPage({ params, searchParams }: {
       ) : null}
 
       <section className="content-list">
-        <div className="content-list-heading"><h2>{t("allClients")}</h2><span>{filteredClients.length}</span></div>
+        <div className="content-list-heading"><h2>{t("allClients")}</h2><span>{totalClients}</span></div>
         <div className="content-table-wrap">
           <table className="content-table">
             <thead><tr><th>{t("fields.client")}</th><th>{t("fields.source")}</th><th>{t("fields.stage")}</th><th>{t("fields.account")}</th><th>{t("fields.invite")}</th><th>{common("actions")}</th></tr></thead>
-            <tbody>{filteredClients.map((client) => {
+            <tbody>{clients.map((client) => {
               const invite = latestInvite.get(client.id);
               const status = invite ? invitationStatus(invite, now) : null;
               return (
@@ -286,6 +326,11 @@ export default async function ClientsPage({ params, searchParams }: {
             })}</tbody>
           </table>
         </div>
+        <nav className="content-pagination" aria-label={pagination.label}>
+          {page > 1 ? <Link className="content-secondary-button" href={pageHref(page - 1)}>{pagination.previous}</Link> : <span />}
+          <span>{paginationStatus}</span>
+          {page < totalPages ? <Link className="content-secondary-button" href={pageHref(page + 1)}>{pagination.next}</Link> : <span />}
+        </nav>
       </section>
     </main>
   );

@@ -878,6 +878,18 @@ html:lang(bn) .admin-kicker {
   justify-content: space-between;
 }
 
+.content-pagination {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+.content-pagination > :last-child {
+  justify-self: end;
+}
+
 .content-list-heading span {
   display: grid;
   min-width: 2rem;

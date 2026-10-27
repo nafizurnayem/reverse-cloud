@@ -108,6 +108,10 @@ export function limitScheduleRequests(ip: string, options: RateLimitOptions = {}
   return limitRequests("schedule", ip, 30, 60, options);
 }
 
+export function limitScheduleBookingRequests(ip: string, options: RateLimitOptions = {}) {
+  return limitRequests("schedule:booking", ip, 5, 60 * 60, options);
+}
+
 export async function limitChatRequests(
   ip: string,
   sessionId: string,

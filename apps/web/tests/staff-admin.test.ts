@@ -12,7 +12,10 @@ vi.mock("@/lib/auth/guards", () => ({ requirePermission: mocks.requirePermission
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
-import { setStaffRoleStatus } from "../src/app/[locale]/admin/staff/actions";
+import {
+  addStaffMember,
+  setStaffRoleStatus,
+} from "../src/app/[locale]/admin/staff/actions";
 import { staffRoleStatusPayload } from "../src/lib/admin/staff-values";
 
 const userId = "00000000-0000-4000-8000-000000002701";
@@ -43,6 +46,43 @@ describe("staff role input", () => {
 });
 
 describe("staff role action", () => {
+  it("looks up an exact email and activates the selected role", async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({
+        data: [{ user_id: userId, email: "person@example.com", full_name: "Person" }],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: true, error: null });
+    const data = form({
+      locale: "en",
+      email: " Person@Example.com ",
+      role_id: roleId,
+    });
+
+    await expect(addStaffMember(data)).rejects.toThrow(
+      "redirect:/en/admin/staff?saved=added",
+    );
+    expect(mocks.requirePermission).toHaveBeenCalledWith("en", "staff.manage");
+    expect(mocks.rpc).toHaveBeenNthCalledWith(1, "lookup_user_by_email", {
+      p_email: "person@example.com",
+    });
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, "set_staff_role_status", {
+      p_user_id: userId,
+      p_role_id: roleId,
+      p_is_active: true,
+    });
+  });
+
+  it("returns a stable error when no signed-in account matches the email", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: [], error: null });
+    const data = form({ locale: "en", email: "missing@example.com", role_id: roleId });
+
+    await expect(addStaffMember(data)).rejects.toThrow(
+      "redirect:/en/admin/staff?error=userNotFound",
+    );
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  });
+
   it("requires staff.manage and activates through the atomic RPC", async () => {
     const data = form({ locale: "bn", user_id: userId, role_id: roleId, is_active: "true" });
     await expect(setStaffRoleStatus(data)).rejects.toThrow(
