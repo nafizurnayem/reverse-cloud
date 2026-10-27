@@ -63,3 +63,10 @@ async def test_send_token_alert_critical() -> None:
     payload = client.post.call_args[1]["json"]
     assert "🚨 CRITICAL: <b>AI Token Usage Alert</b>" in payload["text"]
     assert "Daily budget exhausted" in payload["text"]
+
+
+def test_daily_usage_sql_utc_timestamptz() -> None:
+    from app.jobs.token_alerts import DAILY_USAGE_SQL
+    # Verify the SQL query explicitly constructs UTC timestamptz regardless of session timezone (e.g. +06:00)
+    assert "date_trunc('day', now() at time zone 'UTC') at time zone 'UTC'" in DAILY_USAGE_SQL
+

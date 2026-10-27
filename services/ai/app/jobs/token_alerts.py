@@ -19,7 +19,7 @@ select
   coalesce(sum(tokens_out), 0)::bigint as total_tokens_out,
   coalesce(sum(tokens_in + tokens_out), 0)::bigint as total_tokens
 from public.chat_messages
-where created_at >= date_trunc('day', now() at time zone 'UTC');
+where created_at >= date_trunc('day', now() at time zone 'UTC') at time zone 'UTC';
 """
 
 
