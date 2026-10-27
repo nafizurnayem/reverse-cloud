@@ -191,8 +191,8 @@ select throws_ok(
 -- ------------------------------------------------------------- 10. FX-18: accept_client_invite
 reset role;
 -- Seed an expired invite for Alice
-insert into public.client_invites (id, client_id, email, token_hash, expires_at) values
-  ('11111111-1111-1111-1111-1111111111f1', '11111111-1111-1111-1111-1111111111c1', 'customer-a@test.local', encode(extensions.digest('expired-token', 'sha256'), 'hex'), now() - interval '1 hour');
+insert into public.client_invites (id, client_id, email, token_hash, created_at, expires_at) values
+  ('11111111-1111-1111-1111-1111111111f1', '11111111-1111-1111-1111-1111111111c1', 'customer-a@test.local', encode(extensions.digest('expired-token', 'sha256'), 'hex'), now() - interval '2 hours', now() - interval '1 hour');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111102","role":"authenticated"}', true);
