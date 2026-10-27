@@ -1,15 +1,15 @@
 import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
+import { trustedPublicOrigin } from "@/lib/auth/public-origin";
 import { needsClientAccountLink, safePostLoginPath } from "@/lib/auth/routes";
 import { inviteTokenFromDestination } from "@/lib/invites/routes";
-import { requireSiteUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 type Context = { params: Promise<{ locale: string }> };
 
-function loginError(locale: string, code: string, next?: string) {
-  const url = new URL(`/${locale}/login`, requireSiteUrl());
+function loginError(origin: URL, locale: string, code: string, next?: string) {
+  const url = new URL(`/${locale}/login`, origin);
   url.searchParams.set("error", code);
   if (next) url.searchParams.set("next", next);
   return NextResponse.redirect(url);
@@ -30,15 +30,15 @@ export async function GET(request: NextRequest, { params }: Context) {
   }
 
   const next = safePostLoginPath(request.nextUrl.searchParams.get("next"), locale);
-  const publicSiteUrl = requireSiteUrl();
+  const publicSiteUrl = trustedPublicOrigin(request.headers);
   const magicLink = request.nextUrl.searchParams.get("method") === "magic_link";
   if (request.nextUrl.searchParams.has("error")) {
-    return loginError(locale, magicLink ? "magic_link_invalid" : "oauth_denied", next);
+    return loginError(publicSiteUrl, locale, magicLink ? "magic_link_invalid" : "oauth_denied", next);
   }
 
   const code = request.nextUrl.searchParams.get("code");
   if (!code) {
-    return loginError(locale, magicLink ? "magic_link_invalid" : "invalid_callback", next);
+    return loginError(publicSiteUrl, locale, magicLink ? "magic_link_invalid" : "invalid_callback", next);
   }
 
   let supabase: Awaited<ReturnType<typeof createClient>>;
@@ -46,10 +46,10 @@ export async function GET(request: NextRequest, { params }: Context) {
     supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      return loginError(locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
+      return loginError(publicSiteUrl, locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
     }
   } catch {
-    return loginError(locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
+    return loginError(publicSiteUrl, locale, magicLink ? "magic_link_invalid" : "oauth_callback_failed", next);
   }
 
   const inviteToken = inviteTokenFromDestination(next, locale);
@@ -72,9 +72,9 @@ export async function GET(request: NextRequest, { params }: Context) {
   if (needsClientAccountLink(next, locale)) {
     try {
       const { error } = await supabase.rpc("link_my_client_account");
-      if (error) return loginError(locale, "account_link_failed", next);
+      if (error) return loginError(publicSiteUrl, locale, "account_link_failed", next);
     } catch {
-      return loginError(locale, "account_link_failed", next);
+      return loginError(publicSiteUrl, locale, "account_link_failed", next);
     }
   }
 

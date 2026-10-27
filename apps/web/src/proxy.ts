@@ -2,11 +2,25 @@ import createMiddleware from "next-intl/middleware";
 import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
+import { trustedPublicOrigin } from "./lib/auth/public-origin";
 import { localizedPath, loginPath, protectedArea } from "./lib/auth/routes";
 import { isActiveStaff } from "./lib/supabase/roles";
 import { refreshSession } from "./lib/supabase/session";
 
 const handleLocale = createMiddleware(routing);
+
+function applyTrustedRedirectOrigin(response: NextResponse, request: NextRequest) {
+  const location = response.headers.get("location");
+  if (!location) return response;
+
+  const destination = new URL(location, request.url);
+  const safeDestination = new URL(
+    `${destination.pathname}${destination.search}${destination.hash}`,
+    trustedPublicOrigin(request.headers),
+  );
+  response.headers.set("location", safeDestination.toString());
+  return response;
+}
 
 export async function proxy(request: NextRequest) {
   const segments = request.nextUrl.pathname.split("/").filter(Boolean);
@@ -15,8 +29,10 @@ export async function proxy(request: NextRequest) {
     hasLocale(routing.locales, segments[0]) &&
     segments[0] === segments[1]
   ) {
-    const canonical = request.nextUrl.clone();
-    canonical.pathname = `/${segments[0]}/${segments.slice(2).join("/")}`;
+    const canonical = new URL(
+      `/${segments[0]}/${segments.slice(2).join("/")}${request.nextUrl.search}`,
+      trustedPublicOrigin(request.headers),
+    );
     return NextResponse.redirect(canonical);
   }
 
@@ -40,7 +56,9 @@ export async function proxy(request: NextRequest) {
 
     if (!session.userId) {
       const returnTo = localizedPath(request.nextUrl.pathname, locale) + request.nextUrl.search;
-      const response = NextResponse.redirect(new URL(loginPath(locale, returnTo), request.url));
+      const response = NextResponse.redirect(
+        new URL(loginPath(locale, returnTo), trustedPublicOrigin(request.headers)),
+      );
       for (const cookie of localeResponse.cookies.getAll()) response.cookies.set(cookie);
       return session.applyTo(response, true);
     }
@@ -56,7 +74,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return session.applyTo(localeResponse, Boolean(area));
+  return session.applyTo(applyTrustedRedirectOrigin(localeResponse, request), Boolean(area));
 }
 
 export const config = {

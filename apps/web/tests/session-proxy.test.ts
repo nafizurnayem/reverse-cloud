@@ -21,6 +21,8 @@ let cookieAdapter: CookieMethodsServer;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://reverse-cloud.example");
+  vi.stubEnv("TRUSTED_PUBLIC_ORIGINS", "");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "public-key");
   mocks.getClaims.mockResolvedValue({ data: { claims: null }, error: null });
@@ -44,8 +46,9 @@ describe("session proxy", () => {
     const response = await proxy(request("/en/en/portal?tab=active"));
 
     expect(response.status).toBe(307);
-    expect(new URL(response.headers.get("location")!).pathname).toBe("/en/portal");
-    expect(new URL(response.headers.get("location")!).search).toBe("?tab=active");
+    expect(response.headers.get("location")).toBe(
+      "https://reverse-cloud.example/en/portal?tab=active",
+    );
   });
 
   it("matches protected dotted paths while excluding APIs and assets", () => {
@@ -63,6 +66,26 @@ describe("session proxy", () => {
     expect(location.pathname).toBe("/bn/login");
     expect(location.searchParams.get("next")).toBe("/bn/admin?tab=staff");
     expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("uses only allow-listed forwarded origins for protected redirects", async () => {
+    vi.stubEnv("TRUSTED_PUBLIC_ORIGINS", "https://public-tunnel.example");
+
+    let response = await proxy(request("/en/portal", {
+      "x-forwarded-host": "public-tunnel.example",
+      "x-forwarded-proto": "https",
+    }));
+    expect(response.headers.get("location")).toBe(
+      "https://public-tunnel.example/en/login?next=%2Fen%2Fportal",
+    );
+
+    response = await proxy(request("/en/portal", {
+      "x-forwarded-host": "attacker.example",
+      "x-forwarded-proto": "https",
+    }));
+    expect(response.headers.get("location")).toBe(
+      "https://reverse-cloud.example/en/login?next=%2Fen%2Fportal",
+    );
   });
 
   it("preserves refreshed and deleted cookies on redirects", async () => {
@@ -96,7 +119,7 @@ describe("session proxy", () => {
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "developer-1" } }, error: null });
     mocks.limit.mockResolvedValue({ data: [{ role_id: "developer-role" }], error: null });
     const response = await proxy(request("/admin", { Cookie: "NEXT_LOCALE=bn" }));
-    expect(new URL(response.headers.get("location")!).pathname).toBe("/bn/admin");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/bn/admin");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
