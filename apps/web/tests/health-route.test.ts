@@ -20,7 +20,7 @@ import { GET } from "../src/app/api/health/route";
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "publishable-key");
 });
 
 describe("GET /api/health", () => {
@@ -45,5 +45,15 @@ describe("GET /api/health", () => {
     const body = await res.json();
     expect(body.status).toBe("degraded");
     expect(body.database.connected).toBe(false);
+  });
+
+  it("falls back to the legacy anon key when the publishable key is absent", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
+    mocks.limit.mockResolvedValue({ data: [{ id: "1" }], error: null });
+
+    const res = await GET();
+
+    expect(res.status).toBe(200);
   });
 });

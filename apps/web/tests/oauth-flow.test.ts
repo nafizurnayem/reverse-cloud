@@ -27,6 +27,7 @@ import { GET } from "../src/app/[locale]/(auth)/auth/callback/route";
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://reverse-cloud.example/app/path");
+  vi.stubEnv("TRUSTED_PUBLIC_ORIGINS", "");
   mocks.createClient.mockResolvedValue({
     auth: {
       signInWithOAuth: mocks.signInWithOAuth,
@@ -128,6 +129,41 @@ describe("OAuth callback", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
     expect(response.headers.get("location")).toBe("https://reverse-cloud.example/bn/portal");
     expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("uses the configured public site URL for callback redirects", async () => {
+    const response = await GET(
+      new NextRequest("http://0.0.0.0:3000/en/auth/callback?code=once&next=%2Fen%2Fportal"),
+      context("en"),
+    );
+
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+  });
+
+  it("uses an allow-listed forwarded origin and ignores a spoofed one", async () => {
+    vi.stubEnv("TRUSTED_PUBLIC_ORIGINS", "https://public-tunnel.example");
+
+    let response = await GET(
+      new NextRequest("http://0.0.0.0:3000/en/auth/callback?code=once&next=%2Fen%2Fportal", {
+        headers: {
+          "x-forwarded-host": "public-tunnel.example",
+          "x-forwarded-proto": "https",
+        },
+      }),
+      context("en"),
+    );
+    expect(response.headers.get("location")).toBe("https://public-tunnel.example/en/portal");
+
+    response = await GET(
+      new NextRequest("http://0.0.0.0:3000/en/auth/callback?code=twice&next=%2Fen%2Fportal", {
+        headers: {
+          "x-forwarded-host": "attacker.example",
+          "x-forwarded-proto": "https",
+        },
+      }),
+      context("en"),
+    );
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
   });
 
   it("does not exchange a provider error and preserves the locale", async () => {
