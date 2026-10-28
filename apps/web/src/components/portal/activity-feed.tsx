@@ -61,30 +61,44 @@ export function ActivityFeed({ activity, locale }: ActivityFeedProps) {
       </div>
 
       <div className="space-y-4">
-        {activity.map((item) => (
-          <div key={item.id} className="flex items-start gap-3 text-xs">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border bg-muted/40 mt-0.5">
-              {getIcon(item.type)}
-            </span>
+        {activity.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+            <Radio className="mx-auto h-6 w-6 text-muted-foreground/40 mb-2" />
+            <p className="font-medium text-foreground">
+              {isBn ? "কোনো সাম্প্রতিক আপডেট নেই" : "No Activity Recorded Yet"}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {isBn
+                ? "প্রজেক্টের কাজের অগ্রগতি ও স্ট্যাটাস আপডেট এখানে দেখানো হবে।"
+                : "Project milestones and status reports will appear here as work progresses."}
+            </p>
+          </div>
+        ) : (
+          activity.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 text-xs">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border bg-muted/40 mt-0.5">
+                {getIcon(item.type)}
+              </span>
 
-            <div className="flex-1 space-y-1">
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-                <span className="font-semibold text-foreground text-xs">
-                  {item.title}
-                </span>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {formatTime(item.timestamp)}
+              <div className="flex-1 space-y-1">
+                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
+                  <span className="font-semibold text-foreground text-xs">
+                    {item.title}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {formatTime(item.timestamp)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {item.description}
+                </p>
+                <span className="inline-block text-[10px] text-primary/80 font-medium">
+                  — {item.author}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                {item.description}
-              </p>
-              <span className="inline-block text-[10px] text-primary/80 font-medium">
-                — {item.author}
-              </span>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

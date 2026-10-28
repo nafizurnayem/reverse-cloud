@@ -20,6 +20,13 @@ interface ConfirmationCardProps {
   onConfirmed?: (proposalId: string) => void;
 }
 
+interface ConfirmedBookingInfo {
+  uid: string;
+  startsAt: string;
+  endsAt: string;
+  meetingUrl?: string;
+}
+
 export function ConfirmationCard({
   data,
   locale = "en",
@@ -30,6 +37,7 @@ export function ConfirmationCard({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [bookingInfo, setBookingInfo] = useState<ConfirmedBookingInfo | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Check client session
@@ -84,13 +92,23 @@ export function ConfirmationCard({
         const json = await res.json();
         if (res.ok && json.ok) {
           setStatus("confirmed");
+          if (json.booking) {
+            setBookingInfo(json.booking);
+          }
           onConfirmed?.(data.proposalId);
+        } else if (res.status === 401 || json.code === "unauthorized") {
+          setIsAuthenticated(false);
+          setErrorMessage(
+            isBn
+              ? "সেশন শেষ হয়ে গেছে। বুকিং নিশ্চিত করতে অনুগ্রহ করে পুনরায় সাইন ইন করুন।"
+              : "Authentication required. Please sign in to confirm this slot."
+          );
         } else {
           setErrorMessage(
             json.message ||
               (isBn
-                ? "বুকিং নিশ্চিত করা যায়নি। স্লটটির মেয়াদ উত্তীর্ণ হয়ে থাকতে পারে।"
-                : "Unable to confirm meeting. The slot may have expired.")
+                ? "বুকিং নিশ্চিত করা যায়নি। স্লটটির মেয়াদ উত্তীর্ণ বা অন্য কেউ বুক করে থাকতে পারে।"
+                : "Unable to confirm meeting. The slot may have expired or is no longer available.")
           );
         }
       } catch {
@@ -103,10 +121,10 @@ export function ConfirmationCard({
     });
   }
 
-  // Construct login-then-return URL
+  // Construct login-then-return URL with ?next=...
   const currentPath = typeof window !== "undefined" ? window.location.pathname : `/${locale}`;
-  const returnTo = `${currentPath}?confirmProposal=${data.proposalId}&openChat=true`;
-  const loginUrl = `/${locale}/login?returnTo=${encodeURIComponent(returnTo)}`;
+  const nextPath = `${currentPath}?confirmProposal=${data.proposalId}&openChat=true`;
+  const loginUrl = `/${locale}/login?next=${encodeURIComponent(nextPath)}`;
 
   const isConfirmed = status === "confirmed";
 
@@ -158,17 +176,27 @@ export function ConfirmationCard({
 
       {/* Actions based on Auth & Status */}
       {isConfirmed ? (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400 font-medium">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <div className="text-[11px]">
+        <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400 font-medium">
+          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="text-[11px] space-y-1">
             <span className="font-bold block">
               {isBn ? "মিটিং নিশ্চিত করা হয়েছে!" : "Meeting Confirmed!"}
             </span>
-            <span className="text-[10px] opacity-90">
+            <span className="text-[10px] opacity-90 block">
               {isBn
-                ? "ক্যালেন্ডার ইনভাইট এবং গুগল মিট লিংক পাঠানো হয়েছে।"
+                ? "ক্যালেন্ডার ইনভাইট এবং গুগল মিট লিংক আপনার ইমেইলে পাঠানো হয়েছে।"
                 : "Calendar invite & Google Meet link sent to your email."}
             </span>
+            {bookingInfo?.meetingUrl && (
+              <a
+                href={bookingInfo.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300 underline mt-1"
+              >
+                <span>{isBn ? "মিটিং লিংকে যোগ দিন →" : "Join Meeting Link →"}</span>
+              </a>
+            )}
           </div>
         </div>
       ) : isAuthenticated ? (

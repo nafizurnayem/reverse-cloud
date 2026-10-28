@@ -39,26 +39,35 @@ export default async function HomePage({ params }: Props) {
     getApprovedReviews(locale),
   ]);
 
+  const isBn = locale === "bn";
   const previews = [
     {
       title: tFooter("webDev"),
-      desc: "High-velocity Next.js 16 platforms with full SSR/SSG, Supabase RLS, and seamless i18n.",
-      href: "/services#web-dev",
+      desc: isBn
+        ? "উচ্চ-গতির নেক্সট.জেএস ১৬ প্ল্যাটফর্ম—ফুল এসএসআর/এসএসজি, সুপাবেস আরএলএস এবং সমন্বিত বহુભাষিক সমর্থন সহ।"
+        : "High-velocity Next.js 16 platforms with full SSR/SSG, Supabase RLS, and seamless i18n.",
+      href: "/services/website-development",
     },
     {
       title: tFooter("aiSolutions"),
-      desc: "Domain-specific PydanticAI agents, evaluation benchmarks, and secure HMAC-signed APIs.",
-      href: "/services#ai",
+      desc: isBn
+        ? "নির্দিষ্ট ডোমেইনের জন্য পাইড্যান্টিকএআই এজেন্ট, মূল্যায়ন বেঞ্চমার্ক এবং নিরাপদ এইচম্যাক-স্বাক্ষরিত এপিআই।"
+        : "Domain-specific PydanticAI agents, evaluation benchmarks, and secure HMAC-signed APIs.",
+      href: "/services/ai-chatbots-agents",
     },
     {
       title: tFooter("automation"),
-      desc: "Robust event-driven automations, webhook synchronization, and background worker queues.",
-      href: "/services#automation",
+      desc: isBn
+        ? "ইভেন্ট-চালিত অটোমেশন, ওয়েবহুক সিঙ্ক্রোনাইজেশন এবং ব্যাকগ্রাউন্ড ওয়ার্কার কিউ।"
+        : "Robust event-driven automations, webhook synchronization, and background worker queues.",
+      href: "/services/ai-automation",
     },
     {
       title: tFooter("scraping"),
-      desc: "Resilient distributed Python data extraction pipelines with asyncpg and structured storage.",
-      href: "/services#scraping",
+      desc: isBn
+        ? "স্থিতিস্থাপক ডিস্ট্রিবিউটেড পাইথন ডেটা নিষ্কাশন পাইপলাইন এবং কাঠামোগত স্টোরেজ।"
+        : "Resilient distributed Python data extraction pipelines with asyncpg and structured storage.",
+      href: "/services/software-development",
     },
   ];
 

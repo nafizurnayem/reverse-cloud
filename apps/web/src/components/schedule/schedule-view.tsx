@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Script from "next/script";
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -25,6 +26,13 @@ interface ScheduleViewProps {
 interface SlotItem {
   start: string;
   end: string;
+}
+
+interface BookingConfirmedDetails {
+  uid: string;
+  startsAt: string;
+  endsAt: string;
+  meetingUrl?: string;
 }
 
 export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProps) {
@@ -57,8 +65,10 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
   const [notes, setNotes] = useState<string>("");
 
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
+  const [confirmedDetails, setConfirmedDetails] = useState<BookingConfirmedDetails | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
   // Generate next 14 days
   const upcomingDays = Array.from({ length: 14 }).map((_, i) => {
@@ -145,10 +155,69 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
       return;
     }
 
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const turnstileToken =
+      (formData.get("cf-turnstile-response") as string) ||
+      (typeof window !== "undefined" && (window as unknown as { turnstileToken?: string }).turnstileToken) ||
+      "";
+
     startSubmit(async () => {
-      // Simulate booking confirmation / proposal connection
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      setBookingConfirmed(true);
+      try {
+        const res = await fetch("/api/schedule/book", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            meetingType: selectedMeetingType,
+            start: selectedSlot.start,
+            end: selectedSlot.end,
+            timeZone,
+            name: name.trim(),
+            email: email.trim(),
+            company: company.trim() || null,
+            notes: notes.trim() || null,
+            locale: isBn ? "bn" : "en",
+            turnstileToken,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          if (data.booking) {
+            setConfirmedDetails(data.booking);
+          }
+          setBookingConfirmed(true);
+        } else {
+          window.turnstile?.reset();
+          if (data.code === "slot_unavailable") {
+            setErrorMsg(
+              isBn
+                ? "এই সময়টি আর উপলব্ধ নেই। অনুগ্রহ করে অন্য একটি সময় নির্বাচন করুন।"
+                : "This slot is no longer available. Please select another time."
+            );
+          } else if (data.code === "turnstile_failed") {
+            setErrorMsg(
+              isBn
+                ? "সিকিউরিটি ভেরিফিকেশন ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+                : "Security verification failed. Please try again."
+            );
+          } else {
+            setErrorMsg(
+              data.message ||
+                (isBn
+                  ? "বুকিং সম্পন্ন করা যায়নি। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+                  : "Unable to complete booking. Please try again later.")
+            );
+          }
+        }
+      } catch {
+        window.turnstile?.reset();
+        setErrorMsg(
+          isBn
+            ? "নেটওয়ার্ক ত্রুটি। অনুগ্রহ করে আবার চেষ্টা করুন।"
+            : "Network error occurred. Please try again."
+        );
+      }
     });
   }
 
@@ -192,12 +261,12 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
             <User className="h-4 w-4 text-primary" />
             <span>
               {isBn
-                ? "পূর্বে নিবন্ধিত ক্লায়েন্ট? দ্রুত বুকিংয়ের জন্য সাইন ഇൻ করুন।"
+                ? "পূর্বে নিবন্ধিত ক্লায়েন্ট? দ্রুত বুকিংয়ের জন্য সাইন ইন করুন।"
                 : "Existing client or portal user? Sign in for instant prefill."}
             </span>
           </div>
           <a
-            href={`/${locale}/login?returnTo=/${locale}/schedule`}
+            href={`/${locale}/login?next=/${locale}/schedule`}
             className="inline-flex items-center gap-1 font-semibold text-primary hover:underline text-xs"
           >
             <span>{isBn ? "সাইন ইন করুন →" : "Sign In →"}</span>
@@ -242,6 +311,19 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
               <span className="font-bold text-foreground">{timeZone}</span>
             </div>
           </div>
+
+          {confirmedDetails?.meetingUrl && (
+            <div className="pt-1">
+              <a
+                href={confirmedDetails.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
+              >
+                <span>{isBn ? "মিটিং লিংকে যোগ দিন →" : "Join Meeting Link →"}</span>
+              </a>
+            </div>
+          )}
 
           <button
             type="button"
@@ -504,6 +586,23 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
                     {isBn ? "বুকিং সম্পন্ন করতে বাম থেকে একটি সময় স্লট নির্বাচন করুন" : "Select an available time slot on the left"}
                   </div>
                 )}
+
+                {/* Turnstile verification */}
+                <Script
+                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+                  strategy="afterInteractive"
+                />
+                {siteKey ? (
+                  <div className="contact-turnstile py-1">
+                    <div
+                      className="cf-turnstile"
+                      data-sitekey={siteKey}
+                      data-action="schedule_booking"
+                      data-language={locale}
+                      data-size="compact"
+                    />
+                  </div>
+                ) : null}
 
                 <button
                   type="submit"

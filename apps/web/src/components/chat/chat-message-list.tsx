@@ -6,7 +6,6 @@ import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
 import {
   ConfirmationCard,
   EstimateCard,
-  FallbackState,
   HumanHandoffCard,
   LeadSavedCard,
 } from "./cards";
@@ -112,14 +111,10 @@ export function ChatMessageList({
                 </div>
               )}
 
-              {/* Error fallback within message */}
+              {/* Error note within message bubble */}
               {msg.error && (
-                <div className="w-full">
-                  <FallbackState
-                    locale={locale}
-                    initialMessage={msg.error}
-                    onSuccess={onTriggerFallback}
-                  />
+                <div className="w-full rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                  <p>{msg.error}</p>
                 </div>
               )}
             </div>

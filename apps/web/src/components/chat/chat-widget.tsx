@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   Bot,
@@ -29,19 +29,59 @@ interface ChatWidgetProps {
 export function ChatWidget({
   locale,
   initialOpen = false,
-  useMockStreamDefault = true,
+  useMockStreamDefault = false,
 }: ChatWidgetProps) {
   const activeLocale = useLocale() === "bn" ? "bn" : "en";
   const effectiveLocale = locale ?? activeLocale;
   const isBn = effectiveLocale === "bn";
   const [isOpen, setIsOpen] = useState(initialOpen);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [useMock, setUseMock] = useState(useMockStreamDefault);
+  const [useMock, setUseMock] = useState(() => {
+    if (useMockStreamDefault) return true;
+    return process.env.NEXT_PUBLIC_ENABLE_MOCK_CHAT === "true";
+  });
   const [isStreaming, setIsStreaming] = useState(false);
   const [fallbackMode, setFallbackMode] = useState(false);
   const [selectedMockScenario, setSelectedMockScenario] = useState<MockStreamScenario>("greeting");
 
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+
+  // Restore chat messages from sessionStorage and check openChat/confirmProposal URL query params
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const shouldOpen = searchParams.get("openChat") === "true";
+        const proposalId = searchParams.get("confirmProposal");
+
+        if (shouldOpen || proposalId) {
+          setIsOpen(true);
+          setIsMinimized(false);
+        }
+
+        const saved = sessionStorage.getItem("rc_chat_history");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+          }
+        }
+      } catch {
+        // storage errors ignored
+      }
+    });
+  }, []);
+
+  // Persist chat messages to sessionStorage across navigations / login return
+  useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        sessionStorage.setItem("rc_chat_history", JSON.stringify(messages));
+      }
+    } catch {
+      // storage errors ignored
+    }
+  }, [messages]);
 
   const greetingMessage: ChatMessageItem = {
     id: "welcome-1",
@@ -58,6 +98,22 @@ export function ChatWidget({
     setMessages([]);
     setFallbackMode(false);
     setIsStreaming(false);
+    try {
+      sessionStorage.removeItem("rc_chat_history");
+    } catch {
+      // storage errors ignored
+    }
+  }
+
+  function handleCardAction(action: string) {
+    if (action === "consultation") {
+      const discussMsg = isBn
+        ? "আমি এই প্রজেক্টটি নিয়ে আলোচনা করতে চাই এবং একটি পরামর্শ মিটিং নির্ধারণ করতে চাই।"
+        : "I would like to discuss this project and schedule a consultation.";
+      void handleSendMessage(discussMsg);
+    } else {
+      setFallbackMode(true);
+    }
   }
 
   async function handleSendMessage(userInput: string) {
@@ -259,7 +315,7 @@ export function ChatWidget({
             </div>
 
             <div className="flex items-center gap-1">
-              {/* Mock stream toggle for local demo */}
+              {/* Mock stream toggle for development */}
               <button
                 type="button"
                 onClick={() => setUseMock(!useMock)}
@@ -336,10 +392,10 @@ export function ChatWidget({
                 messages={activeMessages}
                 locale={effectiveLocale}
                 onTriggerFallback={() => setFallbackMode(true)}
-                onCardAction={() => setFallbackMode(true)}
+                onCardAction={handleCardAction}
               />
 
-              {/* Fallback Banner if in Kill Switch / Error Mode */}
+              {/* Fallback Banner rendered once at container level when in Error/Fallback Mode */}
               {fallbackMode && (
                 <div className="p-3 border-t bg-card">
                   <FallbackState
