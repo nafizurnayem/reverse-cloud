@@ -14,6 +14,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
 import {
   addStaffMember,
+  revokeStaffInvite,
   setStaffRoleStatus,
 } from "../src/app/[locale]/admin/staff/actions";
 import { staffRoleStatusPayload } from "../src/lib/admin/staff-values";
@@ -73,14 +74,35 @@ describe("staff role action", () => {
     });
   });
 
-  it("returns a stable error when no signed-in account matches the email", async () => {
-    mocks.rpc.mockResolvedValueOnce({ data: [], error: null });
-    const data = form({ locale: "en", email: "missing@example.com", role_id: roleId });
+  it("pre-authorizes the email when no signed-in account exists yet", async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: { status: "preauthorized" }, error: null });
+    const data = form({ locale: "en", email: "newperson@example.com", role_id: roleId });
 
     await expect(addStaffMember(data)).rejects.toThrow(
-      "redirect:/en/admin/staff?error=userNotFound",
+      "redirect:/en/admin/staff?saved=preauthorized",
     );
-    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenNthCalledWith(1, "lookup_user_by_email", {
+      p_email: "newperson@example.com",
+    });
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, "preauthorize_staff_member", {
+      p_email: "newperson@example.com",
+      p_role_id: roleId,
+    });
+  });
+
+  it("revokes a pending staff invite with staff.manage permission", async () => {
+    const inviteId = "00000000-0000-4000-8000-000000002703";
+    mocks.rpc.mockResolvedValueOnce({ data: true, error: null });
+    const data = form({ locale: "en", invite_id: inviteId });
+
+    await expect(revokeStaffInvite(data)).rejects.toThrow(
+      "redirect:/en/admin/staff?saved=inviteRevoked",
+    );
+    expect(mocks.rpc).toHaveBeenCalledWith("revoke_staff_invite", {
+      p_invite_id: inviteId,
+    });
   });
 
   it("requires staff.manage and activates through the atomic RPC", async () => {

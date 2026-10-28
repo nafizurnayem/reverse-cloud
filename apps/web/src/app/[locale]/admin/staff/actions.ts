@@ -44,20 +44,51 @@ export async function addStaffMember(formData: FormData) {
   if (lookup.error) redirect(staffPath(locale, { error: "saveFailed" }));
   const row = Array.isArray(lookup.data) ? lookup.data[0] : lookup.data;
   const userId = row && typeof row.user_id === "string" ? row.user_id : "";
-  if (!validUuid(userId)) redirect(staffPath(locale, { error: "userNotFound" }));
 
-  const assigned = await supabase.rpc("set_staff_role_status", {
-    p_user_id: userId,
+  if (validUuid(userId)) {
+    const assigned = await supabase.rpc("set_staff_role_status", {
+      p_user_id: userId,
+      p_role_id: roleId,
+      p_is_active: true,
+    });
+    if (assigned.error || assigned.data !== true) {
+      redirect(staffPath(locale, { error: "saveFailed" }));
+    }
+
+    revalidatePath(staffPath(locale));
+    revalidatePath(`/${locale}/admin`, "layout");
+    redirect(staffPath(locale, { saved: "added" }));
+  }
+
+  const preauth = await supabase.rpc("preauthorize_staff_member", {
+    p_email: email,
     p_role_id: roleId,
-    p_is_active: true,
   });
-  if (assigned.error || assigned.data !== true) {
+  if (preauth.error) {
     redirect(staffPath(locale, { error: "saveFailed" }));
   }
 
   revalidatePath(staffPath(locale));
   revalidatePath(`/${locale}/admin`, "layout");
-  redirect(staffPath(locale, { saved: "added" }));
+  redirect(staffPath(locale, { saved: "preauthorized" }));
+}
+
+export async function revokeStaffInvite(formData: FormData) {
+  const locale = localeFrom(formData);
+  const { supabase } = await requirePermission(locale, "staff.manage");
+  const inviteId = text(formData, "invite_id");
+  if (!validUuid(inviteId)) {
+    redirect(staffPath(locale, { error: "invalidInput" }));
+  }
+
+  const result = await supabase.rpc("revoke_staff_invite", { p_invite_id: inviteId });
+  if (result.error || result.data !== true) {
+    redirect(staffPath(locale, { error: "saveFailed" }));
+  }
+
+  revalidatePath(staffPath(locale));
+  revalidatePath(`/${locale}/admin`, "layout");
+  redirect(staffPath(locale, { saved: "inviteRevoked" }));
 }
 
 export async function setStaffRoleStatus(formData: FormData) {

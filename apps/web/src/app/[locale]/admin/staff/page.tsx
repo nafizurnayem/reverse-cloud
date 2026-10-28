@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ActionMessage, ContentHeader, StatusBadge } from "@/components/admin-content";
 import { routing } from "@/i18n/routing";
 import { requirePermission } from "@/lib/auth/guards";
-import { addStaffMember, setStaffRoleStatus } from "./actions";
+import { addStaffMember, revokeStaffInvite, setStaffRoleStatus } from "./actions";
 
 type Search = { saved?: string; error?: string };
 type Role = { id: string; key: string; name: string; description: string | null };
@@ -15,8 +15,16 @@ type DirectoryUser = {
   full_name: string | null;
   created_at: string;
 };
+type PendingInvite = {
+  invite_id: string;
+  email: string;
+  role_id: string;
+  role_name: string;
+  role_key: string;
+  created_at: string;
+};
 
-const savedKeys = new Set(["activated", "deactivated", "added"]);
+const savedKeys = new Set(["activated", "deactivated", "added", "preauthorized", "inviteRevoked"]);
 const errorKeys = new Set(["invalidInput", "lastActiveAdmin", "saveFailed", "userNotFound"]);
 
 function userName(user: DirectoryUser, fallback: string) {
@@ -37,10 +45,11 @@ export default async function StaffPage({ params, searchParams }: {
     getTranslations({ locale, namespace: "AdminStaff" }),
     getTranslations({ locale, namespace: "AdminContent" }),
   ]);
-  const [usersResult, rolesResult, assignmentsResult] = await Promise.all([
+  const [usersResult, rolesResult, assignmentsResult, pendingResult] = await Promise.all([
     supabase.rpc("list_staff_directory"),
     supabase.from("roles").select("id,key,name,description").order("name"),
     supabase.from("staff_roles").select("user_id,role_id,is_active"),
+    supabase.rpc("list_pending_staff_invites"),
   ]);
   if (usersResult.error || rolesResult.error || assignmentsResult.error) {
     throw new Error("Unable to load staff access");
@@ -51,31 +60,46 @@ export default async function StaffPage({ params, searchParams }: {
   );
   const roles = (rolesResult.data ?? []) as Role[];
   const assignments = (assignmentsResult.data ?? []) as Assignment[];
+  const pendingInvites = ((pendingResult.data ?? []) as PendingInvite[]);
   const assignmentMap = new Map(assignments.map((item) => [`${item.user_id}:${item.role_id}`, item]));
   const activeStaff = new Set(assignments.filter((item) => item.is_active).map((item) => item.user_id));
   const local = locale === "bn" ? {
-    addTitle: "স্টাফ সদস্য যোগ করুন",
-    addDescription: "আগে সাইন ইন করা অ্যাকাউন্টের সঠিক ইমেইল লিখে প্রথম রোলটি নির্বাচন করুন।",
+    addTitle: "স্টাফ সদস্য যোগ করুন বা প্রি-অথরাইজ করুন",
+    addDescription: "অ্যাকাউন্টের ইমেইল লিখে প্রথম রোলটি নির্বাচন করুন। ব্যক্তিটি সাইন ইন না করে থাকলেও তার রোল সংরক্ষিত থাকবে এবং সাইন ইন করলেই সক্রিয় হবে।",
     emailLabel: "অ্যাকাউন্ট ইমেইল",
     roleLabel: "প্রাথমিক রোল",
     rolePlaceholder: "একটি রোল বেছে নিন",
     addSubmit: "স্টাফ সদস্য যোগ করুন",
     added: "স্টাফ সদস্য যোগ হয়েছে এবং নির্বাচিত রোলটি সক্রিয় আছে।",
-    userNotFound: "এই ইমেইলের কোনো সাইন-ইন করা অ্যাকাউন্ট পাওয়া যায়নি। ব্যক্তিটিকে একবার সাইন ইন করতে বলুন, তারপর আবার চেষ্টা করুন।",
+    preauthorized: "ইমেইল প্রি-অথরাইজ করা হয়েছে! ব্যক্তিটি সাইন ইন করলেই তার রোল স্বয়ংক্রিয়ভাবে চালু হবে।",
+    inviteRevoked: "অপেক্ষারত প্রি-অথরাইজেশনটি বাতিল করা হয়েছে।",
+    pendingTitle: "অপেক্ষারত প্রি-অথরাইজেশন",
+    pendingDescription: "এই ইমেইলগুলোর রোল আগে থেকেই অনুমোদিত আছে। ব্যক্তিটি প্রথমবারের মতো লগইন করলেই তার রোল সক্রিয় হয়ে যাবে।",
+    revokeSubmit: "বাতিল",
     staffOnlyDescription: "শুধু স্টাফ-রোল অ্যাসাইনমেন্ট থাকা অ্যাকাউন্ট এখানে দেখা যাবে। নিষ্ক্রিয় করলে অ্যাসাইনমেন্ট ও অডিট ইতিহাস সংরক্ষিত থাকে।",
   } : {
-    addTitle: "Add staff member",
-    addDescription: "Enter the exact email of an existing signed-in account and choose its first role.",
+    addTitle: "Add or Pre-authorize staff member",
+    addDescription: "Enter an email and choose their first role. If the person has not signed in yet, their role is pre-authorized and will automatically activate on their first login.",
     emailLabel: "Account email",
     roleLabel: "Initial role",
     rolePlaceholder: "Choose a role",
     addSubmit: "Add staff member",
     added: "The staff member was added and the selected role is active.",
-    userNotFound: "No signed-in account matches that email. Ask the person to sign in once, then try again.",
+    preauthorized: "Email pre-authorized! When this person signs in with this email, their staff role will automatically activate.",
+    inviteRevoked: "Pending invitation was revoked.",
+    pendingTitle: "Pending Pre-authorizations",
+    pendingDescription: "These emails are pre-authorized for staff roles. When they sign in, their permissions activate immediately.",
+    revokeSubmit: "Revoke",
     staffOnlyDescription: "Only accounts with a staff-role assignment appear here. Deactivation preserves the assignment and its audit history.",
   };
   const saved = typeof search.saved === "string" && savedKeys.has(search.saved)
-    ? search.saved === "added" ? local.added : t(`saved.${search.saved}`)
+    ? search.saved === "added"
+      ? local.added
+      : search.saved === "preauthorized"
+      ? local.preauthorized
+      : search.saved === "inviteRevoked"
+      ? local.inviteRevoked
+      : t(`saved.${search.saved}`)
     : null;
   const error = typeof search.error === "string" && errorKeys.has(search.error)
     ? search.error === "userNotFound" ? local.userNotFound : t(`errors.${search.error}`)
@@ -195,6 +219,52 @@ export default async function StaffPage({ params, searchParams }: {
           </table>
         </div>
       </section>
+
+      {pendingInvites.length > 0 ? (
+        <section className="content-list staff-pending-section">
+          <div className="content-list-heading">
+            <h2>{local.pendingTitle}</h2>
+            <span>{pendingInvites.length}</span>
+          </div>
+          <p className="staff-help">{local.pendingDescription}</p>
+          <div className="content-table-wrap">
+            <table className="content-table staff-table">
+              <thead>
+                <tr>
+                  <th>{local.emailLabel}</th>
+                  <th>{local.roleLabel}</th>
+                  <th>{t("columns.person")}</th>
+                  <th>{common("actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingInvites.map((invite) => (
+                  <tr key={invite.invite_id}>
+                    <td>
+                      <strong>{invite.email}</strong>
+                    </td>
+                    <td>
+                      <StatusBadge active={true} activeLabel={invite.role_name} inactiveLabel="" />
+                    </td>
+                    <td>
+                      <small>{t("joined", { date: joined.format(new Date(invite.created_at)) })}</small>
+                    </td>
+                    <td>
+                      <form action={revokeStaffInvite} className="staff-role-action">
+                        <input type="hidden" name="locale" value={locale} />
+                        <input type="hidden" name="invite_id" value={invite.invite_id} />
+                        <button className="content-secondary-button danger" type="submit">
+                          {local.revokeSubmit}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
