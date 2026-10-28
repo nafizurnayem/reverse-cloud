@@ -143,7 +143,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/services/saas-development"
+                  href="/services/software-development"
                   className="transition-colors hover:text-foreground"
                 >
                   {t("scraping")}

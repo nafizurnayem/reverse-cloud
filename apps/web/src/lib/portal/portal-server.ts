@@ -167,7 +167,24 @@ export async function fetchClientProjects(): Promise<PortalProject[]> {
     const supabase = await createClient();
     const { data: userRes } = await supabase.auth.getUser();
     if (!userRes?.user) {
-      return getPortalProjects();
+      if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+        return getPortalProjects();
+      }
+      return [];
+    }
+
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", userRes.user.id)
+      .is("archived_at", null)
+      .maybeSingle();
+
+    if (!client) {
+      if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+        return getPortalProjects();
+      }
+      return [];
     }
 
     const { data: dbProjects, error } = await supabase
@@ -178,21 +195,50 @@ export async function fetchClientProjects(): Promise<PortalProject[]> {
         milestones(id, title, description, weight, is_done, is_client_visible, preview_url, due_on, done_at, sort_order),
         payment_items(id, title, description, amount_due, currency, status, due_on, paid_at)
       `)
+      .eq("client_id", client.id)
       .order("created_at", { ascending: false });
 
     if (error || !dbProjects || dbProjects.length === 0) {
-      return getPortalProjects();
+      if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+        return getPortalProjects();
+      }
+      return [];
     }
 
     return (dbProjects as unknown as DbProjectRow[]).map(mapDbProjectToPortalProject);
   } catch {
-    return getPortalProjects();
+    if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+      return getPortalProjects();
+    }
+    return [];
   }
 }
 
 export async function fetchClientProjectById(id: string): Promise<PortalProject | null> {
   try {
     const supabase = await createClient();
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes?.user) {
+      if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+        return getPortalProjectById(id) ?? null;
+      }
+      return null;
+    }
+
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", userRes.user.id)
+      .is("archived_at", null)
+      .maybeSingle();
+
+    if (!client) {
+      if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+        return getPortalProjectById(id) ?? null;
+      }
+      return null;
+    }
+
     const { data, error } = await supabase
       .from("projects")
       .select(`
@@ -203,15 +249,23 @@ export async function fetchClientProjectById(id: string): Promise<PortalProject 
         payment_items(id, title, description, amount_due, currency, status, due_on, paid_at)
       `)
       .eq("id", id)
+      .eq("client_id", client.id)
       .maybeSingle();
 
     if (!error && data) {
       return mapDbProjectToPortalProject(data as unknown as DbProjectRow);
     }
 
-    return getPortalProjectById(id) ?? null;
+    if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+      return getPortalProjectById(id) ?? null;
+    }
+
+    return null;
   } catch {
-    return getPortalProjectById(id) ?? null;
+    if (process.env.NEXT_PUBLIC_ENABLE_PORTAL_DEMO === "true" || process.env.ENABLE_PORTAL_DEMO === "true") {
+      return getPortalProjectById(id) ?? null;
+    }
+    return null;
   }
 }
 

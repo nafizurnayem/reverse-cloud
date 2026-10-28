@@ -2,18 +2,27 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { AlertCircle, ArrowRight, CheckCircle2, Send } from "lucide-react";
+
+declare global {
+  interface Window {
+    turnstile?: { reset: () => void };
+  }
+}
 
 interface FallbackStateProps {
   locale?: "en" | "bn";
   initialMessage?: string;
   onSuccess?: () => void;
+  siteKey?: string;
 }
 
 export function FallbackState({
   locale = "en",
   initialMessage = "",
   onSuccess,
+  siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "",
 }: FallbackStateProps) {
   const isBn = locale === "bn";
   const [name, setName] = useState("");
@@ -25,8 +34,15 @@ export function FallbackState({
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
+    const values = new FormData(form);
     setState("sending");
     setErrorMessage("");
+
+    const turnstileToken =
+      (values.get("cf-turnstile-response") as string) ||
+      (typeof window !== "undefined" && (window as unknown as { turnstileToken?: string }).turnstileToken) ||
+      "";
 
     try {
       const res = await fetch("/api/leads", {
@@ -38,30 +54,34 @@ export function FallbackState({
           message,
           consent,
           locale,
+          turnstileToken,
           utm: { utm_source: "chat_fallback" },
         }),
       });
 
-      const data = await res.json() as { ok?: boolean; code?: string };
+      const data = (await res.json()) as { ok?: boolean; code?: string };
       if (!res.ok || !data.ok) {
         setState("error");
         setErrorMessage(
           isBn
             ? "বার্তা পাঠাতে ব্যর্থ হয়েছে। অনুগ্রহ করে সম্পূর্ণ যোগাযোগ পৃষ্ঠা ব্যবহার করুন।"
-            : "Failed to send message. Please use our main contact page.",
+            : "Failed to send message. Please use our main contact page."
         );
+        window.turnstile?.reset();
         return;
       }
 
       setState("sent");
+      window.turnstile?.reset();
       onSuccess?.();
     } catch {
       setState("error");
       setErrorMessage(
         isBn
           ? "নেটওয়ার্ক ত্রুটি। অনুগ্রহ করে সরাসরি যোগাযোগ করুন।"
-          : "Network error. Please use our contact page directly.",
+          : "Network error. Please use our contact page directly."
       );
+      window.turnstile?.reset();
     }
   }
 
@@ -83,6 +103,10 @@ export function FallbackState({
 
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-4 shadow-sm my-2 space-y-3">
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="afterInteractive"
+      />
       <div className="flex items-start gap-2.5">
         <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div>
@@ -130,11 +154,37 @@ export function FallbackState({
         </div>
 
         <label className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
-          <input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" />
-          <span>{isBn ? "আমার অনুরোধের উত্তর দিতে আমার তথ্য ব্যবহারে সম্মতি দিচ্ছি। " : "I consent to the use of my details to answer this enquiry. "}
-            <Link href={`/${locale}/privacy`} className="font-semibold text-primary hover:underline">{isBn ? "গোপনীয়তা নীতি" : "Privacy Policy"}</Link>
+          <input
+            type="checkbox"
+            required
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            {isBn
+              ? "আমার অনুরোধের উত্তর দিতে আমার তথ্য ব্যবহারে সম্মতি দিচ্ছি। "
+              : "I consent to the use of my details to answer this enquiry. "}
+            <Link
+              href={`/${locale}/privacy`}
+              className="font-semibold text-primary hover:underline"
+            >
+              {isBn ? "গোপনীয়তা নীতি" : "Privacy Policy"}
+            </Link>
           </span>
         </label>
+
+        {siteKey ? (
+          <div className="contact-turnstile py-1">
+            <div
+              className="cf-turnstile"
+              data-sitekey={siteKey}
+              data-action="contact"
+              data-language={locale}
+              data-size="compact"
+            />
+          </div>
+        ) : null}
 
         {state === "error" && (
           <p className="text-[11px] text-destructive font-medium">{errorMessage}</p>
@@ -155,7 +205,15 @@ export function FallbackState({
             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             <Send className="h-3 w-3" />
-            <span>{state === "sending" ? (isBn ? "পাঠানো হচ্ছে..." : "Sending...") : (isBn ? "পাঠান" : "Send")}</span>
+            <span>
+              {state === "sending"
+                ? isBn
+                  ? "পাঠানো হচ্ছে..."
+                  : "Sending..."
+                : isBn
+                ? "পাঠান"
+                : "Send"}
+            </span>
           </button>
         </div>
       </form>

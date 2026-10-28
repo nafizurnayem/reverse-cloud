@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Box, CreditCard, LogOut, Shield } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { signOut } from "@/app/[locale]/(auth)/actions";
 
 interface PortalHeaderProps {
   locale: string;
@@ -82,7 +83,7 @@ export function PortalHeader({
             </span>
           </div>
 
-          <form action="/auth/sign-out" method="post">
+          <form action={signOut.bind(null, locale)}>
             <button
               type="submit"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

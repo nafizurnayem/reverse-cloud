@@ -141,7 +141,7 @@ export function WizardContainer({ questions, locale, labels }: WizardContainerPr
                       #{index + 1}
                     </span>
                     <Badge variant={isTopRank ? "default" : "secondary"} className="text-xs font-semibold">
-                      {res.matchPercentage}% Match
+                      {labels.matchLabel.replace("{pct}", String(res.matchPercentage))}
                     </Badge>
                   </div>
 

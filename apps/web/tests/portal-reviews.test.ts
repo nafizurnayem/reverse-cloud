@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   getUser: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -12,6 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: () => ({
     auth: { getUser: mocks.getUser },
     from: mocks.from,
+    rpc: mocks.rpc,
   }),
 }));
 
@@ -153,35 +155,14 @@ describe("Portal Review Submission & Validation", () => {
     expect(result.error).toBe("unauthorized");
   });
 
-  it("updates existing portal review when one already exists for the project", async () => {
+  it("submits portal review via submit_project_review RPC and revalidates path", async () => {
     mocks.getUser.mockResolvedValue({
       data: { user: { id: "user-client-1", email: "client@example.com" } },
       error: null,
     });
-
-    const existingChain: Record<string, unknown> = {};
-    existingChain.select = vi.fn().mockReturnValue(existingChain);
-    existingChain.eq = vi.fn().mockReturnValue(existingChain);
-    existingChain.maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: "rev-existing-01" },
+    mocks.rpc.mockResolvedValue({
+      data: "rev-rpc-01",
       error: null,
-    });
-
-    const updateChain: Record<string, unknown> = {};
-    updateChain.update = vi.fn().mockReturnValue(updateChain);
-    updateChain.eq = vi.fn().mockResolvedValue({
-      data: null,
-      error: null,
-    });
-
-    mocks.from.mockImplementation((table: string) => {
-      if (table === "reviews") {
-        return {
-          select: existingChain.select,
-          update: updateChain.update,
-        };
-      }
-      return {};
     });
 
     const formData = new FormData();
@@ -193,40 +174,26 @@ describe("Portal Review Submission & Validation", () => {
 
     const result = await submitProjectReview(formData);
     expect(result.success).toBe(true);
-    expect(result.reviewId).toBe("rev-existing-01");
+    expect(result.reviewId).toBe("rev-rpc-01");
+    expect(mocks.rpc).toHaveBeenCalledWith("submit_project_review", {
+      p_project_id: "proj-123",
+      p_rating: 5,
+      p_reviewer_name: "Tariqul Islam",
+      p_reviewer_title: null,
+      p_body: "Updated review after production release.",
+      p_locale: "en",
+    });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/en/portal/projects/proj-123");
   });
 
-  it("inserts new portal review when no previous review exists", async () => {
+  it("handles RPC submission error gracefully", async () => {
     mocks.getUser.mockResolvedValue({
       data: { user: { id: "user-client-1", email: "client@example.com" } },
       error: null,
     });
-
-    const selectChain: Record<string, unknown> = {};
-    selectChain.select = vi.fn().mockReturnValue(selectChain);
-    selectChain.eq = vi.fn().mockReturnValue(selectChain);
-    selectChain.maybeSingle = vi.fn().mockResolvedValue({
+    mocks.rpc.mockResolvedValue({
       data: null,
-      error: null,
-    });
-
-    const insertChain: Record<string, unknown> = {};
-    insertChain.insert = vi.fn().mockReturnValue(insertChain);
-    insertChain.select = vi.fn().mockReturnValue(insertChain);
-    insertChain.single = vi.fn().mockResolvedValue({
-      data: { id: "rev-new-02" },
-      error: null,
-    });
-
-    mocks.from.mockImplementation((table: string) => {
-      if (table === "reviews") {
-        return {
-          select: selectChain.select,
-          insert: insertChain.insert,
-        };
-      }
-      return {};
+      error: new Error("project_not_found_or_forbidden"),
     });
 
     const formData = new FormData();
@@ -238,8 +205,7 @@ describe("Portal Review Submission & Validation", () => {
     formData.append("locale", "bn");
 
     const result = await submitProjectReview(formData);
-    expect(result.success).toBe(true);
-    expect(result.reviewId).toBe("rev-new-02");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/bn/portal/projects/proj-123");
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("project_not_found_or_forbidden");
   });
 });

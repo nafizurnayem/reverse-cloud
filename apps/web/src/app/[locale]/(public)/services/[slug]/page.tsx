@@ -370,7 +370,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                       <OtherIcon className="h-5 w-5" />
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {other.pricing_model}
+                      {modelLabels[other.pricing_model] || other.pricing_model}
                     </Badge>
                   </div>
                   <CardTitle className="text-lg font-bold">{otherName}</CardTitle>

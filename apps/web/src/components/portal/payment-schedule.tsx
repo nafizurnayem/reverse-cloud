@@ -41,69 +41,83 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
           </div>
         </div>
 
-        <div className="divide-y divide-border rounded-xl border overflow-hidden">
-          {project.payments.map((pay) => {
-            const isPaid = pay.status === "paid";
-            const isDue = pay.status === "due";
+        {project.payments.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
+            <CreditCard className="mx-auto h-6 w-6 text-muted-foreground/40 mb-2" />
+            <p className="font-medium text-foreground">
+              {isBn ? "কোনো নির্ধারিত পেমেন্ট নেই" : "No Payment Schedule Assigned"}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {isBn
+                ? "প্রজেক্টের জন্য কোনো প্রদেয় বা আসন্ন ইনভয়েস শিডিউল পাওয়া যায়নি।"
+                : "No pending or upcoming payment milestones have been created for this project yet."}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border rounded-xl border overflow-hidden">
+            {project.payments.map((pay) => {
+              const isPaid = pay.status === "paid";
+              const isDue = pay.status === "due";
 
-            return (
-              <div
-                key={pay.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 gap-3 bg-card hover:bg-muted/20 transition-colors"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground text-xs">
-                      {pay.title}
-                    </span>
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                        isPaid
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              return (
+                <div
+                  key={pay.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 gap-3 bg-card hover:bg-muted/20 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground text-xs">
+                        {pay.title}
+                      </span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          isPaid
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            : isDue
+                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isPaid
+                          ? (isBn ? "পরিশোধিত" : "Paid")
                           : isDue
-                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
+                          ? (isBn ? "প্রদেয়" : "Due")
+                          : (isBn ? "আসন্ন" : "Upcoming")}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                      <span>{isBn ? "তারিখ:" : "Due:"} {pay.dueDate}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground/80">
+                        #{pay.invoiceNumber}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                    <div className="text-right">
+                      <span className="block font-mono font-bold text-xs text-foreground">
+                        {formatUsd(pay.amountUsd)}
+                      </span>
+                      <span className="block font-mono text-[10px] text-muted-foreground">
+                        ≈ {formatBdt(pay.amountBdt)}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInvoice(pay)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted hover:text-primary transition-colors shadow-sm"
                     >
-                      {isPaid
-                        ? (isBn ? "পরিশোধিত" : "Paid")
-                        : isDue
-                        ? (isBn ? "প্রদেয়" : "Due")
-                        : (isBn ? "আসন্ন" : "Upcoming")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                    <span>{isBn ? "তারিখ:" : "Due:"} {pay.dueDate}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground/80">
-                      #{pay.invoiceNumber}
-                    </span>
+                      <FileText className="h-3.5 w-3.5 text-primary" />
+                      <span>{isBn ? "ইনভয়েস" : "Invoice"}</span>
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                  <div className="text-right">
-                    <span className="block font-mono font-bold text-xs text-foreground">
-                      {formatUsd(pay.amountUsd)}
-                    </span>
-                    <span className="block font-mono text-[10px] text-muted-foreground">
-                      ≈ {formatBdt(pay.amountBdt)}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedInvoice(pay)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted hover:text-primary transition-colors shadow-sm"
-                  >
-                    <FileText className="h-3.5 w-3.5 text-primary" />
-                    <span>{isBn ? "ইনভয়েস" : "Invoice"}</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {selectedInvoice && (

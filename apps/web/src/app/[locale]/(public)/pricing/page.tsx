@@ -40,6 +40,13 @@ export default async function PricingPage({ params }: Props) {
     getTranslations({ locale, namespace: "ServiceDetail" }),
   ]);
 
+  const modelLabels: Record<string, string> = {
+    fixed: tDetail("fixedModel"),
+    hourly: tDetail("hourlyModel"),
+    retainer: tDetail("retainerModel"),
+    custom: tDetail("customModel"),
+  };
+
   const models = [
     {
       icon: Briefcase,
@@ -160,7 +167,7 @@ export default async function PricingPage({ params }: Props) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="font-mono text-[11px] uppercase">
-                      {service.pricing_model}
+                      {modelLabels[service.pricing_model] || service.pricing_model}
                     </Badge>
                   </div>
                   <h3 className="text-base font-bold text-foreground">{name}</h3>

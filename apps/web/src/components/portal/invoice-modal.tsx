@@ -113,7 +113,7 @@ export function InvoiceModal({
             </h4>
             <p className="text-xs text-muted-foreground">{project.companyName}</p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              Project: {project.title}
+              {isBn ? "প্রজেক্ট:" : "Project:"} {project.title}
             </p>
           </div>
 
@@ -122,9 +122,9 @@ export function InvoiceModal({
             <table className="w-full text-left text-xs">
               <thead className="bg-muted text-muted-foreground text-[10px] uppercase tracking-wider">
                 <tr>
-                  <th className="py-2 px-3">Description</th>
-                  <th className="py-2 px-3 text-right">Amount (USD)</th>
-                  <th className="py-2 px-3 text-right">Amount (BDT)</th>
+                  <th className="py-2 px-3">{isBn ? "বিবরণ" : "Description"}</th>
+                  <th className="py-2 px-3 text-right">{isBn ? "পরিমাণ (USD)" : "Amount (USD)"}</th>
+                  <th className="py-2 px-3 text-right">{isBn ? "পরিমাণ (BDT)" : "Amount (BDT)"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -132,7 +132,9 @@ export function InvoiceModal({
                   <td className="py-3 px-3">
                     <p className="font-medium text-foreground">{payment.title}</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Milestone delivery item for project #{project.id}
+                      {isBn
+                        ? `প্রজেক্ট #${project.id}-এর জন্য মাইলফলক ডেলিভারি`
+                        : `Milestone delivery item for project #${project.id}`}
                     </p>
                   </td>
                   <td className="py-3 px-3 text-right font-mono font-semibold">
