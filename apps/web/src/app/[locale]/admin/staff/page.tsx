@@ -76,6 +76,7 @@ export default async function StaffPage({ params, searchParams }: {
     pendingTitle: "অপেক্ষারত প্রি-অথরাইজেশন",
     pendingDescription: "এই ইমেইলগুলোর রোল আগে থেকেই অনুমোদিত আছে। ব্যক্তিটি প্রথমবারের মতো লগইন করলেই তার রোল সক্রিয় হয়ে যাবে।",
     revokeSubmit: "বাতিল",
+    userNotFound: "এই ইমেইলে কোনো সমস্যা হয়েছে। আবার চেষ্টা করুন।",
     staffOnlyDescription: "শুধু স্টাফ-রোল অ্যাসাইনমেন্ট থাকা অ্যাকাউন্ট এখানে দেখা যাবে। নিষ্ক্রিয় করলে অ্যাসাইনমেন্ট ও অডিট ইতিহাস সংরক্ষিত থাকে।",
   } : {
     addTitle: "Add or Pre-authorize staff member",
@@ -90,6 +91,7 @@ export default async function StaffPage({ params, searchParams }: {
     pendingTitle: "Pending Pre-authorizations",
     pendingDescription: "These emails are pre-authorized for staff roles. When they sign in, their permissions activate immediately.",
     revokeSubmit: "Revoke",
+    userNotFound: "Something went wrong with that email. Please try again.",
     staffOnlyDescription: "Only accounts with a staff-role assignment appear here. Deactivation preserves the assignment and its audit history.",
   };
   const saved = typeof search.saved === "string" && savedKeys.has(search.saved)

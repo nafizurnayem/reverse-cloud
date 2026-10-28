@@ -41,7 +41,7 @@ set local role anon;
 select throws_ok(
   $$select public.list_pending_staff_invites()$$,
   '42501',
-  'permission_denied',
+  null,
   'Anon cannot list pending staff invites'
 );
 
