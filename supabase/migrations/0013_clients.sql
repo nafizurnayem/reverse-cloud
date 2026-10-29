@@ -105,6 +105,8 @@ grant update (full_name, email, phone, company, country, timezone,
 create function app.guard_client_self_update()
 returns trigger
 language plpgsql
+security definer
+set search_path = ''
 as $$
 begin
   if current_user in ('anon', 'authenticated')

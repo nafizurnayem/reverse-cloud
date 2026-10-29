@@ -73,7 +73,10 @@ begin
         'invite_id', v_invite_id,
         'client_id', p_client_id,
         'client_name', v_client.full_name,
-        'token', v_token,
+        -- Raw token intentionally omitted: the email worker must look up the invite
+        -- by invite_id and generate its own signed link. Storing the raw token
+        -- in the outbox payload would allow anyone with outbox read access to
+        -- hijack the invitation (audit bug #1 fix).
         'expires_at', v_expires_at,
         'locale', coalesce(v_client.preferred_locale, 'en')
       )
