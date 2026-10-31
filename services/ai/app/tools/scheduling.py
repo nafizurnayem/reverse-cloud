@@ -90,56 +90,44 @@ async def get_available_slots(
         except Exception as exc:
             logger.debug("Meeting type DB lookup failed: %s", exc)
 
-    if api_key and event_type_id:
-        try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                res = await client.get(
-                    "https://api.cal.com/v2/slots",
-                    params={
-                        "eventTypeId": event_type_id,
-                        "start": start_iso,
-                        "end": end_iso,
-                        "timeZone": time_zone,
-                        "format": "range",
-                    },
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "cal-api-version": CALCOM_API_VERSION,
-                    },
-                )
-                if res.is_success:
-                    payload = res.json()
-                    raw_slots = payload.get("data", {}).get("slots", [])
-                    formatted_slots = []
-                    for item in raw_slots[:8]:
-                        s = item.get("start")
-                        e = item.get("end")
-                        if s and e:
-                            formatted_slots.append({"start": s, "end": e})
-                    if formatted_slots:
-                        return formatted_slots
-        except Exception as exc:
-            logger.warning("Cal.com API slots request failed: %s. Using default slots.", exc)
+    if not api_key or not event_type_id:
+        # FX-14: never invent slots when Cal.com is not configured.
+        logger.warning("Cal.com not configured (api_key=%s, event_type_id=%s); returning unavailable.", bool(api_key), event_type_id)
+        return [{"error": "availability_unavailable", "message": "Scheduling is not available right now. Please contact us directly to arrange a call."}]
 
-    # Deterministic default business-hour consultation slots if live Cal.com is unconfigured
-    default_slots: list[dict[str, str]] = []
-    base_day = now + timedelta(days=1)
-    if base_day.weekday() >= 5:  # weekend skip
-        base_day += timedelta(days=(7 - base_day.weekday()))
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.get(
+                "https://api.cal.com/v2/slots",
+                params={
+                    "eventTypeId": event_type_id,
+                    "start": start_iso,
+                    "end": end_iso,
+                    "timeZone": time_zone,
+                    "format": "range",
+                },
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "cal-api-version": CALCOM_API_VERSION,
+                },
+            )
+            if res.is_success:
+                payload = res.json()
+                raw_slots = payload.get("data", {}).get("slots", [])
+                formatted_slots = []
+                for item in raw_slots[:8]:
+                    s = item.get("start")
+                    e = item.get("end")
+                    if s and e:
+                        formatted_slots.append({"start": s, "end": e})
+                if formatted_slots:
+                    return formatted_slots
+            logger.warning("Cal.com slots API returned non-success status %s", res.status_code)
+    except Exception as exc:
+        # FX-14: do not fall back to invented slots; surface the real error
+        logger.warning("Cal.com API slots request failed: %s", exc)
 
-    for day_offset in range(min(days_ahead, 3)):
-        slot_day = base_day + timedelta(days=day_offset)
-        if slot_day.weekday() < 5:  # Monday to Friday
-            for hour in (14, 16):  # 14:00 UTC, 16:00 UTC
-                s_dt = slot_day.replace(hour=hour, minute=0, second=0, microsecond=0)
-                e_dt = s_dt + timedelta(minutes=duration_min)
-                default_slots.append(
-                    {
-                        "start": s_dt.isoformat().replace("+00:00", "Z"),
-                        "end": e_dt.isoformat().replace("+00:00", "Z"),
-                    }
-                )
-    return default_slots[:6]
+    return [{"error": "availability_unavailable", "message": "Unable to retrieve live availability right now. Please try again in a moment or contact us directly."}]
 
 
 async def create_booking_hold(
@@ -186,6 +174,53 @@ async def create_booking_hold(
             "expires_in_minutes": 15,
             "message": "Slot held for 15 minutes. Please proceed to confirmation.",
         }
+
+    # FX-14: recheck that the requested slot is still live before holding it.
+    settings = get_settings()
+    api_key = (ctx.deps.calcom_api_key if ctx else None) or settings.calcom_api_key
+    if api_key:
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as http_client:
+                pool_check = await ctx.deps.db_pool.acquire() if ctx.deps.db_pool else None
+                event_type_id: str | None = None
+                if pool_check is not None:
+                    try:
+                        mt = await pool_check.fetchrow(SELECT_MEETING_TYPE_SQL, meeting_type_key)
+                        if mt:
+                            event_type_id = mt["calcom_event_type_id"]
+                    finally:
+                        await ctx.deps.db_pool.release(pool_check)
+
+                if event_type_id:
+                    check_res = await http_client.get(
+                        "https://api.cal.com/v2/slots",
+                        params={
+                            "eventTypeId": event_type_id,
+                            "start": start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            "end": end_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            "timeZone": timezone_name,
+                            "format": "range",
+                        },
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "cal-api-version": CALCOM_API_VERSION,
+                        },
+                    )
+                    if check_res.is_success:
+                        live_slots = check_res.json().get("data", {}).get("slots", [])
+                        starts_iso = start_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        slot_available = any(
+                            s.get("start", "").startswith(starts_iso[:16])
+                            for s in live_slots
+                        )
+                        if not slot_available:
+                            return {
+                                "status": "error",
+                                "message": "That slot is no longer available. Please choose a different time.",
+                            }
+        except Exception as exc:
+            logger.warning("Slot live-check failed: %s — proceeding with hold anyway.", exc)
+
 
     try:
         async with pool.acquire() as conn:
@@ -241,5 +276,6 @@ async def create_booking_hold(
                 "message": "Slot successfully reserved for 15 minutes. Awaiting confirmation.",
             }
     except Exception as exc:
-        logger.error("Failed to hold booking proposal: %s", exc)
-        return {"status": "error", "message": f"Could not create booking proposal: {exc}"}
+        logger.error("Failed to hold booking proposal: %s", exc, exc_info=True)
+        # FX-25: never expose raw exception text to the model/user
+        return {"status": "error", "message": "Unable to hold this slot right now. Please try again or choose another time."}

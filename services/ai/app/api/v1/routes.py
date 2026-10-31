@@ -3,7 +3,8 @@ import json
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from ...agents.chat_agent import run_agent_stream
+import uuid as _uuid
+from ...agents.chat_agent import CardEvent, TextChunk, run_agent_stream
 from ...config import get_settings
 from ...estimator.engine import EstimateInput, estimate_project
 from ...schemas.chat import ChatRequest
@@ -57,17 +58,29 @@ async def _chat_events(payload: ChatRequest, db_pool=None):
         )
         return
 
+    # FX-08: stream yields TextChunk (text delta) and CardEvent (renderable tool result).
+    # FX-25: raw exception text is never forwarded to the client; a request_id is
+    #        included so the error can be correlated with server logs.
+    request_id = str(_uuid.uuid4())
     try:
         stream = run_agent_stream(payload, pool=db_pool, client_id=payload.client_id)
         timeout_seconds = getattr(settings, "ai_stream_timeout_seconds", 60.0)
-        async for text in stream_with_timeout(stream, timeout_seconds=timeout_seconds):
-            yield _sse("text_delta", {"text": text})
+        async for event in stream_with_timeout(stream, timeout_seconds=timeout_seconds):
+            if isinstance(event, TextChunk):
+                yield _sse("text_delta", {"text": event.text})
+            elif isinstance(event, CardEvent):
+                yield _sse("card", {"type": event.card_type, "data": event.data})
     except StreamTimeoutError:
-        yield _sse("error", {"code": "timeout", "message": "Response generation timed out."})
+        yield _sse("error", {"code": "timeout", "message": "Response generation timed out.", "request_id": request_id})
     except GuardrailViolation as error:
-        yield _sse("error", {"code": error.code, "message": error.message})
+        yield _sse("error", {"code": error.code, "message": error.message, "request_id": request_id})
     except Exception as error:
-        yield _sse("error", {"code": "provider_error", "message": str(error)})
+        # FX-25: log the full exception server-side; send only a safe generic message
+        import logging as _logging
+        _logging.getLogger(__name__).error(
+            "Unhandled chat stream error [request_id=%s]: %s", request_id, error, exc_info=True
+        )
+        yield _sse("error", {"code": "server_error", "message": "Something went wrong. Please try again.", "request_id": request_id})
     else:
         yield _sse("message_end", {"reason": "stop"})
 

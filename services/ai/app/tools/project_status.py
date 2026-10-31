@@ -34,27 +34,29 @@ FROM public.get_client_project_status($1, $2);
 
 async def get_project_status(
     ctx: RunContext[AgentDeps],
-    client_id: str | None = None,
     project_id: str | None = None,
 ) -> dict[str, Any]:
     """Retrieve verified delivery progress, active milestones, and client updates for a project.
 
-    Clients must be authenticated. Internal engineering notes and financial budgets
-    are strictly stripped at the database kernel level (migration 0028).
+    Clients must be authenticated. The client identity is read exclusively from the
+    server-side verified request context - the model cannot supply or override it.
+    Internal engineering notes and financial budgets are stripped at the DB level (migration 0028).
 
     Args:
         ctx: Agent run context.
-        client_id: Client UUID (defaults to authenticated session client if omitted).
-        project_id: Optional specific project UUID if client has multiple active projects.
+        project_id: Optional specific project UUID if the client has multiple active projects.
 
     Returns:
         Dictionary containing project progress percentage, milestones, and public updates.
     """
-    effective_client_id = client_id or (ctx.deps.client_id if ctx else None)
+    # FX-03: client_id is intentionally NOT a tool parameter. It must come only from
+    # the server-signed request context (set by the Next.js API route after verifying
+    # the session). This prevents the model from querying any other client's data.
+    effective_client_id = ctx.deps.client_id if ctx else None
     if not effective_client_id:
         return {
-            "error": "missing_client_id",
-            "message": "A verified client ID is required to access project status.",
+            "error": "authentication_required",
+            "message": "Please sign in to your client portal to view project status.",
         }
 
     try:
@@ -116,5 +118,6 @@ async def get_project_status(
 
             return {"projects": projects, "total_projects": len(projects)}
     except Exception as exc:
-        logger.error("Failed to query get_client_project_status: %s", exc)
-        return {"error": "query_failed", "message": f"Database query failed: {exc}"}
+        logger.error("Failed to query get_client_project_status: %s", exc, exc_info=True)
+        # FX-25: never expose raw exception text to the model/user
+        return {"error": "query_failed", "message": "Project status is temporarily unavailable. Please try again later."}

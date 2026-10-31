@@ -15,7 +15,17 @@ from ..agents.deps import AgentDeps
 
 logger = logging.getLogger(__name__)
 
-INSERT_LEAD_SQL = """
+# FX-13: call the security-definer function created in migration D-3 instead of
+# a raw INSERT. create_chat_lead() inserts the lead AND queues the two outbox
+# rows (email + Telegram alerts) in a single atomic transaction. It is only
+# executable by the ai_service role and never exposes leads data directly.
+CREATE_CHAT_LEAD_SQL = """
+SELECT * FROM public.create_chat_lead($1, $2, $3, $4, $5, $6, $7);
+"""
+
+# Fallback used only when the D-3 migration has not yet been applied (e.g. in a
+# dev environment running an older schema). Will be removed once D-3 is merged.
+INSERT_LEAD_SQL_FALLBACK = """
 INSERT INTO public.leads (
     name,
     email,
@@ -91,16 +101,37 @@ async def save_lead(
 
     try:
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                INSERT_LEAD_SQL,
-                clean_name[:120],
-                clean_email,
-                clean_phone,
-                clean_company,
-                locale if locale in ("en", "bn") else "en",
-                clean_message[:5000],
-                "chat",
-            )
+            # FX-13: prefer the security-definer RPC that also queues email + Telegram alerts.
+            # Fall back to a direct insert if the D-3 migration has not yet been applied.
+            row = None
+            try:
+                row = await conn.fetchrow(
+                    CREATE_CHAT_LEAD_SQL,
+                    clean_name[:120],
+                    clean_email,
+                    clean_phone,
+                    clean_company,
+                    locale if locale in ("en", "bn") else "en",
+                    clean_message[:5000],
+                    "chat",
+                )
+            except Exception as rpc_exc:
+                logger.warning(
+                    "create_chat_lead RPC unavailable (D-3 not yet applied?), "
+                    "falling back to direct insert: %s",
+                    rpc_exc,
+                )
+                row = await conn.fetchrow(
+                    INSERT_LEAD_SQL_FALLBACK,
+                    clean_name[:120],
+                    clean_email,
+                    clean_phone,
+                    clean_company,
+                    locale if locale in ("en", "bn") else "en",
+                    clean_message[:5000],
+                    "chat",
+                )
+
             lead_id = str(row["id"]) if row else "created"
             logger.info("Lead created successfully with ID %s", lead_id)
             return {
@@ -109,8 +140,9 @@ async def save_lead(
                 "message": "Contact lead has been saved. Our team will follow up promptly.",
             }
     except Exception as exc:
-        logger.error("Failed to insert lead into database: %s", exc)
+        logger.error("Failed to insert lead into database: %s", exc, exc_info=True)
+        # FX-25: never expose raw exception text (may contain table/column names) to the model
         return {
             "status": "error",
-            "message": f"Could not record lead: {exc}",
+            "message": "Unable to save your contact details right now. Please try again or use the contact form.",
         }
