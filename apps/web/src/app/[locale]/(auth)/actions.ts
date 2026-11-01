@@ -3,7 +3,7 @@
 import { hasLocale } from "next-intl";
 import { redirect } from "next/navigation";
 import { routing } from "@/i18n/routing";
-import { loginPath, safePostLoginPath, type Locale } from "@/lib/auth/routes";
+import { loginPath, needsClientAccountLink, safePostLoginPath, type Locale } from "@/lib/auth/routes";
 import { requireSiteUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -86,9 +86,11 @@ export async function continueWithClientAccount(localeValue: string, nextValue: 
     const supabase = await createClient();
     const userResult = await supabase.auth.getUser();
     signedIn = !userResult.error && Boolean(userResult.data.user);
-    if (signedIn) {
+    if (signedIn && needsClientAccountLink(next, locale)) {
       const result = await supabase.rpc("link_my_client_account");
       linked = !result.error && typeof result.data === "string";
+    } else if (signedIn) {
+      linked = true;
     }
   } catch {
     // The localized login page displays the stable account-link error below.

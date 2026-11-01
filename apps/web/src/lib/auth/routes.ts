@@ -33,7 +33,7 @@ export function needsClientAccountLink(destination: string, locale: Locale) {
 export function safePostLoginPath(
   value: string | readonly string[] | null | undefined,
   locale: Locale,
-  fallback = `/${locale}/portal`,
+  fallback = `/${locale}`,
 ) {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
     return fallback;

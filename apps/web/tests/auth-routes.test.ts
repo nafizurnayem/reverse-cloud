@@ -9,16 +9,16 @@ describe("post-login destination validation", () => {
   it.each([
     ["/en/admin", "en", "/en/admin"],
     ["/bn/portal/projects/1?tab=files#invoice", "bn", "/bn/portal/projects/1?tab=files#invoice"],
-    [undefined, "en", "/en/portal"],
-    ["https://evil.example/en/admin", "en", "/en/portal"],
-    ["//evil.example/en/admin", "en", "/en/portal"],
-    ["/\\evil.example/en/admin", "en", "/en/portal"],
-    ["/en/%5cevil.example", "en", "/en/portal"],
-    ["/bn/admin", "en", "/en/portal"],
-    ["/en.evil/admin", "en", "/en/portal"],
-    ["/en/../bn/admin", "en", "/en/portal"],
-    ["/en/login", "en", "/en/portal"],
-    [["/en/admin"], "en", "/en/portal"],
+    [undefined, "en", "/en"],
+    ["https://evil.example/en/admin", "en", "/en"],
+    ["//evil.example/en/admin", "en", "/en"],
+    ["/\\evil.example/en/admin", "en", "/en"],
+    ["/en/%5cevil.example", "en", "/en"],
+    ["/bn/admin", "en", "/en"],
+    ["/en.evil/admin", "en", "/en"],
+    ["/en/../bn/admin", "en", "/en"],
+    ["/en/login", "en", "/en"],
+    [["/en/admin"], "en", "/en"],
   ] as const)("maps %j for %s to %s", (value, locale, expected) => {
     expect(safePostLoginPath(value, locale)).toBe(expected);
   });
@@ -34,7 +34,7 @@ describe("postLoginPathFromQuery", () => {
 
   it("applies the same open-redirect protection to returnTo", () => {
     expect(postLoginPathFromQuery(undefined, "https://evil.example", "en"))
-      .toBe("/en/portal");
+      .toBe("/en");
   });
 });
 

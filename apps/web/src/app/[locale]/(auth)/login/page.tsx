@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { needsClientAccountLink, postLoginPathFromQuery } from "@/lib/auth/routes";
+import { accountDestination } from "@/lib/auth/destination";
 import { createClient } from "@/lib/supabase/server";
 import {
   continueWithClientAccount,
@@ -40,7 +41,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
   if (!hasLocale(routing.locales, locale)) notFound();
 
   const query = await searchParams;
-  const next = postLoginPathFromQuery(query.next, query.returnTo, locale);
+  let next = postLoginPathFromQuery(query.next, query.returnTo, locale);
   const error = typeof query.error === "string" && errorKeys.has(query.error)
     ? query.error
     : null;
@@ -48,11 +49,16 @@ export default async function LoginPage({ params, searchParams }: Props) {
   const magicLinkSent = query.magic_link_sent === "1";
   const t = await getTranslations({ locale, namespace: "Login" });
 
-  let user: { email?: string } | null = null;
+  let user: { id: string; email?: string } | null = null;
   try {
     const supabase = await createClient();
     const result = await supabase.auth.getUser();
-    if (!result.error) user = result.data.user;
+    if (!result.error) {
+      user = result.data.user;
+      if (user && next === `/${locale}`) {
+        next = await accountDestination(supabase, user.id, locale);
+      }
+    }
   } catch {
     // Missing or temporarily unavailable auth config is shown as sign-in failure.
   }

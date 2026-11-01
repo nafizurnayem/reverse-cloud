@@ -104,6 +104,11 @@ export function limitContactRequests(ip: string, options: RateLimitOptions = {})
   return limitRequests("contact", ip, 5, 60 * 60, options);
 }
 
+export function limitPreviewChatRequests(ip: string) {
+  // shortcut: one server process for the temporary preview; use Redis for a stable deployment.
+  return limitRequests("preview-chat", ip, 5, 60, { production: false });
+}
+
 export function limitScheduleRequests(ip: string, options: RateLimitOptions = {}) {
   return limitRequests("schedule", ip, 30, 60, options);
 }

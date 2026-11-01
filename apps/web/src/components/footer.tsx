@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Separator } from "@/components/ui/separator";
 
-export function Footer() {
+export function Footer({ accountHref = null }: { accountHref?: string | null }) {
   const t = useTranslations("Footer");
   const currentYear = new Date().getFullYear();
 
@@ -101,10 +101,10 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/login"
+                  href={accountHref ?? "/login"}
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {t("login")}
+                  {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
                 </Link>
               </li>
             </ul>
@@ -167,8 +167,8 @@ export function Footer() {
             <Link href="/services" className="transition-colors hover:text-foreground">
               {t("services")}
             </Link>
-            <Link href="/login" className="transition-colors hover:text-foreground">
-              {t("login")}
+            <Link href={accountHref ?? "/login"} className="transition-colors hover:text-foreground">
+              {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
             </Link>
             <Link href="/privacy" className="transition-colors hover:text-foreground">{t("privacy")}</Link>
             <Link href="/terms" className="transition-colors hover:text-foreground">{t("terms")}</Link>
