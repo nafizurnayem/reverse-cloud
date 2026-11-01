@@ -9,11 +9,13 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   rpc: vi.fn(),
   signOut: vi.fn(),
+  accountDestination: vi.fn(),
   redirect: vi.fn((url: string) => { throw new Error(`redirect:${url}`); }),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/auth/destination", () => ({ accountDestination: mocks.accountDestination }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
@@ -47,6 +49,7 @@ beforeEach(() => {
   mocks.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
   mocks.rpc.mockResolvedValue({ data: "00000000-0000-4000-8000-000000000001", error: null });
   mocks.signOut.mockResolvedValue({ error: null });
+  mocks.accountDestination.mockImplementation((_supabase, _userId, locale) => `/${locale}`);
 });
 
 describe("magic-link start", () => {
@@ -82,7 +85,7 @@ describe("magic-link start", () => {
     formData.set("email", "person@example.com");
 
     await expect(signInWithMagicLink("en", "https://evil.example", formData)).rejects.toThrow(
-      "redirect:/en/login?error=magic_link_start_failed&next=%2Fen%2Fportal",
+      "redirect:/en/login?error=magic_link_start_failed&next=%2Fen",
     );
   });
 });
@@ -106,7 +109,7 @@ describe("Google OAuth start", () => {
       "redirect:https://project.supabase.co/auth/v1/authorize",
     );
     const call = mocks.signInWithOAuth.mock.calls[0][0];
-    expect(new URL(call.options.redirectTo).searchParams.get("next")).toBe("/en/portal");
+    expect(new URL(call.options.redirectTo).searchParams.get("next")).toBe("/en");
   });
 
   it("returns a localized stable error when OAuth cannot start", async () => {
@@ -191,7 +194,7 @@ describe("OAuth callback", () => {
     );
     const destination = new URL(response.headers.get("location")!);
     expect(destination.pathname).toBe("/bn/login");
-    expect(destination.searchParams.get("next")).toBe("/bn/portal");
+    expect(destination.searchParams.get("next")).toBe("/bn");
   });
 
   it("returns a magic-link-specific error for an expired email link", async () => {
@@ -242,6 +245,18 @@ describe("OAuth callback", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
+  it("sends a staff member from ordinary sign-in to the admin dashboard", async () => {
+    mocks.accountDestination.mockResolvedValue("/en/admin");
+    const response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen"),
+      context("en"),
+    );
+    expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
+    expect(mocks.accountDestination).toHaveBeenCalledWith(expect.anything(), "user-1", "en");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/admin");
+    expect(mocks.rpc).not.toHaveBeenCalledWith("link_my_client_account");
+  });
+
   it("rejects an invalid, expired, or used invitation without exposing its token", async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: new Error("private database detail") });
     const response = await GET(
@@ -279,10 +294,10 @@ describe("account-link retry", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
   });
 
-  it("keeps account-link failures stable and rejects external destinations", async () => {
-    mocks.rpc.mockResolvedValue({ data: null, error: new Error("private detail") });
+  it("does not create a client account for an unsafe destination", async () => {
     await expect(continueWithClientAccount("en", "https://evil.example")).rejects.toThrow(
-      "redirect:/en/login?error=account_link_failed&next=%2Fen%2Fportal",
+      "redirect:/en",
     );
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 });

@@ -487,7 +487,9 @@
     "wizard": "Service Finder",
     "schedule": "Schedule",
     "contact": "Contact",
-    "login": "Sign in"
+    "login": "Sign in",
+    "dashboard": "Dashboard",
+    "account": "Account"
   },
   "Footer": {
     "brand": "Reverse Cloud",
@@ -503,6 +505,8 @@
     "wizard": "Service Finder",
     "contact": "Contact",
     "login": "Staff & Client Login",
+    "dashboard": "Dashboard",
+    "account": "Account",
     "privacy": "Privacy",
     "terms": "Terms",
     "webDev": "Web Development",

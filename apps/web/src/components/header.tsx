@@ -7,7 +7,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { cn } from "@/lib/utils";
 
-export function Header() {
+export function Header({ accountHref = null }: { accountHref?: string | null }) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
   const locale = useLocale();
@@ -101,10 +101,10 @@ export function Header() {
           <LanguageSwitcher />
 
           <Link
-            href="/login"
+            href={accountHref ?? "/login"}
             className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-3.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:text-sm"
           >
-            {t("login")}
+            {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
           </Link>
 
           {/* Mobile Menu Toggle Button */}

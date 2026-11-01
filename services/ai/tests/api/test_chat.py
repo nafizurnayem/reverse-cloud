@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
+from services.ai.app.agents.chat_agent import TextChunk
 from services.ai.app.api.v1 import routes
 from services.ai.app.main import app
 
@@ -35,8 +36,8 @@ def test_chat_streams_contract_events(monkeypatch):
 	body_text = json.dumps(body, separators=(",", ":"))
 
 	async def fake_stream(_payload, pool=None, **kwargs):
-		yield "Hi"
-		yield " there"
+		yield TextChunk(text="Hi")
+		yield TextChunk(text=" there")
 
 	monkeypatch.setattr(
 		routes,

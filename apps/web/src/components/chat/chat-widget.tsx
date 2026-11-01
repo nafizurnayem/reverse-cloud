@@ -207,6 +207,19 @@ export function ChatWidget({
         return;
       }
 
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        const payload = await response.json() as { reply?: unknown };
+        if (typeof payload.reply !== "string" || !payload.reply.trim()) {
+          throw new Error("Chatbot returned an invalid reply");
+        }
+        setMessages((prev) =>
+          prev.map((m) => m.id === assistantMsgId
+            ? { ...m, content: payload.reply as string, isStreaming: false }
+            : m),
+        );
+        return;
+      }
+
       // Stream the response
       let streamedText = "";
       const streamedCards: ChatCard[] = [];
@@ -316,7 +329,7 @@ export function ChatWidget({
 
             <div className="flex items-center gap-1">
               {/* Mock stream toggle for development */}
-              <button
+              {process.env.NODE_ENV !== "production" && <button
                 type="button"
                 onClick={() => setUseMock(!useMock)}
                 title={useMock ? "Using Mock Stream (click to use live API)" : "Using Live API (click to use Mock)"}
@@ -327,7 +340,7 @@ export function ChatWidget({
                 }`}
               >
                 {useMock ? "MOCK" : "LIVE"}
-              </button>
+              </button>}
 
               <button
                 type="button"
@@ -362,7 +375,7 @@ export function ChatWidget({
           {!isMinimized && (
             <>
               {/* Optional Scenario Selector when in Mock mode */}
-              {useMock && (
+              {process.env.NODE_ENV !== "production" && useMock && (
                 <div className="flex items-center gap-1 bg-muted/30 px-3 py-1 border-b text-[10px] overflow-x-auto scrollbar-none">
                   <span className="text-muted-foreground font-semibold flex items-center gap-1 shrink-0">
                     <Sparkles className="h-3 w-3 text-amber-500" />

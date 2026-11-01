@@ -2,6 +2,7 @@ import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
 import { trustedPublicOrigin } from "@/lib/auth/public-origin";
+import { accountDestination } from "@/lib/auth/destination";
 import { needsClientAccountLink, safePostLoginPath } from "@/lib/auth/routes";
 import { inviteTokenFromDestination } from "@/lib/invites/routes";
 import { createClient } from "@/lib/supabase/server";
@@ -78,5 +79,16 @@ export async function GET(request: NextRequest, { params }: Context) {
     }
   }
 
-  return privateRedirect(new URL(next, publicSiteUrl));
+  let destination = next;
+  if (next === `/${locale}`) {
+    try {
+      await supabase.rpc("claim_my_staff_invites");
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user) destination = await accountDestination(supabase, user.id, locale);
+    } catch {
+      // Login remains available if role resolution is temporarily unavailable.
+    }
+  }
+
+  return privateRedirect(new URL(destination, publicSiteUrl));
 }

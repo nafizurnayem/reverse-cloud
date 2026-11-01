@@ -6,6 +6,7 @@ import {
   type ChatSession,
 } from "@/lib/chat/session";
 import { validateChatPayload } from "@/lib/chat/values";
+import { localPreviewChat } from "@/lib/chat/local-preview";
 import {
   limitChatRequests,
   requestIp,
@@ -110,6 +111,8 @@ function json(
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.LOCAL_OLLAMA_PREVIEW === "true") return localPreviewChat(request);
+
   const serviceUrl = process.env.AI_SERVICE_URL?.trim();
   const serviceSecret = process.env.AI_HMAC_SECRET_CURRENT;
   let timeoutMs: number;
