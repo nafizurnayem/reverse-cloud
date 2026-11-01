@@ -129,9 +129,8 @@ async def test_human_handoff_tool() -> None:
 async def test_scheduling_slots_fallback() -> None:
     ctx = make_mock_context()
     slots = await get_available_slots(ctx, meeting_type="discovery_call")
-    assert len(slots) > 0
-    assert "start" in slots[0]
-    assert "end" in slots[0]
+    assert slots[0]["error"] == "availability_unavailable"
+    assert "start" not in slots[0]
 
 
 @pytest.mark.asyncio

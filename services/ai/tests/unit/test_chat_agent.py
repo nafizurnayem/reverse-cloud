@@ -4,6 +4,8 @@ import pytest
 from pydantic_ai.models.test import TestModel
 
 from app.agents.chat_agent import (
+    CardEvent,
+    TextChunk,
     convert_chat_messages,
     create_chat_agent,
     load_system_prompt,
@@ -65,7 +67,10 @@ async def test_run_agent_stream_with_test_model() -> None:
 
     chunks: list[str] = []
     async for delta in run_agent_stream(payload, model=test_model):
-        chunks.append(delta)
+        if isinstance(delta, TextChunk):
+            chunks.append(delta.text)
+        else:
+            assert isinstance(delta, CardEvent)
 
     full_text = "".join(chunks)
     assert "Reverse Cloud builds production web apps." in full_text

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
+from services.ai.app.agents.chat_agent import TextChunk
 from services.ai.app.api.v1 import routes
 from services.ai.app.main import app
 from services.ai.app.schemas.chat import ChatMessage
@@ -181,7 +182,7 @@ def test_chat_caps_history_before_streaming(monkeypatch):
     async def fake_stream(payload, pool=None, **kwargs):
         nonlocal received_messages
         received_messages = list(payload.messages)
-        yield "Response"
+        yield TextChunk(text="Response")
 
     monkeypatch.setattr(
         routes,

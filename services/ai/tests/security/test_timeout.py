@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
+from services.ai.app.agents.chat_agent import TextChunk
 from services.ai.app.api.v1 import routes
 from services.ai.app.main import app
 from services.ai.app.security.guardrails import (
@@ -68,9 +69,9 @@ def test_chat_stream_timeout_emits_sse_error(monkeypatch):
     body_text = json.dumps(body, separators=(",", ":"))
 
     async def hanging_stream(_payload, pool=None, **kwargs):
-        yield "First part"
+        yield TextChunk(text="First part")
         await asyncio.sleep(0.2)  # Delay longer than the configured timeout
-        yield "Never reached"
+        yield TextChunk(text="Never reached")
 
     monkeypatch.setattr(
         routes,
@@ -97,4 +98,4 @@ def test_chat_stream_timeout_emits_sse_error(monkeypatch):
 
     assert response.status_code == 200
     assert 'event: text_delta\ndata: {"text": "First part"}\n\n' in response.text
-    assert 'event: error\ndata: {"code": "timeout", "message": "Response generation timed out."}\n\n' in response.text
+    assert 'event: error\ndata: {"code": "timeout", "message": "Response generation timed out.", "request_id": "' in response.text
