@@ -46,6 +46,9 @@ jobs:
       - name: Run Vitest unit & integration tests
         run: pnpm test
 
+      - name: Verify preview image runtime permissions
+        run: bash ops/auto-deploy/tests/dockerfile-runtime-permissions.sh
+
       - name: Verify Next.js production build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://mock-supabase.supabase.co

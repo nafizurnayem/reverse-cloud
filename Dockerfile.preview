@@ -8,6 +8,9 @@ COPY apps/web/package.json apps/web/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+# Git deployment checkouts use umask 077. Keep application files root-owned,
+# but normalize copied source without walking the already-readable dependency tree.
+RUN find /app -path '*/node_modules' -prune -o -type d -exec chmod a+rx {} + -o -type f -exec chmod a+r {} +
 RUN --mount=type=secret,id=web_env,target=/app/apps/web/.env.local pnpm build
 RUN chown -R node:node /app/apps/web/.next
 
