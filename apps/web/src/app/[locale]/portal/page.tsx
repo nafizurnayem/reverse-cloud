@@ -2,7 +2,7 @@ import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Briefcase, Calendar, Clock, Flag } from "lucide-react";
+import { ArrowRight, Briefcase, Calendar, Clock, Flag, Layers, Sparkles } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import { fetchClientProjects } from "@/lib/portal/portal-server";
 import { calculateClientProgress } from "@/lib/portal/portal-calc";
@@ -43,6 +43,44 @@ export default async function PortalProjectsPage({
         </p>
       ) : null}
 
+      <section aria-labelledby="portal-start-title" className="space-y-4">
+        <div>
+          <h2 id="portal-start-title" className="text-xl font-bold text-foreground">
+            {isBn ? "আপনার পরবর্তী প্রজেক্ট শুরু করুন" : "Start your next project"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isBn
+              ? "আপনার জন্য উপযুক্ত সেবা খুঁজুন, বিস্তারিত দেখুন এবং প্রস্তাবনার অনুরোধ পাঠান।"
+              : "Find the right service, compare your options, and send us a proposal request."}
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link href={`/${locale}/wizard`} className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
+            <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
+            <h3 className="mt-3 font-bold text-foreground">{isBn ? "সার্ভিস ফাইন্ডার" : "Service Finder"}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isBn ? "কয়েকটি প্রশ্নের উত্তর দিয়ে আপনার জন্য সেরা সেবা খুঁজুন।" : "Answer a few questions to find your best-fit service."}
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+              {isBn ? "সেবা খুঁজুন" : "Find a service"} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+            </span>
+          </Link>
+          <Link href={`/${locale}/services`} className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
+            <Layers className="h-6 w-6 text-primary" aria-hidden="true" />
+            <h3 className="mt-3 font-bold text-foreground">{isBn ? "সব সেবা দেখুন" : "Browse services"}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isBn ? "সেবার বিবরণ ও প্রারম্ভিক মূল্য দেখে আপনার পছন্দটি বেছে নিন।" : "Review service details and starting prices before you choose."}
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+              {isBn ? "সেবা দেখুন" : "Explore services"} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+            </span>
+          </Link>
+        </div>
+        <Link href={`/${locale}/contact?proposal=1`} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+          {isBn ? "প্রস্তাবনার অনুরোধ করুন" : "Request a proposal"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </section>
+
       {/* Projects Grid or Empty State */}
       {projects.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/40 p-12 text-center max-w-lg mx-auto">
@@ -52,14 +90,14 @@ export default async function PortalProjectsPage({
           </h2>
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
             {isBn
-              ? "আপনার অ্যাকাউন্টে এখনো কোনো ক্লায়েন্ট প্রজেক্ট যুক্ত করা হয়নি। আমাদের সাপোর্ট বা আপনার একাউন্ট ম্যানেজারের সাথে যোগাযোগ করুন।"
-              : "No active client projects are assigned to your portal profile yet. Once onboarding is complete, real-time milestones and deliverables will appear here."}
+              ? "এখনো কোনো প্রজেক্ট যুক্ত হয়নি। উপরের সার্ভিস ফাইন্ডার বা সেবা তালিকা থেকে পছন্দ করে প্রস্তাবনার অনুরোধ করুন।"
+              : "No projects are assigned yet. Use the Service Finder or browse services above, then request a proposal to get started."}
           </p>
           <Link
-            href={`/${locale}/contact`}
+            href={`/${locale}/wizard`}
             className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
           >
-            <span>{isBn ? "সাপোর্টে যোগাযোগ করুন" : "Contact Support"}</span>
+            <span>{isBn ? "সেবা খুঁজুন" : "Find a service"}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>

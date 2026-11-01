@@ -57,9 +57,9 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
         {locale === "bn" ? "মূল কন্টেন্টে যান" : "Skip to main content"}
       </a>
 
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         {/* Brand */}
-        <div className="flex items-center gap-8">
+        <div className="flex min-w-0 items-center gap-5">
           <Link
             href="/"
             className="flex items-center gap-2.5 font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
@@ -70,11 +70,11 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
             >
               R
             </span>
-            <span className="text-lg font-bold tracking-tight">{t("brand")}</span>
+            <span className="hidden text-lg font-bold tracking-tight min-[420px]:inline">{t("brand")}</span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-6 md:flex" aria-label="Main Navigation">
+          <nav className="hidden items-center gap-4 xl:flex" aria-label="Main Navigation">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -83,7 +83,7 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
                   href={link.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "text-sm font-medium transition-colors hover:text-foreground",
+                    "whitespace-nowrap text-xs font-medium transition-colors hover:text-foreground",
                     isActive
                       ? "font-semibold text-primary"
                       : "text-muted-foreground"
@@ -97,12 +97,12 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher />
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="hidden xl:block"><LanguageSwitcher /></div>
 
           <Link
             href={accountHref ?? "/login"}
-            className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-3.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:text-sm"
+            className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:px-3.5 sm:text-sm"
           >
             {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
           </Link>
@@ -111,7 +111,7 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted md:hidden transition-colors"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted xl:hidden transition-colors"
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-navigation"
             aria-label={
@@ -136,7 +136,7 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
           role="dialog"
           aria-modal="true"
           aria-label={t("brand")}
-          className="fixed inset-x-0 top-16 z-50 border-b border-border bg-background/95 backdrop-blur-md px-4 py-6 shadow-xl md:hidden"
+          className="fixed inset-x-0 top-16 z-50 border-b border-border bg-background/95 backdrop-blur-md px-4 py-6 shadow-xl xl:hidden"
         >
           <nav className="flex flex-col space-y-3" aria-label="Mobile Navigation">
             {navLinks.map((link) => {
@@ -159,6 +159,7 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
               );
             })}
           </nav>
+          <div className="mt-4 border-t border-border pt-4"><LanguageSwitcher /></div>
         </div>
       )}
     </header>
