@@ -2,8 +2,7 @@ import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
 import { trustedPublicOrigin } from "@/lib/auth/public-origin";
-import { accountDestination } from "@/lib/auth/destination";
-import { needsClientAccountLink, safePostLoginPath } from "@/lib/auth/routes";
+import { protectedArea, safePostLoginPath } from "@/lib/auth/routes";
 import { inviteTokenFromDestination } from "@/lib/invites/routes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -70,25 +69,42 @@ export async function GET(request: NextRequest, { params }: Context) {
     return privateRedirect(new URL(`/${locale}/portal?invite=accepted`, publicSiteUrl));
   }
 
-  if (needsClientAccountLink(next, locale)) {
-    try {
-      const { error } = await supabase.rpc("link_my_client_account");
-      if (error) return loginError(publicSiteUrl, locale, "account_link_failed", next);
-    } catch {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return loginError(publicSiteUrl, locale, "oauth_callback_failed", next);
+
+    const { error: inviteError } = await supabase.rpc("claim_my_staff_invites");
+    if (inviteError) return loginError(publicSiteUrl, locale, "account_link_failed", next);
+
+    // Staff are never provisioned as clients, even if they opened a portal link.
+    const { data: staffRoles, error: staffError } = await supabase
+      .from("staff_roles")
+      .select("role_id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .limit(1);
+    if (staffError || !Array.isArray(staffRoles)) return loginError(publicSiteUrl, locale, "account_link_failed", next);
+    if (staffRoles.length) return privateRedirect(new URL(`/${locale}/admin`, publicSiteUrl));
+
+    const { data: existingClient, error: clientError } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (clientError) return loginError(publicSiteUrl, locale, "account_link_failed", next);
+
+    const { data: linkedClientId, error: linkError } = await supabase.rpc("link_my_client_account");
+    if (linkError || typeof linkedClientId !== "string") {
       return loginError(publicSiteUrl, locale, "account_link_failed", next);
     }
-  }
 
-  let destination = next;
-  if (next === `/${locale}`) {
-    try {
-      await supabase.rpc("claim_my_staff_invites");
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (!error && user) destination = await accountDestination(supabase, user.id, locale);
-    } catch {
-      // Login remains available if role resolution is temporarily unavailable.
-    }
+    // The first sign-in always opens the portal. Returning clients keep safe
+    // deep links, but an admin URL is never a client destination.
+    const destination = !existingClient || next === `/${locale}` || protectedArea(next) === "admin"
+      ? `/${locale}/portal`
+      : next;
+    return privateRedirect(new URL(destination, publicSiteUrl));
+  } catch {
+    return loginError(publicSiteUrl, locale, "account_link_failed", next);
   }
-
-  return privateRedirect(new URL(destination, publicSiteUrl));
 }

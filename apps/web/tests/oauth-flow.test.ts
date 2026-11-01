@@ -8,14 +8,15 @@ const mocks = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   getUser: vi.fn(),
   rpc: vi.fn(),
+  from: vi.fn(),
+  staffLimit: vi.fn(),
+  clientSingle: vi.fn(),
   signOut: vi.fn(),
-  accountDestination: vi.fn(),
   redirect: vi.fn((url: string) => { throw new Error(`redirect:${url}`); }),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/auth/destination", () => ({ accountDestination: mocks.accountDestination }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
@@ -39,7 +40,13 @@ beforeEach(() => {
       signOut: mocks.signOut,
     },
     rpc: mocks.rpc,
+    from: mocks.from,
   });
+  const staffQuery = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), limit: mocks.staffLimit };
+  const clientQuery = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: mocks.clientSingle };
+  mocks.from.mockImplementation((table: string) => table === "staff_roles" ? staffQuery : clientQuery);
+  mocks.staffLimit.mockResolvedValue({ data: [], error: null });
+  mocks.clientSingle.mockResolvedValue({ data: null, error: null });
   mocks.signInWithOAuth.mockResolvedValue({
     data: { url: "https://project.supabase.co/auth/v1/authorize" },
     error: null,
@@ -49,7 +56,6 @@ beforeEach(() => {
   mocks.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
   mocks.rpc.mockResolvedValue({ data: "00000000-0000-4000-8000-000000000001", error: null });
   mocks.signOut.mockResolvedValue({ error: null });
-  mocks.accountDestination.mockImplementation((_supabase, _userId, locale) => `/${locale}`);
 });
 
 describe("magic-link start", () => {
@@ -212,7 +218,9 @@ describe("OAuth callback", () => {
   });
 
   it("reports account-linking failures without exposing database details", async () => {
-    mocks.rpc.mockResolvedValue({ data: null, error: new Error("email_already_linked") });
+    mocks.rpc.mockImplementation((name: string) => name === "link_my_client_account"
+      ? Promise.resolve({ data: null, error: new Error("email_already_linked") })
+      : Promise.resolve({ data: 0, error: null }));
     const response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen%2Fportal"),
       context("en"),
@@ -237,23 +245,59 @@ describe("OAuth callback", () => {
 
     mocks.rpc.mockClear();
     mocks.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
+    mocks.staffLimit.mockResolvedValue({ data: [{ role_id: "admin-role" }], error: null });
     response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=twice&next=%2Fen%2Fadmin"),
       context("en"),
     );
     expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/admin");
-    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
+    expect(mocks.rpc).not.toHaveBeenCalledWith("link_my_client_account");
   });
 
   it("sends a staff member from ordinary sign-in to the admin dashboard", async () => {
-    mocks.accountDestination.mockResolvedValue("/en/admin");
+    mocks.staffLimit.mockResolvedValue({ data: [{ role_id: "admin-role" }], error: null });
     const response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen"),
       context("en"),
     );
     expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
-    expect(mocks.accountDestination).toHaveBeenCalledWith(expect.anything(), "user-1", "en");
     expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/admin");
+    expect(mocks.rpc).not.toHaveBeenCalledWith("link_my_client_account");
+  });
+
+  it("creates a client on first ordinary sign-in and opens the portal", async () => {
+    const response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen%2Fservices"),
+      context("en"),
+    );
+    expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
+    expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+  });
+
+  it("preserves a returning client's safe deep link but not an admin destination", async () => {
+    mocks.clientSingle.mockResolvedValue({ data: { id: "client-1" }, error: null });
+    let response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen%2Fservices"),
+      context("en"),
+    );
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/services");
+
+    response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=twice&next=%2Fen%2Fadmin"),
+      context("en"),
+    );
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+  });
+
+  it("does not provision a client when staff-role resolution fails", async () => {
+    mocks.staffLimit.mockResolvedValue({ data: null, error: new Error("database unavailable") });
+    const response = await GET(
+      new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once"),
+      context("en"),
+    );
+    expect(new URL(response.headers.get("location")!).searchParams.get("error")).toBe("account_link_failed");
     expect(mocks.rpc).not.toHaveBeenCalledWith("link_my_client_account");
   });
 
