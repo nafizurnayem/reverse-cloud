@@ -20,6 +20,7 @@ create unique index if not exists staff_invites_pending_unique
 
 alter table public.staff_invites enable row level security;
 
+drop policy if exists "staff_invites: staff manage" on public.staff_invites;
 create policy "staff_invites: staff manage"
   on public.staff_invites
   for all
