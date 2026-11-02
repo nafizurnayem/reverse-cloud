@@ -112,5 +112,5 @@ export async function signOut(localeValue: string) {
   } catch {
     redirect(`/${locale}/login?error=sign_out_failed`);
   }
-  redirect(`/${locale}/login?logged_out=1`);
+  redirect(`/${locale}`);
 }
