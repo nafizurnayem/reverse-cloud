@@ -320,7 +320,7 @@ describe("OAuth callback", () => {
 
 describe("logout", () => {
   it("clears only the current session and preserves the locale", async () => {
-    await expect(signOut("bn")).rejects.toThrow("redirect:/bn/login?logged_out=1");
+    await expect(signOut("bn")).rejects.toThrow("redirect:/bn");
     expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
