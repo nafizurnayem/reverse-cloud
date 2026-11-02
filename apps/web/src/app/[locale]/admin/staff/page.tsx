@@ -55,14 +55,18 @@ export default async function StaffPage({ params, searchParams }: {
     throw new Error("Unable to load staff access");
   }
 
-  const users = ((usersResult.data ?? []) as DirectoryUser[]).sort((left, right) =>
-    userName(left, left.user_id).localeCompare(userName(right, right.user_id), locale),
-  );
   const roles = (rolesResult.data ?? []) as Role[];
   const assignments = (assignmentsResult.data ?? []) as Assignment[];
   const pendingInvites = ((pendingResult.data ?? []) as PendingInvite[]);
   const assignmentMap = new Map(assignments.map((item) => [`${item.user_id}:${item.role_id}`, item]));
   const activeStaff = new Set(assignments.filter((item) => item.is_active).map((item) => item.user_id));
+  const assignedStaffIds = new Set(assignments.map((item) => item.user_id));
+
+  const users = ((usersResult.data ?? []) as DirectoryUser[])
+    .filter((user) => assignedStaffIds.has(user.user_id))
+    .sort((left, right) =>
+      userName(left, left.user_id).localeCompare(userName(right, right.user_id), locale),
+    );
   const local = locale === "bn" ? {
     addTitle: "স্টাফ সদস্য যোগ করুন বা প্রি-অথরাইজ করুন",
     addDescription: "অ্যাকাউন্টের ইমেইল লিখে প্রথম রোলটি নির্বাচন করুন। ব্যক্তিটি সাইন ইন না করে থাকলেও তার রোল সংরক্ষিত থাকবে এবং সাইন ইন করলেই সক্রিয় হবে।",
