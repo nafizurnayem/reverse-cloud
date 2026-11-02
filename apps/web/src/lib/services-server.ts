@@ -31,6 +31,52 @@ interface DbFaqRow {
   answer_bn: string | null;
 }
 
+export async function getPublishedServices(): Promise<ServiceDetailItem[]> {
+  if (getPublicSupabaseEnv()) {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select("id,slug,name_en,name_bn,summary_en,summary_bn,body_en,body_bn,icon,pricing_model,starting_from_usd,sort_order")
+        .eq("is_published", true)
+        .is("archived_at", null)
+        .order("sort_order");
+
+      if (!error && data?.length) {
+        return (data as DbServiceRow[]).map((row) => {
+          const fallback = SERVICES_CATALOG.find((item) => item.slug === row.slug);
+          return {
+            ...fallback,
+            id: row.id,
+            slug: row.slug,
+            name_en: row.name_en,
+            name_bn: row.name_bn || fallback?.name_bn || row.name_en,
+            summary_en: row.summary_en || fallback?.summary_en || "",
+            summary_bn: row.summary_bn || fallback?.summary_bn || row.summary_en || "",
+            body_en: row.body_en || fallback?.body_en || "",
+            body_bn: row.body_bn || fallback?.body_bn || row.body_en || "",
+            pricing_model: row.pricing_model as PricingModel,
+            starting_from_usd: row.starting_from_usd === null ? null : Number(row.starting_from_usd),
+            sort_order: row.sort_order,
+            icon: row.icon || fallback?.icon || "Globe",
+            deliverables_en: fallback?.deliverables_en || [],
+            deliverables_bn: fallback?.deliverables_bn || [],
+            process_en: fallback?.process_en || [],
+            process_bn: fallback?.process_bn || [],
+            tech_stack: fallback?.tech_stack || [],
+            faqs_en: fallback?.faqs_en || [],
+            faqs_bn: fallback?.faqs_bn || [],
+          };
+        });
+      }
+    } catch {
+      // Supabase unavailable; use the built-in catalog.
+    }
+  }
+
+  return SERVICES_CATALOG;
+}
+
 export async function getServiceBySlug(slug: string): Promise<ServiceDetailItem | null> {
   // 1. Try fetching from Supabase if configured and published
   const env = getPublicSupabaseEnv();
