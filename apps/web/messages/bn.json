@@ -44,6 +44,7 @@
     "unknownEmail": "আপনার Google অ্যাকাউন্ট",
     "continue": "এগিয়ে যান",
     "signOut": "সাইন আউট",
+    "backHome": "হোমপেজে ফিরে যান",
     "loggedOut": "আপনি সাইন আউট করেছেন।",
     "errors": {
       "oauth_denied": "Google সাইন-ইন বাতিল বা প্রত্যাখ্যাত হয়েছে। আবার চেষ্টা করুন।",

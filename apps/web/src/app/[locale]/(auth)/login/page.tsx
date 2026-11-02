@@ -118,6 +118,11 @@ export default async function LoginPage({ params, searchParams }: Props) {
             </form>
           </>
         )}
+        <div className="auth-actions">
+          <Link className="auth-button auth-button-secondary" href={`/${locale}`}>
+            {t("backHome")}
+          </Link>
+        </div>
       </section>
     </main>
   );
