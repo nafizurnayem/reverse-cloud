@@ -75,11 +75,14 @@ select throws_ok(
   '42501', null, 'authenticated clients cannot bypass the RPC with direct inserts'
 );
 
+delete from public.profiles
+ where id = '00000000-0000-4000-8000-000000002703';
+
 select ok(
   public.set_staff_role_status(
     '00000000-0000-4000-8000-000000002703',
     (select id from public.roles where key = 'developer'), true),
-  'an admin can assign a role'
+  'an admin can assign a role to an auth user without a profile'
 );
 select is(
   (select is_active from public.staff_roles
