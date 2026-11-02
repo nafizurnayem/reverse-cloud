@@ -44,6 +44,7 @@
     "unknownEmail": "your Google account",
     "continue": "Continue",
     "signOut": "Sign out",
+    "backHome": "Back to home",
     "loggedOut": "You have been signed out.",
     "errors": {
       "oauth_denied": "Google sign-in was cancelled or denied. Please try again.",
