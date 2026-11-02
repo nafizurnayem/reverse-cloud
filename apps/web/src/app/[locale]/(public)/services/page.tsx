@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SERVICES_CATALOG } from "@/lib/services-catalog";
+import { getPublishedServices } from "@/lib/services-server";
 import {
   ArrowRight,
   Bot,
@@ -56,9 +56,10 @@ export default async function ServicesPage({ params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, tDetail] = await Promise.all([
+  const [t, tDetail, services] = await Promise.all([
     getTranslations({ locale, namespace: "Services" }),
     getTranslations({ locale, namespace: "ServiceDetail" }),
+    getPublishedServices(),
   ]);
 
   const modelLabels: Record<string, string> = {
@@ -86,7 +87,7 @@ export default async function ServicesPage({ params }: Props) {
 
       {/* Services Grid (All 11 seeded capabilities) */}
       <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {SERVICES_CATALOG.map((service) => {
+        {services.map((service) => {
           const name = locale === "bn" ? service.name_bn : service.name_en;
           const summary = locale === "bn" ? service.summary_bn : service.summary_en;
           const IconComponent = iconMap[service.icon] || Globe;
