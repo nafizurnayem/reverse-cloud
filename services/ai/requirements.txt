@@ -5,7 +5,7 @@ pydantic>=2.9.0
 pydantic-settings>=2.5.0
 
 # --- AI Agent & LLMs ---
-pydantic-ai>=0.0.14
+pydantic-ai>=2.65.0
 # Install model providers based on your Phase 0 model selection:
 # e.g., openai, google-genai, or anthropic
 openai>=1.50.0

@@ -17,8 +17,10 @@ import asyncpg
 from pydantic_ai import Agent, RunContext
 from dataclasses import dataclass
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolReturnPart, UserPromptPart
+from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
+from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from ..config import get_settings
@@ -88,8 +90,12 @@ def resolve_model(override_model: Any = None) -> Any:
         return override_model
 
     settings = get_settings()
+    if settings.ollama_url:
+        provider = OllamaProvider(base_url=f"{settings.ollama_url.rstrip('/')}/v1")
+        return OllamaModel(settings.ollama_model, provider=provider)
+
     if not settings.llm_api_key:
-        logger.warning("No LLM_API_KEY configured; falling back to TestModel")
+        logger.warning("No Ollama URL or LLM_API_KEY configured; falling back to TestModel")
         return TestModel()
 
     provider = OpenAIProvider(api_key=settings.llm_api_key)
@@ -171,7 +177,7 @@ async def run_agent_stream(
     Args:
         payload: ChatRequest with message list, locale, and conversation_id.
         pool: asyncpg pool for tool queries (leads, knowledge chunks, scheduling, project status).
-        embedder: Custom embedder protocol instance (defaults to OpenAIEmbedder).
+        embedder: Custom embedder protocol instance (defaults to the configured provider).
         model: Optional model override for unit and integration testing.
         client_id: Optional authenticated client UUID for project status queries.
 

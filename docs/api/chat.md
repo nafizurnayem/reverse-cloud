@@ -102,3 +102,24 @@ TURNSTILE_EXPECTED_HOSTNAME=
 `CHAT_COOKIE_SECRET` must contain at least 32 random bytes. The HMAC secret must
 match `AI_HMAC_SECRET_CURRENT` on the AI service. The connect timeout accepts
 values from 1,000 through 30,000 milliseconds and defaults to 10,000.
+
+## Local Ollama with RAG
+
+The AI service uses Ollama for chat and embeddings when `OLLAMA_URL` is set.
+The small multilingual embedding model matches the 1024-dimensional pgvector
+schema introduced in migration `0035_ollama_rag_embeddings.sql`:
+
+```dotenv
+OLLAMA_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3.2:1b
+EMBEDDING_MODEL=qwen3-embedding:0.6b
+EMBED_DIM=1024
+DATABASE_URL_AI=postgresql://ai_service:<password>@<host>:5432/postgres?sslmode=require
+```
+
+Pull both models before starting the AI service, apply the migration, then
+rebuild the preserved knowledge chunks without creating duplicate documents:
+
+```bash
+python -m scripts.reindex_knowledge
+```
