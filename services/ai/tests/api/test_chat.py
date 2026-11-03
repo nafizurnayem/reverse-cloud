@@ -42,7 +42,12 @@ def test_chat_streams_contract_events(monkeypatch):
 	monkeypatch.setattr(
 		routes,
 		"get_settings",
-		lambda: SimpleNamespace(ai_hmac_secret_current=secret, llm_api_key="test-key", ai_enabled=True),
+		lambda: SimpleNamespace(
+			ai_hmac_secret_current=secret,
+			llm_api_key=None,
+			ollama_url="http://localhost:11434",
+			ai_enabled=True,
+		),
 	)
 	monkeypatch.setattr(routes, "run_agent_stream", fake_stream)
 

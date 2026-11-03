@@ -102,7 +102,8 @@ async def create_chat(
     except InvalidSignature as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
 
-    if not get_settings().llm_api_key:
+    settings = get_settings()
+    if not settings.llm_api_key and not getattr(settings, "ollama_url", None):
         raise HTTPException(status_code=503, detail="chat service is not configured")
     db_pool = getattr(request.app.state, "db_pool", None)
     return StreamingResponse(

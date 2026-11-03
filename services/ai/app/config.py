@@ -30,6 +30,10 @@ class Settings(BaseSettings):
 	ai_stream_timeout_seconds: float = Field(default=60.0, ge=1.0)
 	llm_api_key: str | None = None
 	llm_model: str = "gpt-4o-mini"
+	ollama_url: str | None = None
+	ollama_model: str = "llama3.2:1b"
+	embedding_model: str | None = None
+	embed_dim: int = Field(default=1024, ge=1, le=4096)
 	email_api_key: str | None = None
 	email_api_url: str = "https://api.resend.com/emails"
 	email_from: str | None = None

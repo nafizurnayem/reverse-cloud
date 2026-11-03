@@ -2,13 +2,16 @@
 
 import pytest
 from pydantic_ai.models.test import TestModel
+from types import SimpleNamespace
 
+from app.agents import chat_agent
 from app.agents.chat_agent import (
     CardEvent,
     TextChunk,
     convert_chat_messages,
     create_chat_agent,
     load_system_prompt,
+    resolve_model,
     run_agent_stream,
 )
 from app.schemas.chat import ChatMessage, ChatRequest
@@ -52,6 +55,29 @@ def test_create_chat_agent_registers_tools() -> None:
         "get_project_status",
     }
     assert expected.issubset(tool_names)
+
+
+def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
+    monkeypatch.setattr(
+        chat_agent,
+        "get_settings",
+        lambda: SimpleNamespace(
+            ollama_url="http://localhost:11434/",
+            ollama_model="llama3.2:1b",
+            llm_api_key=None,
+        ),
+    )
+    monkeypatch.setattr(chat_agent, "OllamaProvider", lambda **kwargs: kwargs)
+    monkeypatch.setattr(
+        chat_agent,
+        "OllamaModel",
+        lambda model, provider: (model, provider),
+    )
+
+    assert resolve_model() == (
+        "llama3.2:1b",
+        {"base_url": "http://localhost:11434/v1"},
+    )
 
 
 @pytest.mark.asyncio

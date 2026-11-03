@@ -93,7 +93,7 @@ select is_empty(
 -- ============================================================= hybrid search function
 
 select has_function('public', 'match_knowledge_chunks',
-  array['text', 'extensions.vector(1536)', 'integer', 'double precision', 'text'],
+  array['text', 'extensions.vector(1024)', 'integer', 'double precision', 'text'],
   'match_knowledge_chunks function exists');
 
 select isnt_empty(

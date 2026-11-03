@@ -15,7 +15,7 @@ Each line in the JSONL file should be a JSON object with:
 The script will:
     1. Parse and validate each entry
     2. Split long content into chunks using the existing chunking logic
-    3. Generate embeddings via the configured OpenAI embedder
+    3. Generate embeddings via the configured Ollama or OpenAI embedder
     4. Insert into knowledge_documents and knowledge_chunks tables
 """
 
@@ -91,7 +91,7 @@ async def ingest_entries(
     Args:
         connection: Active asyncpg connection.
         entries: Validated knowledge entries.
-        generate_embeddings: Whether to generate vector embeddings (requires LLM_API_KEY).
+        generate_embeddings: Whether to generate vector embeddings.
 
     Returns:
         Summary dict with counts of documents and chunks ingested.
@@ -99,10 +99,10 @@ async def ingest_entries(
     embedder = None
     if generate_embeddings:
         try:
-            from app.retrieval.embedder import OpenAIEmbedder
-            embedder = OpenAIEmbedder()
+            from app.retrieval.embedder import configured_embedder
+            embedder = configured_embedder()
         except RuntimeError:
-            logger.warning("No LLM_API_KEY set; inserting chunks without embeddings")
+            logger.warning("No embedding provider configured; inserting chunks without embeddings")
 
     docs_inserted = 0
     chunks_inserted = 0

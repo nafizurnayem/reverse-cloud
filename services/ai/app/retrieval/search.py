@@ -13,7 +13,7 @@ from typing import Any
 
 import asyncpg
 
-from .embedder import OpenAIEmbedder
+from .embedder import configured_embedder
 from .ingest import Embedder
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ async def hybrid_search(
         top_k: Maximum number of chunks to return (default 5).
         min_similarity: Minimum cosine similarity threshold (default 0.3).
         locale: Optional language filter ('en' or 'bn').
-        embedder: Optional custom embedder; defaults to OpenAIEmbedder.
+        embedder: Optional custom embedder; defaults to the configured provider.
 
     Returns:
         List of dicts representing matched chunks ranked by combined_score descending.
@@ -70,7 +70,7 @@ async def hybrid_search(
 
     vector_str: str | None = None
     try:
-        active_embedder = embedder or OpenAIEmbedder()
+        active_embedder = embedder or configured_embedder()
         embedding = await active_embedder.embed(clean_query)
         if embedding:
             vector_str = f"[{','.join(str(round(x, 6)) for x in embedding)}]"
