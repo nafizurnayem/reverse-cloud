@@ -54,6 +54,7 @@ export default async function SchedulePage({ params }: Props) {
         meetingTypes={meetingTypes}
         prefill={prefill}
         locale={locale}
+        siteKey={process.env.TURNSTILE_SITE_KEY?.trim() ?? ""}
       />
     </div>
   );
