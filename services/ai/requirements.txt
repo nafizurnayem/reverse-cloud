@@ -9,6 +9,7 @@ pydantic-ai>=2.65.0
 # Install model providers based on your Phase 0 model selection:
 # e.g., openai, google-genai, or anthropic
 openai>=1.50.0
+google-genai>=2.0.0
 tiktoken>=0.8.0
 
 # --- Database & Vector Storage ---

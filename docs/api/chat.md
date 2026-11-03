@@ -106,16 +106,25 @@ values from 1,000 through 30,000 milliseconds and defaults to 10,000.
 ## Local Ollama with RAG
 
 The AI service uses Ollama for chat and embeddings when `OLLAMA_URL` is set.
-The small multilingual embedding model matches the 1024-dimensional pgvector
+The small multilingual embedding model matches the 768-dimensional pgvector
 schema introduced in migration `0035_ollama_rag_embeddings.sql`:
 
 ```dotenv
 OLLAMA_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=llama3.2:1b
-EMBEDDING_MODEL=qwen3-embedding:0.6b
-EMBED_DIM=1024
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+EMBED_DIM=768
 DATABASE_URL_AI=postgresql://ai_service:<password>@<host>:5432/postgres?sslmode=require
 ```
+
+Ollama is the primary provider. Gemini is used when Ollama has a connection,
+API, or unusable-response failure. If both embedding providers fail, knowledge
+search safely falls back to keyword matching. Existing deployments may keep a
+Gemini key in `LLM_API_KEY` when `LLM_MODEL` starts with `gemini-`; new
+deployments should prefer the explicit `GEMINI_API_KEY` variables above.
 
 Pull both models before starting the AI service, apply the migration, then
 rebuild the preserved knowledge chunks without creating duplicate documents:

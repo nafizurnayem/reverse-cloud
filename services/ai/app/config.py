@@ -32,8 +32,15 @@ class Settings(BaseSettings):
 	llm_model: str = "gpt-4o-mini"
 	ollama_url: str | None = None
 	ollama_model: str = "llama3.2:1b"
+	ollama_embedding_model: str = "qwen3-embedding:0.6b"
+	gemini_api_key: str | None = Field(
+		default=None,
+		validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+	)
+	gemini_model: str = "gemini-3.5-flash"
+	gemini_embedding_model: str | None = None
 	embedding_model: str | None = None
-	embed_dim: int = Field(default=1024, ge=1, le=4096)
+	embed_dim: int = Field(default=768, ge=1, le=4096)
 	email_api_key: str | None = None
 	email_api_url: str = "https://api.resend.com/emails"
 	email_from: str | None = None
@@ -52,3 +59,32 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
 	return Settings()
+
+
+def resolved_gemini_api_key(settings: Settings) -> str | None:
+	explicit_key = getattr(settings, "gemini_api_key", None)
+	llm_api_key = getattr(settings, "llm_api_key", None)
+	llm_model = getattr(settings, "llm_model", "")
+	if explicit_key:
+		return explicit_key
+	if llm_api_key and llm_model.startswith("gemini-"):
+		return llm_api_key
+	return None
+
+
+def resolved_gemini_model(settings: Settings) -> str:
+	llm_api_key = getattr(settings, "llm_api_key", None)
+	llm_model = getattr(settings, "llm_model", "")
+	if llm_api_key and llm_model.startswith("gemini-"):
+		return llm_model
+	return getattr(settings, "gemini_model", "gemini-3.5-flash")
+
+
+def resolved_gemini_embedding_model(settings: Settings) -> str:
+	explicit_model = getattr(settings, "gemini_embedding_model", None)
+	generic_model = getattr(settings, "embedding_model", None)
+	if explicit_model:
+		return explicit_model
+	if generic_model and generic_model.startswith("gemini-"):
+		return generic_model
+	return "gemini-embedding-2"

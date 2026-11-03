@@ -7,12 +7,17 @@ either to a specific provider.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
 import httpx
+from google import genai
+from google.genai import types
 from openai import AsyncOpenAI
 
-from ..config import get_settings
+from ..config import get_settings, resolved_gemini_api_key, resolved_gemini_embedding_model
+
+logger = logging.getLogger(__name__)
 
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 OLLAMA_EMBEDDING_MODEL = "qwen3-embedding:0.6b"
@@ -67,7 +72,7 @@ class OllamaEmbedder:
         if not settings.ollama_url:
             raise RuntimeError("OLLAMA_URL is required for the Ollama embedder")
         self._url = settings.ollama_url.rstrip("/")
-        self._model = settings.embedding_model or OLLAMA_EMBEDDING_MODEL
+        self._model = settings.ollama_embedding_model or OLLAMA_EMBEDDING_MODEL
         self._dimensions = settings.embed_dim
 
     async def embed(self, text: str) -> Sequence[float]:
@@ -97,8 +102,71 @@ class OllamaEmbedder:
         return [[float(value) for value in vector] for vector in embeddings]
 
 
-def configured_embedder() -> OpenAIEmbedder | OllamaEmbedder:
-    """Use Ollama when configured, otherwise retain the OpenAI provider."""
-    if get_settings().ollama_url:
-        return OllamaEmbedder()
+class GeminiEmbedder:
+    """Async fallback embedder backed by the Gemini API."""
+
+    def __init__(self) -> None:
+        settings = get_settings()
+        self._api_key = resolved_gemini_api_key(settings)
+        if not self._api_key:
+            raise RuntimeError("GEMINI_API_KEY is required for the Gemini embedder")
+        self._model = resolved_gemini_embedding_model(settings)
+        self._dimensions = settings.embed_dim
+
+    async def embed(self, text: str) -> Sequence[float]:
+        embeddings = await self.embed_batch([text])
+        return embeddings[0]
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        client = genai.Client(api_key=self._api_key)
+        try:
+            response = await client.aio.models.embed_content(
+                model=self._model,
+                contents=[text.replace("\n", " ") for text in texts],
+                config=types.EmbedContentConfig(output_dimensionality=self._dimensions),
+            )
+        finally:
+            await client.aio.aclose()
+
+        embeddings = response.embeddings
+        if not embeddings or len(embeddings) != len(texts):
+            raise RuntimeError("Gemini returned an invalid embedding response")
+        vectors = [embedding.values for embedding in embeddings]
+        if any(vector is None or len(vector) != self._dimensions for vector in vectors):
+            raise RuntimeError("Gemini returned an unexpected embedding dimension")
+        return [[float(value) for value in vector] for vector in vectors if vector is not None]
+
+
+class FallbackEmbedder:
+    """Retry embedding requests with Gemini after an Ollama operational failure."""
+
+    def __init__(self, primary: OllamaEmbedder, fallback: GeminiEmbedder) -> None:
+        self._primary = primary
+        self._fallback = fallback
+
+    async def embed(self, text: str) -> Sequence[float]:
+        embeddings = await self.embed_batch([text])
+        return embeddings[0]
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        try:
+            return await self._primary.embed_batch(texts)
+        except (httpx.HTTPError, RuntimeError, TypeError, ValueError) as exc:
+            logger.warning("Ollama embeddings failed; using Gemini fallback: %s", exc)
+            return await self._fallback.embed_batch(texts)
+
+
+def configured_embedder() -> OpenAIEmbedder | OllamaEmbedder | GeminiEmbedder | FallbackEmbedder:
+    """Prefer Ollama, then Gemini, while retaining OpenAI compatibility."""
+    settings = get_settings()
+    ollama = OllamaEmbedder() if settings.ollama_url else None
+    gemini = GeminiEmbedder() if resolved_gemini_api_key(settings) else None
+    if ollama and gemini:
+        return FallbackEmbedder(ollama, gemini)
+    if ollama:
+        return ollama
+    if gemini:
+        return gemini
     return OpenAIEmbedder()

@@ -80,6 +80,41 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
     )
 
 
+def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
+    monkeypatch.setattr(
+        chat_agent,
+        "get_settings",
+        lambda: SimpleNamespace(
+            ollama_url="http://localhost:11434",
+            ollama_model="llama3.2:1b",
+            llm_api_key="gemini-key",
+            llm_model="gemini-3.5-flash",
+            gemini_api_key=None,
+        ),
+    )
+    monkeypatch.setattr(chat_agent, "OllamaProvider", lambda **kwargs: kwargs)
+    monkeypatch.setattr(chat_agent, "OllamaModel", lambda model, provider: ("ollama", model, provider))
+    monkeypatch.setattr(chat_agent, "GoogleProvider", lambda **kwargs: kwargs)
+    monkeypatch.setattr(chat_agent, "GoogleModel", lambda model, provider: ("gemini", model, provider))
+    monkeypatch.setattr(
+        chat_agent,
+        "FallbackModel",
+        lambda *models, **kwargs: ("fallback", *models, kwargs),
+    )
+
+    assert resolve_model() == (
+        "fallback",
+        ("ollama", "llama3.2:1b", {"base_url": "http://localhost:11434/v1"}),
+        ("gemini", "gemini-3.5-flash", {"api_key": "gemini-key"}),
+        {
+            "fallback_on": (
+                chat_agent.ModelAPIError,
+                chat_agent.UnexpectedModelBehavior,
+            )
+        },
+    )
+
+
 @pytest.mark.asyncio
 async def test_run_agent_stream_with_test_model() -> None:
     test_model = TestModel(custom_output_text="Reverse Cloud builds production web apps.")
