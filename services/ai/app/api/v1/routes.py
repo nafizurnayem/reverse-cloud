@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 import uuid as _uuid
 from ...agents.chat_agent import CardEvent, TextChunk, run_agent_stream
-from ...config import get_settings
+from ...config import get_settings, resolved_gemini_api_key
 from ...estimator.engine import EstimateInput, estimate_project
 from ...schemas.chat import ChatRequest
 from ...schemas.estimate import EstimateRequest, EstimateResponse
@@ -103,7 +103,11 @@ async def create_chat(
         raise HTTPException(status_code=401, detail=str(error)) from error
 
     settings = get_settings()
-    if not settings.llm_api_key and not getattr(settings, "ollama_url", None):
+    if (
+        not settings.llm_api_key
+        and not getattr(settings, "ollama_url", None)
+        and not resolved_gemini_api_key(settings)
+    ):
         raise HTTPException(status_code=503, detail="chat service is not configured")
     db_pool = getattr(request.app.state, "db_pool", None)
     return StreamingResponse(

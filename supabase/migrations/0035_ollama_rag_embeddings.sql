@@ -1,4 +1,4 @@
--- Use the 1024-dimensional multilingual Ollama embedding model.
+-- Use a shared 768-dimensional vector size for Ollama and Gemini embeddings.
 drop function if exists public.match_knowledge_chunks(
   text, extensions.vector(1536), integer, double precision, text
 );
@@ -6,15 +6,15 @@ drop function if exists public.match_knowledge_chunks(
 drop index if exists public.knowledge_chunks_embedding_idx;
 
 alter table public.knowledge_chunks
-  alter column embedding type extensions.vector(1024)
-  using null::extensions.vector(1024);
+  alter column embedding type extensions.vector(768)
+  using null::extensions.vector(768);
 
 create index knowledge_chunks_embedding_idx
   on public.knowledge_chunks using hnsw (embedding extensions.vector_cosine_ops);
 
 create function public.match_knowledge_chunks(
   query_text         text,
-  query_embedding    extensions.vector(1024),
+  query_embedding    extensions.vector(768),
   match_count        integer default 6,
   min_similarity     double precision default 0.3,
   filter_locale      text default null
@@ -89,5 +89,5 @@ end;
 $$;
 
 grant execute on function public.match_knowledge_chunks(
-  text, extensions.vector(1024), integer, double precision, text
+  text, extensions.vector(768), integer, double precision, text
 ) to ai_service, authenticated;
