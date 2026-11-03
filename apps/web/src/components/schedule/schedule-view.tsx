@@ -15,12 +15,14 @@ import {
   UserCheck,
 } from "lucide-react";
 import type { ScheduleMeetingType, SchedulePrefill } from "@/lib/schedule-server";
+import { scheduleDayRange } from "@/lib/schedule-time";
 import { Badge } from "@/components/ui/badge";
 
 interface ScheduleViewProps {
   meetingTypes: ScheduleMeetingType[];
   prefill: SchedulePrefill;
   locale: string;
+  siteKey: string;
 }
 
 interface SlotItem {
@@ -35,7 +37,7 @@ interface BookingConfirmedDetails {
   meetingUrl?: string;
 }
 
-export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProps) {
+export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: ScheduleViewProps) {
   const isBn = locale === "bn";
 
   const [selectedMeetingType, setSelectedMeetingType] = useState<string>(
@@ -56,6 +58,8 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
 
   const [slots, setSlots] = useState<SlotItem[]>([]);
   const [loadingSlots, setLoadingSlots] = useState<boolean>(false);
+  const [availabilityError, setAvailabilityError] = useState<boolean>(false);
+  const [availabilityRetry, setAvailabilityRetry] = useState<number>(0);
   const [selectedSlot, setSelectedSlot] = useState<SlotItem | null>(null);
 
   // Form Fields
@@ -68,7 +72,6 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
   const [confirmedDetails, setConfirmedDetails] = useState<BookingConfirmedDetails | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
   // Generate next 14 days
   const upcomingDays = Array.from({ length: 14 }).map((_, i) => {
@@ -82,15 +85,13 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
     };
   });
 
-  // Fetch or mock slots
+  // Fetch live availability from Cal.com through the scheduling API.
   useEffect(() => {
     let active = true;
 
     async function fetchSlots() {
-      const start = `${selectedDate}T00:00:00.000Z`;
-      const end = `${selectedDate}T23:59:59.000Z`;
-
       try {
+        const { start, end } = scheduleDayRange(selectedDate, timeZone);
         const res = await fetch(
           `/api/schedule/slots?meetingType=${encodeURIComponent(
             selectedMeetingType
@@ -100,25 +101,17 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
         );
         const json = await res.json();
         if (!active) return;
-        if (json.ok && Array.isArray(json.slots) && json.slots.length > 0) {
+        if (res.ok && json.ok && Array.isArray(json.slots)) {
           setSlots(json.slots);
+          setAvailabilityError(false);
         } else {
-          // Curated fallback slots if Cal.com is in demo/staging mode
-          setSlots([
-            { start: `${selectedDate}T09:00:00Z`, end: `${selectedDate}T09:30:00Z` },
-            { start: `${selectedDate}T11:00:00Z`, end: `${selectedDate}T11:30:00Z` },
-            { start: `${selectedDate}T14:30:00Z`, end: `${selectedDate}T15:00:00Z` },
-            { start: `${selectedDate}T16:00:00Z`, end: `${selectedDate}T16:30:00Z` },
-            { start: `${selectedDate}T19:00:00Z`, end: `${selectedDate}T19:30:00Z` },
-          ]);
+          setSlots([]);
+          setAvailabilityError(true);
         }
       } catch {
         if (!active) return;
-        setSlots([
-          { start: `${selectedDate}T10:00:00Z`, end: `${selectedDate}T10:30:00Z` },
-          { start: `${selectedDate}T14:00:00Z`, end: `${selectedDate}T14:30:00Z` },
-          { start: `${selectedDate}T16:30:00Z`, end: `${selectedDate}T17:00:00Z` },
-        ]);
+        setSlots([]);
+        setAvailabilityError(true);
       } finally {
         if (active) setLoadingSlots(false);
       }
@@ -127,6 +120,7 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
     const timer = setTimeout(() => {
       if (active) {
         setLoadingSlots(true);
+        setAvailabilityError(false);
         setSelectedSlot(null);
         void fetchSlots();
       }
@@ -136,7 +130,7 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
       active = false;
       clearTimeout(timer);
     };
-  }, [selectedMeetingType, selectedDate, timeZone]);
+  }, [selectedMeetingType, selectedDate, timeZone, availabilityRetry]);
 
   function handleBooking(e: React.FormEvent) {
     e.preventDefault();
@@ -442,6 +436,24 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
                     {isBn ? "স্লট অনুসন্ধান করা হচ্ছে..." : "Loading available slots..."}
                   </span>
                 </div>
+              ) : availabilityError ? (
+                <div
+                  role="alert"
+                  className="flex flex-col items-center gap-3 p-8 text-center rounded-2xl border border-destructive/30 bg-destructive/5 text-xs text-destructive"
+                >
+                  <span>
+                    {isBn
+                      ? "সময়সূচির সেবা এখন উপলভ্য নয়। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+                      : "Availability could not be loaded. Please try again shortly."}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAvailabilityRetry((value) => value + 1)}
+                    className="rounded-xl border border-destructive/30 bg-background px-4 py-2 font-semibold text-foreground hover:bg-muted transition-colors"
+                  >
+                    {isBn ? "আবার চেষ্টা করুন" : "Try again"}
+                  </button>
+                </div>
               ) : slots.length === 0 ? (
                 <div className="p-8 text-center rounded-2xl border bg-muted/20 text-xs text-muted-foreground">
                   {isBn
@@ -606,7 +618,13 @@ export function ScheduleView({ meetingTypes, prefill, locale }: ScheduleViewProp
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedSlot || !name.trim() || !email.trim()}
+                  disabled={
+                    isSubmitting ||
+                    !selectedSlot ||
+                    !name.trim() ||
+                    !email.trim() ||
+                    !siteKey
+                  }
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSubmitting ? (
