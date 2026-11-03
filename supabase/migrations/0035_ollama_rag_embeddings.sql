@@ -12,7 +12,7 @@ alter table public.knowledge_chunks
 create index knowledge_chunks_embedding_idx
   on public.knowledge_chunks using hnsw (embedding extensions.vector_cosine_ops);
 
-create function public.match_knowledge_chunks(
+create or replace function public.match_knowledge_chunks(
   query_text         text,
   query_embedding    extensions.vector(768),
   match_count        integer default 6,
