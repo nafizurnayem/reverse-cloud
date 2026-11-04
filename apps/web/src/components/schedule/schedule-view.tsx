@@ -198,6 +198,19 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                 ? "এই সময়টি আর উপলব্ধ নেই। অনুগ্রহ করে অন্য একটি সময় নির্বাচন করুন।"
                 : "This slot is no longer available. Please select another time."
             );
+          } else if (data.code === "active_booking_exists") {
+            const availableAfter = typeof data.availableAfter === "string"
+              ? new Date(data.availableAfter).toLocaleString(isBn ? "bn-BD" : "en-US", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone,
+                })
+              : null;
+            setErrorMsg(
+              isBn
+                ? `এই ইমেইলে ইতিমধ্যে একটি সক্রিয় বুকিং রয়েছে। বর্তমান মিটিং শেষ হওয়ার পর${availableAfter ? ` (${availableAfter})` : ""} আপনি আবার বুক করতে পারবেন।`
+                : `This email already has an active booking. You can book another meeting after it ends${availableAfter ? ` (${availableAfter})` : ""}.`
+            );
           } else if (data.code === "turnstile_failed") {
             setErrorMsg(
               isBn

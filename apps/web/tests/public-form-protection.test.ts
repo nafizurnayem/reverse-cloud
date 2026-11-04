@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { limitChatRequests, limitContactRequests, requestIp } from "../src/lib/ratelimit";
+import {
+  limitChatRequests,
+  limitContactRequests,
+  requestIp,
+} from "../src/lib/ratelimit";
 import { verifyTurnstile } from "../src/lib/turnstile";
 
 describe("public form protection", () => {
