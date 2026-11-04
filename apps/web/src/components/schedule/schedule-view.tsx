@@ -15,7 +15,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import type { ScheduleMeetingType, SchedulePrefill } from "@/lib/schedule-server";
-import { scheduleDayRange } from "@/lib/schedule-time";
+import { scheduleDayRange, upcomingScheduleDays } from "@/lib/schedule-time";
 import { Badge } from "@/components/ui/badge";
 
 interface ScheduleViewProps {
@@ -43,11 +43,6 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
   const [selectedMeetingType, setSelectedMeetingType] = useState<string>(
     meetingTypes[0]?.key || "discovery_call"
   );
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  });
   const [timeZone, setTimeZone] = useState<string>(() => {
     try {
       return prefill.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -55,6 +50,9 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
       return "UTC";
     }
   });
+  const [selectedDate, setSelectedDate] = useState<string>(() =>
+    upcomingScheduleDays(new Date(), timeZone, "en-US", 1)[0].iso
+  );
 
   const [slots, setSlots] = useState<SlotItem[]>([]);
   const [loadingSlots, setLoadingSlots] = useState<boolean>(false);
@@ -73,17 +71,12 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
 
-  // Generate next 14 days
-  const upcomingDays = Array.from({ length: 14 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i + 1);
-    return {
-      iso: d.toISOString().slice(0, 10),
-      dayName: d.toLocaleDateString(isBn ? "bn-BD" : "en-US", { weekday: "short" }),
-      dayNumber: d.toLocaleDateString(isBn ? "bn-BD" : "en-US", { day: "numeric" }),
-      monthName: d.toLocaleDateString(isBn ? "bn-BD" : "en-US", { month: "short" }),
-    };
-  });
+  // Keep each card's visible date and submitted date key in the selected timezone.
+  const upcomingDays = upcomingScheduleDays(
+    new Date(),
+    timeZone,
+    isBn ? "bn-BD" : "en-US"
+  );
 
   // Fetch live availability from Cal.com through the scheduling API.
   useEffect(() => {
@@ -406,7 +399,11 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                   <select
                     value={timeZone}
                     onChange={(e) => {
-                      setTimeZone(e.target.value);
+                      const nextTimeZone = e.target.value;
+                      setTimeZone(nextTimeZone);
+                      setSelectedDate(
+                        upcomingScheduleDays(new Date(), nextTimeZone, "en-US", 1)[0].iso
+                      );
                       setSelectedSlot(null);
                     }}
                     aria-label={isBn ? "সময় অঞ্চল নির্বাচন করুন" : "Select timezone"}
