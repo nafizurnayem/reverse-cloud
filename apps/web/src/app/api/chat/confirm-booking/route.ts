@@ -213,12 +213,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     await markProposalFailed(proposal.proposal_id, auth.user.id);
     const status = error instanceof CalcomBookingError ? error.status : null;
-    if (status !== null && [400, 404, 409, 422].includes(status)) {
+    if (status === 409) {
       return json({
         ok: false,
         code: "slot_unavailable",
         message: "This slot is no longer available. Please select another time.",
       }, 409);
+    }
+    if (error instanceof CalcomBookingError) {
+      console.error("Cal.com booking rejected", { status });
     }
     if (error instanceof Error && error.name === "AbortError") {
       return json({ ok: false, code: "scheduling_timeout", message: "Booking timed out. Please try another slot." }, 504);
