@@ -17,6 +17,13 @@ returns one complete reply instead of streaming. The preview runs
 `llama3.2:1b`, allows five chat requests per IP per minute, and processes one
 generation at a time. Do not use this as production hosting.
 
+The tunnel is forced to HTTP/2 because this network intermittently drops QUIC.
+Build `ops/cloudflared/Dockerfile`, then run it with
+`tunnel --protocol http2 --metrics 127.0.0.1:2000 --no-autoupdate
+--url http://127.0.0.1:3000`. The image health check uses Cloudflared's `/ready`
+endpoint; Docker health status is monitoring only and does not recreate the
+temporary tunnel URL.
+
 ## Connect and check
 
 From the PC:
