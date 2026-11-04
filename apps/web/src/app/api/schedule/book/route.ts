@@ -225,11 +225,11 @@ export async function POST(request: NextRequest) {
     if (request.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
       return json({ ok: false, code: "scheduling_timeout" }, 504, rate);
     }
-    if (
-      error instanceof CalcomBookingError && error.status !== null &&
-      [400, 404, 409, 422].includes(error.status)
-    ) {
+    if (error instanceof CalcomBookingError && error.status === 409) {
       return json({ ok: false, code: "slot_unavailable" }, 409, rate);
+    }
+    if (error instanceof CalcomBookingError) {
+      console.error("Cal.com booking rejected", { status: error.status });
     }
     return json({ ok: false, code: "scheduling_unavailable" }, 502, rate);
   }

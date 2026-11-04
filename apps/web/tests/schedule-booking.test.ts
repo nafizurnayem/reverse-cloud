@@ -120,6 +120,7 @@ describe("POST /api/schedule/book", () => {
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
     const [bookingUrl, bookingInit] = mocks.fetch.mock.calls[1] as [string, RequestInit];
     expect(bookingUrl).toBe("https://api.cal.com/v2/bookings");
+    expect(new Headers(bookingInit.headers).get("cal-api-version")).toBe("2024-08-13");
     expect(JSON.parse(String(bookingInit.body))).toMatchObject({
       start: "2027-01-10T10:00:00.000Z",
       attendee: { name: "Client Person", email: "client@example.com", timeZone: "Asia/Dhaka" },
@@ -189,6 +190,18 @@ describe("POST /api/schedule/book", () => {
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toMatchObject({ code: "slot_unavailable" });
+    expect(mocks.adminRpc).not.toHaveBeenCalled();
+  });
+
+  it("does not misreport Cal.com validation errors as unavailable slots", async () => {
+    mocks.fetch.mockReset()
+      .mockResolvedValueOnce(slotsResponse())
+      .mockResolvedValueOnce(bookingResponse(422));
+
+    const response = await POST(request(input));
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({ code: "scheduling_unavailable" });
     expect(mocks.adminRpc).not.toHaveBeenCalled();
   });
 });

@@ -103,6 +103,11 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
         if (!active) return;
         if (res.ok && json.ok && Array.isArray(json.slots)) {
           setSlots(json.slots);
+          setSelectedSlot((current) =>
+            current && json.slots.some((slot: SlotItem) => slot.start === current.start && slot.end === current.end)
+              ? current
+              : null
+          );
           setAvailabilityError(false);
         } else {
           setSlots([]);
@@ -121,7 +126,6 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
       if (active) {
         setLoadingSlots(true);
         setAvailabilityError(false);
-        setSelectedSlot(null);
         void fetchSlots();
       }
     }, 0);
@@ -131,6 +135,16 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
       clearTimeout(timer);
     };
   }, [selectedMeetingType, selectedDate, timeZone, availabilityRetry]);
+
+  useEffect(() => {
+    const refresh = () => setAvailabilityRetry((value) => value + 1);
+    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
 
   function handleBooking(e: React.FormEvent) {
     e.preventDefault();
@@ -184,6 +198,8 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
         } else {
           window.turnstile?.reset();
           if (data.code === "slot_unavailable") {
+            setSelectedSlot(null);
+            setAvailabilityRetry((value) => value + 1);
             setErrorMsg(
               isBn
                 ? "এই সময়টি আর উপলব্ধ নেই। অনুগ্রহ করে অন্য একটি সময় নির্বাচন করুন।"
@@ -348,7 +364,10 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                     <button
                       key={mt.key}
                       type="button"
-                      onClick={() => setSelectedMeetingType(mt.key)}
+                      onClick={() => {
+                        setSelectedMeetingType(mt.key);
+                        setSelectedSlot(null);
+                      }}
                       className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
                         isSelected
                           ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
@@ -386,7 +405,10 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                   <Globe className="h-3.5 w-3.5 text-primary" />
                   <select
                     value={timeZone}
-                    onChange={(e) => setTimeZone(e.target.value)}
+                    onChange={(e) => {
+                      setTimeZone(e.target.value);
+                      setSelectedSlot(null);
+                    }}
                     aria-label={isBn ? "সময় অঞ্চল নির্বাচন করুন" : "Select timezone"}
                     className="bg-transparent border-0 text-[11px] font-mono text-foreground focus:outline-none cursor-pointer"
                   >
@@ -407,7 +429,10 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                     <button
                       key={day.iso}
                       type="button"
-                      onClick={() => setSelectedDate(day.iso)}
+                      onClick={() => {
+                        setSelectedDate(day.iso);
+                        setSelectedSlot(null);
+                      }}
                       className={`flex flex-col items-center justify-center min-w-[72px] py-3 rounded-2xl border transition-all ${
                         isSelected
                           ? "border-primary bg-primary text-primary-foreground shadow-md"

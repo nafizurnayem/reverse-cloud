@@ -2,7 +2,8 @@ import "server-only";
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-export const CALCOM_API_VERSION = "2024-09-04";
+export const CALCOM_SLOTS_API_VERSION = "2024-09-04";
+export const CALCOM_BOOKINGS_API_VERSION = "2024-08-13";
 export const MAX_SCHEDULE_RANGE_MS = 31 * 24 * 60 * 60 * 1000;
 export const MAX_WEBHOOK_BYTES = 256 * 1024;
 
@@ -97,7 +98,10 @@ export async function fetchAvailableSlots(options: {
   const timer = setTimeout(abort, options.timeoutMs ?? 8_000);
   try {
     const response = await (options.fetcher ?? fetch)(url, {
-      headers: { authorization: `Bearer ${options.apiKey}`, "cal-api-version": process.env.CALCOM_API_VERSION ?? CALCOM_API_VERSION },
+      headers: {
+        authorization: `Bearer ${options.apiKey}`,
+        "cal-api-version": process.env.CALCOM_SLOTS_API_VERSION ?? process.env.CALCOM_API_VERSION ?? CALCOM_SLOTS_API_VERSION,
+      },
       cache: "no-store", signal: controller.signal,
     });
     if (!response.ok) throw new Error(`calcom_${response.status}`);
@@ -140,7 +144,7 @@ export async function createCalcomBooking(options: {
       method: "POST",
       headers: {
         authorization: `Bearer ${options.apiKey}`,
-        "cal-api-version": process.env.CALCOM_API_VERSION ?? CALCOM_API_VERSION,
+        "cal-api-version": process.env.CALCOM_BOOKINGS_API_VERSION ?? CALCOM_BOOKINGS_API_VERSION,
         "content-type": "application/json",
       },
       body: JSON.stringify({
