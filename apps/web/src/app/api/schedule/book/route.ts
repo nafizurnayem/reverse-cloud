@@ -6,11 +6,7 @@ import {
   parseScheduleQuery,
   sha256,
 } from "@/lib/calcom";
-import {
-  limitScheduleBookingRequests,
-  requestIp,
-  type RateLimitResult,
-} from "@/lib/ratelimit";
+import { requestIp } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -33,16 +29,8 @@ type BookingInput = {
   turnstileToken: string;
 };
 
-function json(body: Record<string, unknown>, status: number, rate?: RateLimitResult) {
+function json(body: Record<string, unknown>, status: number) {
   const headers = new Headers({ "cache-control": "private, no-store" });
-  if (rate) {
-    headers.set("x-ratelimit-limit", String(rate.limit));
-    headers.set("x-ratelimit-remaining", String(rate.remaining));
-    headers.set("x-ratelimit-reset", String(rate.reset));
-    if (!rate.allowed) {
-      headers.set("retry-after", String(Math.max(1, rate.reset - Math.floor(Date.now() / 1_000))));
-    }
-  }
   return NextResponse.json(body, { status, headers });
 }
 
@@ -111,13 +99,6 @@ export async function POST(request: NextRequest) {
   if (!input) return json({ ok: false, code: "invalid_input" }, 400);
 
   const ip = requestIp(request.headers);
-  let rate: RateLimitResult;
-  try {
-    rate = await limitScheduleBookingRequests(ip);
-  } catch {
-    return json({ ok: false, code: "protection_unavailable" }, 503);
-  }
-  if (!rate.allowed) return json({ ok: false, code: "rate_limited" }, 429, rate);
 
   const challenge = await verifyTurnstile(input.turnstileToken, ip, {
     expectedAction: "schedule_booking",
@@ -129,13 +110,34 @@ export async function POST(request: NextRequest) {
     return json({
       ok: false,
       code: unavailable ? "protection_unavailable" : "turnstile_failed",
-    }, unavailable ? 503 : 403, rate);
+    }, unavailable ? 503 : 403);
   }
 
   const apiKey = process.env.CALCOM_API_KEY?.trim();
-  if (!apiKey) return json({ ok: false, code: "scheduling_not_configured" }, 503, rate);
+  if (!apiKey) return json({ ok: false, code: "scheduling_not_configured" }, 503);
 
   try {
+    const admin = createAdminClient();
+    const activeBooking = await admin
+      .from("meetings")
+      .select("ends_at")
+      .eq("attendee_email", input.email)
+      .in("status", ["confirmed", "rescheduled"])
+      .gt("ends_at", new Date().toISOString())
+      .order("ends_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (activeBooking.error) {
+      return json({ ok: false, code: "scheduling_unavailable" }, 503);
+    }
+    if (activeBooking.data) {
+      return json({
+        ok: false,
+        code: "active_booking_exists",
+        availableAfter: activeBooking.data.ends_at,
+      }, 409);
+    }
+
     const supabase = await createClient();
     const meeting = await supabase
       .from("meeting_types")
@@ -143,15 +145,15 @@ export async function POST(request: NextRequest) {
       .eq("key", input.meetingType)
       .eq("is_active", true)
       .maybeSingle();
-    if (meeting.error) return json({ ok: false, code: "scheduling_unavailable" }, 503, rate);
-    if (!meeting.data) return json({ ok: false, code: "meeting_type_not_found" }, 404, rate);
+    if (meeting.error) return json({ ok: false, code: "scheduling_unavailable" }, 503);
+    if (!meeting.data) return json({ ok: false, code: "meeting_type_not_found" }, 404);
     if (!/^\d+$/.test(meeting.data.calcom_event_type_id ?? "")) {
-      return json({ ok: false, code: "meeting_type_not_configured" }, 503, rate);
+      return json({ ok: false, code: "meeting_type_not_configured" }, 503);
     }
 
     const expectedDuration = Number(meeting.data.duration_min) * 60_000;
     if (Date.parse(input.end) - Date.parse(input.start) !== expectedDuration) {
-      return json({ ok: false, code: "invalid_duration" }, 400, rate);
+      return json({ ok: false, code: "invalid_duration" }, 400);
     }
 
     const slots = await fetchAvailableSlots({
@@ -164,7 +166,7 @@ export async function POST(request: NextRequest) {
       signal: request.signal,
     });
     if (!isSelectedSlotAvailable(slots, input.start, input.end)) {
-      return json({ ok: false, code: "slot_unavailable" }, 409, rate);
+      return json({ ok: false, code: "slot_unavailable" }, 409);
     }
 
     const booking = await createCalcomBooking({
@@ -191,7 +193,6 @@ export async function POST(request: NextRequest) {
       end: booking.end,
       email: input.email,
     });
-    const admin = createAdminClient();
     const stored = await admin.rpc("process_calcom_webhook_delivery", {
       p_delivery_key: sha256(`schedule-route:${normalized}`),
       p_trigger_event: "BOOKING_CREATED",
@@ -220,17 +221,17 @@ export async function POST(request: NextRequest) {
         endsAt: booking.end,
         meetingUrl: booking.meetingUrl,
       },
-    }, 201, rate);
+    }, 201);
   } catch (error) {
     if (request.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
-      return json({ ok: false, code: "scheduling_timeout" }, 504, rate);
+      return json({ ok: false, code: "scheduling_timeout" }, 504);
     }
     if (error instanceof CalcomBookingError && error.status === 409) {
-      return json({ ok: false, code: "slot_unavailable" }, 409, rate);
+      return json({ ok: false, code: "slot_unavailable" }, 409);
     }
     if (error instanceof CalcomBookingError) {
       console.error("Cal.com booking rejected", { status: error.status });
     }
-    return json({ ok: false, code: "scheduling_unavailable" }, 502, rate);
+    return json({ ok: false, code: "scheduling_unavailable" }, 502);
   }
 }

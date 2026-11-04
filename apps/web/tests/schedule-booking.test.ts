@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
-  limit: vi.fn(),
   verify: vi.fn(),
   meeting: vi.fn(),
+  activeBooking: vi.fn(),
+  adminFrom: vi.fn(),
   adminRpc: vi.fn(),
   fetch: vi.fn(),
 }));
@@ -12,7 +13,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ratelimit", () => ({
   requestIp: () => "192.0.2.80",
-  limitScheduleBookingRequests: mocks.limit,
 }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.verify }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -28,7 +28,30 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({ rpc: mocks.adminRpc }),
+  createAdminClient: () => {
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      in: vi.fn(),
+      gt: vi.fn(),
+      order: vi.fn(),
+      limit: vi.fn(),
+      maybeSingle: mocks.activeBooking,
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.in.mockReturnValue(query);
+    query.gt.mockReturnValue(query);
+    query.order.mockReturnValue(query);
+    query.limit.mockReturnValue(query);
+    return {
+      from: (table: string) => {
+        mocks.adminFrom(table);
+        return query;
+      },
+      rpc: mocks.adminRpc,
+    };
+  },
 }));
 
 import { POST } from "../src/app/api/schedule/book/route";
@@ -78,8 +101,8 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("CALCOM_API_KEY", "cal_test_key");
   vi.stubEnv("CALCOM_API_BASE_URL", "https://api.cal.com/v2");
-  mocks.limit.mockResolvedValue({ allowed: true, limit: 5, remaining: 4, reset: 4_600 });
   mocks.verify.mockResolvedValue({ success: true, errors: [] });
+  mocks.activeBooking.mockResolvedValue({ data: null, error: null });
   mocks.meeting.mockResolvedValue({
     data: {
       id: "00000000-0000-4000-8000-000000000018",
@@ -104,7 +127,6 @@ describe("POST /api/schedule/book", () => {
     const response = await POST(request(input));
 
     expect(response.status).toBe(201);
-    expect(response.headers.get("x-ratelimit-remaining")).toBe("4");
     await expect(response.json()).resolves.toEqual({
       ok: true,
       booking: {
@@ -117,6 +139,7 @@ describe("POST /api/schedule/book", () => {
     expect(mocks.verify).toHaveBeenCalledWith("turnstile-token", "192.0.2.80", {
       expectedAction: "schedule_booking",
     });
+    expect(mocks.adminFrom).toHaveBeenCalledWith("meetings");
     expect(mocks.fetch).toHaveBeenCalledTimes(2);
     const [bookingUrl, bookingInit] = mocks.fetch.mock.calls[1] as [string, RequestInit];
     expect(bookingUrl).toBe("https://api.cal.com/v2/bookings");
@@ -145,19 +168,40 @@ describe("POST /api/schedule/book", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ ok: false, code: "invalid_input" });
-    expect(mocks.limit).not.toHaveBeenCalled();
     expect(mocks.verify).not.toHaveBeenCalled();
+    expect(mocks.adminFrom).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
-  it("enforces rate limiting before Turnstile", async () => {
-    mocks.limit.mockResolvedValue({ allowed: false, limit: 5, remaining: 0, reset: 4_600 });
+  it("rejects an email that already has an active future booking", async () => {
+    mocks.activeBooking.mockResolvedValue({
+      data: { ends_at: "2027-01-10T12:00:00.000Z" },
+      error: null,
+    });
 
     const response = await POST(request(input));
 
-    expect(response.status).toBe(429);
-    expect(response.headers.get("retry-after")).toBeTruthy();
-    expect(mocks.verify).not.toHaveBeenCalled();
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      code: "active_booking_exists",
+      availableAfter: "2027-01-10T12:00:00.000Z",
+    });
+    expect(mocks.verify).toHaveBeenCalledOnce();
+    expect(mocks.adminFrom).toHaveBeenCalledWith("meetings");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.adminRpc).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the active-booking lookup is unavailable", async () => {
+    mocks.activeBooking.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
+
+    const response = await POST(request(input));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ ok: false, code: "scheduling_unavailable" });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.adminRpc).not.toHaveBeenCalled();
   });
 
   it("requires a valid schedule-booking Turnstile challenge", async () => {
