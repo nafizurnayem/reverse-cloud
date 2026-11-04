@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scheduleDayRange } from "@/lib/schedule-time";
+import { scheduleDayRange, upcomingScheduleDays } from "@/lib/schedule-time";
 
 describe("scheduleDayRange", () => {
   it.each([
@@ -9,5 +9,24 @@ describe("scheduleDayRange", () => {
     ["America/New_York", "2026-11-01", "2026-11-01T04:00:00.000Z", "2026-11-02T05:00:00.000Z"],
   ])("uses the local day boundaries in %s", (timeZone, date, start, end) => {
     expect(scheduleDayRange(date, timeZone)).toEqual({ start, end });
+  });
+});
+
+describe("upcomingScheduleDays", () => {
+  it("keeps Dhaka date labels and submitted ISO dates aligned after midnight", () => {
+    const days = upcomingScheduleDays(
+      new Date("2026-11-04T19:42:00.000Z"),
+      "Asia/Dhaka",
+      "en-US",
+      5
+    );
+
+    expect(days).toEqual([
+      { iso: "2026-11-06", dayName: "Fri", dayNumber: "6", monthName: "Nov" },
+      { iso: "2026-11-07", dayName: "Sat", dayNumber: "7", monthName: "Nov" },
+      { iso: "2026-11-08", dayName: "Sun", dayNumber: "8", monthName: "Nov" },
+      { iso: "2026-11-09", dayName: "Mon", dayNumber: "9", monthName: "Nov" },
+      { iso: "2026-11-10", dayName: "Tue", dayNumber: "10", monthName: "Nov" },
+    ]);
   });
 });

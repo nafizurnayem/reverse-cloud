@@ -39,3 +39,34 @@ export function scheduleDayRange(date: string, timeZone: string) {
     end: localTimeToUtc(midnight + 24 * 60 * 60 * 1_000, timeZone),
   };
 }
+
+export function upcomingScheduleDays(
+  now: Date,
+  timeZone: string,
+  locale: string,
+  count = 14
+) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  const localToday = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    12
+  );
+
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(localToday + (index + 1) * 24 * 60 * 60 * 1_000);
+    return {
+      iso: date.toISOString().slice(0, 10),
+      dayName: date.toLocaleDateString(locale, { weekday: "short", timeZone: "UTC" }),
+      dayNumber: date.toLocaleDateString(locale, { day: "numeric", timeZone: "UTC" }),
+      monthName: date.toLocaleDateString(locale, { month: "short", timeZone: "UTC" }),
+    };
+  });
+}
