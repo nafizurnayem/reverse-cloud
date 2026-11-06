@@ -193,6 +193,51 @@ export async function createCalcomBooking(options: {
   }
 }
 
+export async function cancelCalcomBooking(options: {
+  apiKey: string;
+  bookingUid: string;
+  reason?: string;
+  signal?: AbortSignal;
+  fetcher?: typeof fetch;
+  timeoutMs?: number;
+}) {
+  const bookingUid = options.bookingUid.trim();
+  if (!bookingUid || bookingUid.length > 200) {
+    throw new CalcomBookingError("invalid_booking_uid");
+  }
+
+  const baseUrl = (process.env.CALCOM_API_BASE_URL ?? "https://api.cal.com/v2").replace(/\/$/, "");
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  options.signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, options.timeoutMs ?? 10_000);
+
+  try {
+    const response = await (options.fetcher ?? fetch)(
+      `${baseUrl}/bookings/${encodeURIComponent(bookingUid)}`,
+      {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${options.apiKey}`,
+          "cal-api-version": process.env.CALCOM_BOOKINGS_API_VERSION ?? CALCOM_BOOKINGS_API_VERSION,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          cancellationReason: options.reason?.trim() || "Client cancelled from portal",
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      throw new CalcomBookingError("calcom_cancellation_failed", response.status);
+    }
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", abort);
+  }
+}
+
 function safeEqual(left: string, right: string) {
   const a = Buffer.from(left, "hex");
   const b = Buffer.from(right, "hex");

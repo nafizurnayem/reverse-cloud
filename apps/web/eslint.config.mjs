@@ -13,13 +13,14 @@ export default defineConfig([
       "src/app/api/webhooks/calcom/route.ts",
       "src/app/api/chat/confirm-booking/route.ts",
       "src/app/api/schedule/book/route.ts",
+      "src/app/api/portal/appointments/[[]id[]]/cancel/route.ts",
       "src/lib/invites/**/*.ts",
     ],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{
           group: ["**/supabase/admin", "**/supabase/admin.*", "./admin", "./admin.*"],
-          message: "Service-role imports are limited to validated leads, verified webhooks, validated bookings, and authorized invitations.",
+          message: "Service-role imports are limited to validated leads, verified webhooks, validated booking operations, and authorized invitations.",
         }],
       }],
     },
