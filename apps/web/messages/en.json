@@ -1042,6 +1042,47 @@
       }
     }
   },
+  "AdminMeetings": {
+    "eyebrow": "Scheduling operations",
+    "title": "Client appointments",
+    "description": "Review upcoming appointments and cancel them through Cal.com when necessary.",
+    "upcoming": "Upcoming appointments",
+    "details": "Appointment details",
+    "manage": "Manage",
+    "view": "View",
+    "minutes": "minutes",
+    "empty": "There are no upcoming appointments.",
+    "readOnly": "You can review meetings, but only an administrator can cancel them.",
+    "saved": "The appointment was cancelled in Cal.com, the attendee was notified, and the local record was removed.",
+    "cleanupPending": "Cal.com accepted the cancellation, but local cleanup is still pending. Do not cancel the booking again.",
+    "fields": {
+      "client": "Client",
+      "email": "Email",
+      "type": "Meeting type",
+      "starts": "Starts",
+      "ends": "Ends",
+      "timeZone": "Time zone",
+      "duration": "Duration",
+      "status": "Status"
+    },
+    "statuses": { "confirmed": "Confirmed", "rescheduled": "Rescheduled" },
+    "cancel": {
+      "reason": "Cancellation reason",
+      "reasonPlaceholder": "Explain why this appointment is being cancelled.",
+      "confirm": "I confirm that this appointment should be cancelled.",
+      "emailNotice": "Cal.com will release the time and send its cancellation notification to the attendee.",
+      "button": "Cancel appointment",
+      "keep": "Keep appointment"
+    },
+    "errors": {
+      "invalidInput": "Provide a cancellation reason and confirm the action.",
+      "loadFailed": "The appointment could not be loaded.",
+      "notFound": "This appointment is no longer active.",
+      "alreadyStarted": "An appointment cannot be cancelled after it starts.",
+      "notConfigured": "Cal.com cancellation is not configured on the server.",
+      "calcomFailed": "Cal.com could not cancel the appointment. Nothing was removed locally; please try again."
+    }
+  },
   "AdminStaff": {
     "eyebrow": "Access control",
     "title": "Staff access",

@@ -14,6 +14,7 @@ export default defineConfig([
       "src/app/api/chat/confirm-booking/route.ts",
       "src/app/api/schedule/book/route.ts",
       "src/app/api/portal/appointments/[[]id[]]/cancel/route.ts",
+      "src/app/[[]locale[]]/admin/meetings/actions.ts",
       "src/lib/invites/**/*.ts",
     ],
     rules: {
