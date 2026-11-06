@@ -13,7 +13,11 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-import { fetchClientProjects, fetchClientProjectById } from "@/lib/portal/portal-server";
+import {
+  fetchClientProjects,
+  fetchClientProjectById,
+  fetchUpcomingClientAppointment,
+} from "@/lib/portal/portal-server";
 
 describe("Portal Server Data Fetching (FX-10)", () => {
   const originalEnv = process.env;
@@ -109,5 +113,82 @@ describe("Portal Server Data Fetching (FX-10)", () => {
     expect(single).not.toBeNull();
     expect(single?.id).toBe("proj-fintech-01");
   });
-});
 
+  it("loads the signed-in client's next active appointment", async () => {
+    const meetingEq = vi.fn();
+    const statusIn = vi.fn();
+    const endsAfter = vi.fn();
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "user-123" } } });
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "clients") {
+        return {
+          select: () => ({
+            eq: () => ({
+              is: () => ({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { id: "client-abc" },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === "meetings") {
+        return {
+          select: () => ({
+            eq: (column: string, value: string) => {
+              meetingEq(column, value);
+              return {
+                in: (statusColumn: string, statuses: string[]) => {
+                  statusIn(statusColumn, statuses);
+                  return {
+                    gt: (endColumn: string, endValue: string) => {
+                      endsAfter(endColumn, endValue);
+                      return {
+                        order: () => ({
+                          limit: () => ({
+                            maybeSingle: vi.fn().mockResolvedValue({
+                              data: {
+                                id: "meeting-1",
+                                starts_at: "2027-01-10T10:00:00.000Z",
+                                ends_at: "2027-01-10T10:30:00.000Z",
+                                created_at: "2027-01-01T08:00:00.000Z",
+                                attendee_timezone: "Asia/Dhaka",
+                                status: "confirmed",
+                                meeting_types: {
+                                  name_en: "Discovery Call",
+                                  name_bn: "ডিসকভারি কল",
+                                },
+                              },
+                              error: null,
+                            }),
+                          }),
+                        }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          }),
+        };
+      }
+      return {};
+    });
+
+    await expect(fetchUpcomingClientAppointment()).resolves.toEqual({
+      id: "meeting-1",
+      meetingTypeNameEn: "Discovery Call",
+      meetingTypeNameBn: "ডিসকভারি কল",
+      startsAt: "2027-01-10T10:00:00.000Z",
+      endsAt: "2027-01-10T10:30:00.000Z",
+      bookedAt: "2027-01-01T08:00:00.000Z",
+      timeZone: "Asia/Dhaka",
+      status: "confirmed",
+    });
+    expect(meetingEq).toHaveBeenCalledWith("client_id", "client-abc");
+    expect(statusIn).toHaveBeenCalledWith("status", ["confirmed", "rescheduled"]);
+    expect(endsAfter).toHaveBeenCalledWith("ends_at", expect.any(String));
+  });
+});

@@ -4,11 +4,22 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalProjects, getPortalProjectById } from "./portal-catalog";
 import type {
   PortalActivityItem,
+  PortalAppointment,
   PortalMilestone,
   PortalPaymentItem,
   PortalProject,
   PortalReview,
 } from "./types";
+
+interface DbAppointmentRow {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+  attendee_timezone: string;
+  status: "confirmed" | "rescheduled";
+  meeting_types: { name_en: string; name_bn: string | null } | null;
+}
 
 interface DbMilestoneRow {
   id: string;
@@ -214,6 +225,55 @@ export async function fetchClientProjects(): Promise<PortalProject[]> {
   }
 }
 
+export async function fetchUpcomingClientAppointment(): Promise<PortalAppointment | null> {
+  try {
+    const supabase = await createClient();
+    const { data: userRes } = await supabase.auth.getUser();
+    if (!userRes?.user) return null;
+
+    const { data: client, error: clientError } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", userRes.user.id)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (clientError || !client) return null;
+
+    const { data, error } = await supabase
+      .from("meetings")
+      .select(`
+        id,
+        starts_at,
+        ends_at,
+        created_at,
+        attendee_timezone,
+        status,
+        meeting_types:meeting_type_id(name_en, name_bn)
+      `)
+      .eq("client_id", client.id)
+      .in("status", ["confirmed", "rescheduled"])
+      .gt("ends_at", new Date().toISOString())
+      .order("starts_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+
+    const appointment = data as unknown as DbAppointmentRow;
+    return {
+      id: appointment.id,
+      meetingTypeNameEn: appointment.meeting_types?.name_en ?? "Consultation",
+      meetingTypeNameBn: appointment.meeting_types?.name_bn,
+      startsAt: appointment.starts_at,
+      endsAt: appointment.ends_at,
+      bookedAt: appointment.created_at,
+      timeZone: appointment.attendee_timezone || "UTC",
+      status: appointment.status,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchClientProjectById(id: string): Promise<PortalProject | null> {
   try {
     const supabase = await createClient();
@@ -304,4 +364,3 @@ export async function fetchProjectReview(projectId: string): Promise<PortalRevie
     return null;
   }
 }
-
