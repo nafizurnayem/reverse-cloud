@@ -5,9 +5,22 @@ import { useLocale, useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 
-export function Header({ accountHref = null }: { accountHref?: string | null }) {
+type HeaderUser = {
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+};
+
+export function Header({
+  accountHref = null,
+  user = null,
+}: {
+  accountHref?: string | null;
+  user?: HeaderUser | null;
+}) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
   const locale = useLocale();
@@ -25,7 +38,7 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
     { href: "/contact", label: t("contact") },
   ];
 
-  // Track pathname changes to close mobile drawer during navigation without cascading effect
+  // Track pathname changes to close mobile drawer without cascading state updates
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
@@ -100,12 +113,17 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <div className="hidden xl:block"><LanguageSwitcher /></div>
 
-          <Link
-            href={accountHref ?? "/login"}
-            className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:px-3.5 sm:text-sm"
-          >
-            {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
-          </Link>
+          {/* Signed-in: show avatar + name dropdown; signed-out: show Login/Dashboard link */}
+          {user ? (
+            <UserMenu name={user.name} email={user.email} avatarUrl={user.avatarUrl} />
+          ) : (
+            <Link
+              href={accountHref ?? "/login"}
+              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:px-3.5 sm:text-sm"
+            >
+              {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
+            </Link>
+          )}
 
           {/* Mobile Menu Toggle Button */}
           <button
@@ -159,6 +177,30 @@ export function Header({ accountHref = null }: { accountHref?: string | null }) 
               );
             })}
           </nav>
+
+          {/* Mobile: show user info block if signed in */}
+          {user && (
+            <div className="mt-4 border-t border-border pt-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span
+                  aria-hidden="true"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground overflow-hidden"
+                >
+                  {user.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    (user.name || user.email).slice(0, 2).toUpperCase()
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-foreground">{user.name}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-4 border-t border-border pt-4"><LanguageSwitcher /></div>
         </div>
       )}
