@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CalcomBookingError, cancelCalcomBooking, sha256 } from "@/lib/calcom";
+import { CalcomBookingError, cancelCalcomBooking } from "@/lib/calcom";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -57,33 +57,20 @@ export async function DELETE(
     return json({ ok: false, code: "cancellation_unavailable" }, 502);
   }
 
-  const occurredAt = new Date().toISOString();
-  const eventPayload = JSON.stringify({
-    bookingUid: meeting.calcom_booking_uid,
-    meetingId: meeting.id,
-    clientId: meeting.client_id,
-    occurredAt,
-  });
-  const stored = await createAdminClient().rpc("process_calcom_webhook_delivery", {
-    p_delivery_key: sha256(`portal-cancel:${eventPayload}`),
-    p_trigger_event: "BOOKING_CANCELLED",
-    p_occurred_at: occurredAt,
-    p_booking_uid: meeting.calcom_booking_uid,
-    p_payload_sha256: sha256(eventPayload),
-    p_event_type_id: null,
-    p_meeting_type_key: null,
-    p_proposal_id: null,
-    p_attendee_name: null,
-    p_attendee_email: null,
-    p_attendee_timezone: null,
-    p_starts_at: null,
-    p_ends_at: null,
-  });
+  const removed = await createAdminClient()
+    .from("meetings")
+    .delete()
+    .eq("id", meeting.id)
+    .eq("client_id", meeting.client_id)
+    .eq("calcom_booking_uid", meeting.calcom_booking_uid)
+    .in("status", ["confirmed", "rescheduled"])
+    .select("id")
+    .maybeSingle();
 
-  if (stored.error) {
-    // Cal.com accepted the cancellation. Its signed webhook can still complete
-    // local synchronization, so never invite the client to cancel repeatedly.
-    console.error("Cancelled booking is awaiting local synchronization");
+  if (removed.error || !removed.data) {
+    // Cal.com already accepted the cancellation. Its signed webhook can still
+    // deactivate the local row, so do not encourage a duplicate cancellation.
+    console.error("Cancelled booking could not be removed from the local database");
     return json({ ok: true, synchronizationPending: true }, 202);
   }
 
