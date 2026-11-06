@@ -51,10 +51,10 @@ describe("Cal.com scheduling", () => {
     });
 
     const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://api.cal.com/v2/bookings/booking%2Fuid%20123");
-    expect(init.method).toBe("DELETE");
+    expect(url).toBe("https://api.cal.com/v2/bookings/booking%2Fuid%20123/cancel");
+    expect(init.method).toBe("POST");
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer cal_test_key");
-    expect(new Headers(init.headers).get("cal-api-version")).toBe("2024-08-13");
+    expect(new Headers(init.headers).get("cal-api-version")).toBe("2026-02-25");
     expect(JSON.parse(String(init.body))).toEqual({ cancellationReason: "Client cancelled from portal" });
   });
 

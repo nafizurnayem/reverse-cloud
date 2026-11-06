@@ -76,8 +76,8 @@ describe("DELETE /api/portal/appointments/[id]/cancel", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
     expect(mocks.fetch).toHaveBeenCalledWith(
-      "https://api.cal.com/v2/bookings/booking-uid-123",
-      expect.objectContaining({ method: "DELETE" }),
+      "https://api.cal.com/v2/bookings/booking-uid-123/cancel",
+      expect.objectContaining({ method: "POST" }),
     );
     expect(mocks.rpc).toHaveBeenCalledWith(
       "process_calcom_webhook_delivery",

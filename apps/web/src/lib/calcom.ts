@@ -4,6 +4,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const CALCOM_SLOTS_API_VERSION = "2024-09-04";
 export const CALCOM_BOOKINGS_API_VERSION = "2024-08-13";
+export const CALCOM_CANCELLATION_API_VERSION = "2026-02-25";
 export const MAX_SCHEDULE_RANGE_MS = 31 * 24 * 60 * 60 * 1000;
 export const MAX_WEBHOOK_BYTES = 256 * 1024;
 
@@ -214,12 +215,12 @@ export async function cancelCalcomBooking(options: {
 
   try {
     const response = await (options.fetcher ?? fetch)(
-      `${baseUrl}/bookings/${encodeURIComponent(bookingUid)}`,
+      `${baseUrl}/bookings/${encodeURIComponent(bookingUid)}/cancel`,
       {
-        method: "DELETE",
+        method: "POST",
         headers: {
           authorization: `Bearer ${options.apiKey}`,
-          "cal-api-version": process.env.CALCOM_BOOKINGS_API_VERSION ?? CALCOM_BOOKINGS_API_VERSION,
+          "cal-api-version": process.env.CALCOM_CANCELLATION_API_VERSION ?? CALCOM_CANCELLATION_API_VERSION,
           "content-type": "application/json",
         },
         body: JSON.stringify({
