@@ -13,17 +13,31 @@ type Props = {
 
 export default async function PublicLayout({ children }: Props) {
   let accountHref: string | null = null;
+  let headerUser: { name: string; email: string; avatarUrl?: string | null } | null = null;
   try {
     const [supabase, locale] = await Promise.all([createClient(), getLocale()]);
     const { data: { user }, error } = await supabase.auth.getUser();
-    if (!error && user) accountHref = await accountDestination(supabase, user.id, locale as Locale);
+    if (!error && user) {
+      accountHref = await accountDestination(supabase, user.id, locale as Locale);
+      const meta = user.user_metadata as Record<string, unknown> | undefined;
+      const rawName =
+        (typeof meta?.full_name === "string" && meta.full_name) ||
+        (typeof meta?.name === "string" && meta.name) ||
+        "";
+      headerUser = {
+        name: rawName,
+        email: user.email ?? "",
+        avatarUrl: (typeof meta?.avatar_url === "string" && meta.avatar_url) ||
+                   (typeof meta?.picture === "string" && meta.picture) || null,
+      };
+    }
   } catch {
     // The public site remains available while authentication is unavailable.
   }
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Header accountHref={accountHref} />
+      <Header accountHref={accountHref} user={headerUser} />
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
