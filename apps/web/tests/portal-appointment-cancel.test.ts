@@ -4,7 +4,8 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   meeting: vi.fn(),
-  rpc: vi.fn(),
+  adminFrom: vi.fn(),
+  removedMeeting: vi.fn(),
   fetch: vi.fn(),
 }));
 
@@ -27,7 +28,25 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({ rpc: mocks.rpc }),
+  createAdminClient: () => {
+    const query = {
+      delete: vi.fn(),
+      eq: vi.fn(),
+      in: vi.fn(),
+      select: vi.fn(),
+      maybeSingle: mocks.removedMeeting,
+    };
+    query.delete.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.in.mockReturnValue(query);
+    query.select.mockReturnValue(query);
+    return {
+      from: (table: string) => {
+        mocks.adminFrom(table);
+        return query;
+      },
+    };
+  },
 }));
 
 import { DELETE } from "../src/app/api/portal/appointments/[id]/cancel/route";
@@ -59,7 +78,7 @@ beforeEach(() => {
     },
     error: null,
   });
-  mocks.rpc.mockResolvedValue({ data: true, error: null });
+  mocks.removedMeeting.mockResolvedValue({ data: { id: appointmentId }, error: null });
   mocks.fetch.mockResolvedValue(new Response(JSON.stringify({ status: "success" }), { status: 200 }));
   vi.stubGlobal("fetch", mocks.fetch);
 });
@@ -70,7 +89,7 @@ afterEach(() => {
 });
 
 describe("DELETE /api/portal/appointments/[id]/cancel", () => {
-  it("cancels the authenticated client's future booking and synchronizes its status", async () => {
+  it("cancels the authenticated client's future booking and removes its local row", async () => {
     const response = await DELETE(request(), context());
 
     expect(response.status).toBe(200);
@@ -79,13 +98,8 @@ describe("DELETE /api/portal/appointments/[id]/cancel", () => {
       "https://api.cal.com/v2/bookings/booking-uid-123/cancel",
       expect.objectContaining({ method: "POST" }),
     );
-    expect(mocks.rpc).toHaveBeenCalledWith(
-      "process_calcom_webhook_delivery",
-      expect.objectContaining({
-        p_trigger_event: "BOOKING_CANCELLED",
-        p_booking_uid: "booking-uid-123",
-      }),
-    );
+    expect(mocks.adminFrom).toHaveBeenCalledWith("meetings");
+    expect(mocks.removedMeeting).toHaveBeenCalledOnce();
   });
 
   it("requires authentication before revealing appointment information", async () => {
@@ -106,7 +120,7 @@ describe("DELETE /api/portal/appointments/[id]/cancel", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ ok: false, code: "appointment_not_found" });
     expect(mocks.fetch).not.toHaveBeenCalled();
-    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.adminFrom).not.toHaveBeenCalled();
   });
 
   it("rejects cancellation after the meeting has started", async () => {

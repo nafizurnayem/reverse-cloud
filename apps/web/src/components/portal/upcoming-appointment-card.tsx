@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CalendarDays, CheckCircle2, Clock3, Loader2, Timer, XCircle } from "lucide-react";
 import type { PortalAppointment } from "@/lib/portal/types";
 import { getAppointmentTiming } from "@/lib/portal/appointment-time";
@@ -24,7 +24,6 @@ export function UpcomingAppointmentCard({
   locale: "en" | "bn";
 }) {
   const isBn = locale === "bn";
-  const router = useRouter();
   const [now, setNow] = useState<number | null>(null);
   const [confirmingCancellation, setConfirmingCancellation] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -81,7 +80,6 @@ export function UpcomingAppointmentCard({
       }
       setCancelled(true);
       setConfirmingCancellation(false);
-      router.refresh();
     } catch {
       setCancellationError(
         isBn
@@ -98,13 +96,19 @@ export function UpcomingAppointmentCard({
       <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6" role="status">
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-          <div>
+          <div className="flex-1">
             <h2 className="font-bold text-foreground">{isBn ? "অ্যাপয়েন্টমেন্ট বাতিল হয়েছে" : "Appointment cancelled"}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {isBn
                 ? "আপনার অ্যাপয়েন্টমেন্ট সফলভাবে বাতিল হয়েছে। আপনি এখন অন্য একটি সময় বুক করতে পারবেন।"
                 : "Your appointment was cancelled successfully. You can now book another available time."}
             </p>
+            <Link
+              href={`/${locale}/schedule`}
+              className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              {isBn ? "আরেকটি অ্যাপয়েন্টমেন্ট নির্ধারণ করুন" : "Schedule another appointment"}
+            </Link>
           </div>
         </div>
       </section>
