@@ -4,6 +4,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const CALCOM_SLOTS_API_VERSION = "2024-09-04";
 export const CALCOM_BOOKINGS_API_VERSION = "2024-08-13";
+export const CALCOM_CANCELLATION_API_VERSION = "2026-02-25";
 export const MAX_SCHEDULE_RANGE_MS = 31 * 24 * 60 * 60 * 1000;
 export const MAX_WEBHOOK_BYTES = 256 * 1024;
 
@@ -187,6 +188,51 @@ export async function createCalcomBooking(options: {
       status: optionalString(data.status, 50) ?? "accepted",
       meetingUrl: optionalString(data.meetingUrl ?? data.location, 2_000),
     };
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", abort);
+  }
+}
+
+export async function cancelCalcomBooking(options: {
+  apiKey: string;
+  bookingUid: string;
+  reason?: string;
+  signal?: AbortSignal;
+  fetcher?: typeof fetch;
+  timeoutMs?: number;
+}) {
+  const bookingUid = options.bookingUid.trim();
+  if (!bookingUid || bookingUid.length > 200) {
+    throw new CalcomBookingError("invalid_booking_uid");
+  }
+
+  const baseUrl = (process.env.CALCOM_API_BASE_URL ?? "https://api.cal.com/v2").replace(/\/$/, "");
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  options.signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, options.timeoutMs ?? 10_000);
+
+  try {
+    const response = await (options.fetcher ?? fetch)(
+      `${baseUrl}/bookings/${encodeURIComponent(bookingUid)}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${options.apiKey}`,
+          "cal-api-version": process.env.CALCOM_CANCELLATION_API_VERSION ?? CALCOM_CANCELLATION_API_VERSION,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          cancellationReason: options.reason?.trim() || "Client cancelled from portal",
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      throw new CalcomBookingError("calcom_cancellation_failed", response.status);
+    }
   } finally {
     clearTimeout(timer);
     options.signal?.removeEventListener("abort", abort);

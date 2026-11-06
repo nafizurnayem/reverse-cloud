@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc: mocks.
 
 import { GET } from "../src/app/api/schedule/slots/route";
 import { POST } from "../src/app/api/webhooks/calcom/route";
-import { normalizeSlots, parseScheduleQuery } from "../src/lib/calcom";
+import { cancelCalcomBooking, normalizeSlots, parseScheduleQuery } from "../src/lib/calcom";
 
 const range = "meetingType=discovery_call&start=2027-01-01T00%3A00%3A00Z&end=2027-01-03T00%3A00%3A00Z&timeZone=Asia%2FDhaka";
 
@@ -39,6 +39,23 @@ describe("Cal.com scheduling", () => {
       .toMatchObject({ ok: true, value: { meetingType: "discovery_call", timeZone: "Asia/Dhaka" } });
     expect(normalizeSlots({ data: { day: [{ start: "2027-01-01T09:00:00Z", end: "2027-01-01T09:30:00Z" }] } }, 30))
       .toEqual([{ start: "2027-01-01T09:00:00.000Z", end: "2027-01-01T09:30:00.000Z" }]);
+  });
+
+  it("cancels a Cal.com booking using the protected v2 endpoint", async () => {
+    mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ status: "success" }), { status: 200 }));
+
+    await cancelCalcomBooking({
+      apiKey: "cal_test_key",
+      bookingUid: "booking/uid 123",
+      reason: "Client cancelled from portal",
+    });
+
+    const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.cal.com/v2/bookings/booking%2Fuid%20123/cancel");
+    expect(init.method).toBe("POST");
+    expect(new Headers(init.headers).get("authorization")).toBe("Bearer cal_test_key");
+    expect(new Headers(init.headers).get("cal-api-version")).toBe("2026-02-25");
+    expect(JSON.parse(String(init.body))).toEqual({ cancellationReason: "Client cancelled from portal" });
   });
 
   it("proxies active meeting-type availability using the current v2 contract", async () => {
