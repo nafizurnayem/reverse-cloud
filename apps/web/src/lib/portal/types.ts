@@ -55,6 +55,17 @@ export interface PortalProject {
   payments: PortalPaymentItem[];
 }
 
+export interface PortalAppointment {
+  id: string;
+  meetingTypeNameEn: string;
+  meetingTypeNameBn?: string | null;
+  startsAt: string;
+  endsAt: string;
+  bookedAt: string;
+  timeZone: string;
+  status: "confirmed" | "rescheduled";
+}
+
 export interface PortalReview {
   id: string;
   projectId: string;
@@ -67,4 +78,3 @@ export interface PortalReview {
   status: "pending" | "approved" | "rejected";
   createdAt: string;
 }
-

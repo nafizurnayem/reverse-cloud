@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Briefcase, Calendar, Clock, Flag, Layers, Sparkles } from "lucide-react";
 import { routing } from "@/i18n/routing";
-import { fetchClientProjects } from "@/lib/portal/portal-server";
+import { fetchClientProjects, fetchUpcomingClientAppointment } from "@/lib/portal/portal-server";
 import { calculateClientProgress } from "@/lib/portal/portal-calc";
 import { toBanglaDigits } from "@/lib/money";
+import { UpcomingAppointmentCard } from "@/components/portal";
 
 export default async function PortalProjectsPage({
   params,
@@ -21,7 +22,10 @@ export default async function PortalProjectsPage({
   const query = await searchParams;
   const t = await getTranslations({ locale, namespace: "Portal" });
   const isBn = locale === "bn";
-  const projects = await fetchClientProjects();
+  const [projects, upcomingAppointment] = await Promise.all([
+    fetchClientProjects(),
+    fetchUpcomingClientAppointment(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -41,6 +45,10 @@ export default async function PortalProjectsPage({
         <p className="auth-message auth-success" role="status">
           {t("inviteAccepted")}
         </p>
+      ) : null}
+
+      {upcomingAppointment ? (
+        <UpcomingAppointmentCard appointment={upcomingAppointment} locale={isBn ? "bn" : "en"} />
       ) : null}
 
       <section aria-labelledby="portal-start-title" className="space-y-4">
