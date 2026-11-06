@@ -7,8 +7,6 @@ import { requireUser } from "@/lib/auth/guards";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ChatWidget } from "@/components/chat";
-import { signOut } from "@/app/[locale]/(auth)/actions";
-
 export default async function PortalLayout({
   children,
   params,
@@ -55,11 +53,6 @@ export default async function PortalLayout({
           <Link href={`/${locale}/portal/payments`} className="font-semibold text-foreground hover:text-primary">
             {isBn ? "পেমেন্ট" : "Payments"}
           </Link>
-          <form action={signOut.bind(null, locale)} className="ml-auto">
-            <button type="submit" className="font-semibold text-muted-foreground hover:text-foreground">
-              {isBn ? "সাইন আউট" : "Sign out"}
-            </button>
-          </form>
         </div>
       </nav>
       <main id="main-content" tabIndex={-1} className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full focus:outline-none">
