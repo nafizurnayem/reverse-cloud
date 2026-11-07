@@ -13,3 +13,12 @@ The server-only files `secrets/web.env`, `.deploy.env`, `state/`, `logs/`, and
 `repository/` are intentionally not stored in this repository. Operational
 commands and the Quick Tunnel lifecycle are documented in
 [`HOSTING_PREVIEW.md`](../../HOSTING_PREVIEW.md).
+
+After the activity logger is deployed, stream page visits, clicks, form
+actions, API results, and browser errors on the main PC with:
+
+```sh
+./ops/hosting/watch-activity.sh
+```
+
+Press `Ctrl+C` to stop watching. This does not stop the website.
