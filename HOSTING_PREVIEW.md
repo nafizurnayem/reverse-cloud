@@ -1,28 +1,53 @@
 # Ubuntu laptop hosting preview
 
-This deployment uses the local `hosting-preview-current` checkout with the
-auth and lightweight public-content retrieval fixes. The temporary website
-uses Ollama with keyword retrieval from its published service, portfolio, and
-blog catalogs; it does not use the separate AI service, vector database, or
-private knowledge documents. The site runs on the server laptop at
-`127.0.0.1:3000`; Ollama runs at `127.0.0.1:11434`. Only Cloudflare Tunnel is
-public. The router does not need port forwarding.
+The preview is managed as one Docker Compose project on the Ubuntu laptop.
+GitHub `Dev` is the only source of application code; do not copy or `rsync`
+source files into the server checkout.
+
+For a complete first-time setup, manual deployment, monitoring, and recovery
+runbook, see [`MANUAL_HOSTING_GUIDE.md`](MANUAL_HOSTING_GUIDE.md).
 
 Current public link (temporary):
-https://likely-eve-cleanup-admissions.trycloudflare.com/
+https://write-shannon-divine-reflected.trycloudflare.com/
 
-Cloudflare Quick Tunnel can change this address after a restart. It has no
-uptime guarantee and does not support Server-Sent Events, so preview chat
-returns one complete reply instead of streaming. The preview runs
-`llama3.2:1b`, allows five chat requests per IP per minute, and processes one
-generation at a time. Do not use this as production hosting.
+The site uses the local `llama3.2:1b` Ollama model and public-catalog keyword
+retrieval. It does not use the separate AI service, vector database, or private
+knowledge documents. This is a temporary preview, not production hosting.
 
-The tunnel is forced to HTTP/2 because this network intermittently drops QUIC.
-Build `ops/cloudflared/Dockerfile`, then run it with
-`tunnel --protocol http2 --metrics 127.0.0.1:2000 --no-autoupdate
---url http://127.0.0.1:3000`. The image health check uses Cloudflared's `/ready`
-endpoint; Docker health status is monitoring only and does not recreate the
-temporary tunnel URL.
+## Server layout
+
+Everything is under one root:
+
+```text
+/home/nafz/reverse-cloud-hosting/
+├── docker-compose.yml       # web, Ollama, and Cloudflare Tunnel
+├── deploy.sh                # GitHub Dev fetch/build/health-check/rollback
+├── .deploy.env              # generated image tag and public origin
+├── repository/              # clean Git checkout of GitHub Dev
+├── secrets/web.env          # private web environment, mode 600
+├── state/deployed-dev-sha   # exact live Dev commit
+└── logs/deploy.log          # automatic and manual deployment log
+```
+
+The removed `/home/nafz/reverse-cloud-preview` and
+`/home/nafz/reverse-cloud-auto` trees are obsolete and must not be recreated.
+The Ollama model is stored in the external Docker volume
+`hosting_ollama_models`.
+
+## How the containers connect
+
+- `reverse-cloud-web` uses host networking and listens only on
+  `127.0.0.1:3000`.
+- `reverse-cloud-ollama` publishes port 11434 only on `127.0.0.1` and retains
+  models in `hosting_ollama_models`.
+- `reverse-cloud-tunnel` uses host networking and proxies the temporary public
+  HTTPS URL to `http://127.0.0.1:3000` over HTTP/2.
+- The router requires no port forwarding. Cloudflare is the only public entry
+  point.
+
+The Compose file pins the Ollama and Cloudflared image digests. The web image
+is tagged with the full GitHub commit SHA, for example
+`reverse-cloud-preview:8c74084...`.
 
 ## Connect and check
 
@@ -35,87 +60,106 @@ ssh -i /home/nafiz/.ssh/satellite_c50_hosting nafz@192.168.6.34
 On the server:
 
 ```sh
-docker ps --filter name=reverse-cloud-web --filter name=hosting-ollama --filter name=reverse-cloud-tunnel
-curl -i http://127.0.0.1:3000/api/health
-docker exec hosting-ollama ollama list
-docker logs --tail 50 reverse-cloud-web
-docker logs --tail 50 reverse-cloud-tunnel
+cd /home/nafz/reverse-cloud-hosting
+docker compose --env-file .deploy.env ps
+cat state/deployed-dev-sha
+docker inspect --format='{{.Config.Image}}' reverse-cloud-web
+curl -fsS http://127.0.0.1:3000/api/health
+docker exec reverse-cloud-ollama ollama list
+docker logs --tail 60 reverse-cloud-tunnel
 ```
 
-Keep the laptop powered, awake, and connected to the router. If its LAN address
-changes, use `hostname -I` on the server to find the new address. A DHCP
-reservation on the router can keep the address stable.
+The state SHA, GitHub `Dev` SHA, checkout SHA, and live image tag should be
+identical. Keep the laptop powered, awake, and connected to the router.
 
-## Update the website
+## Automatic updates from GitHub Dev
 
-Edit and test this PC checkout first. The private environment file is
-`apps/web/.env.local`; it is gitignored and must never be committed. The PC's
-copy uses `NEXT_PUBLIC_SITE_URL=http://localhost:3000`; the server's copy uses
-the current HTTPS tunnel URL for Google sign-in. Do not overwrite the server's
-copy with the PC's copy unless you adjust that setting. Sync the source from
-the PC, excluding local build products and secrets:
+The server checks GitHub `Dev` once per minute. GitHub access uses the read-only
+deploy key through `ssh.github.com:443` because this network blocks SSH port 22.
+
+For every new SHA, `deploy.sh`:
+
+1. Fetches and checks out the exact `Dev` commit.
+2. Builds `reverse-cloud-preview:<full-sha>` with the environment mounted as a
+   BuildKit secret.
+3. Starts a candidate on `127.0.0.1:3001`.
+4. Leaves the live site unchanged if the candidate health check fails.
+5. Recreates only the web service and checks port 3000.
+6. Restores the previous Compose image if the live health check fails.
+7. Writes `state/deployed-dev-sha` only after success.
+
+Watch deployments:
 
 ```sh
-rsync -az --exclude .git --exclude node_modules --exclude .next --exclude '.env*' \
-  /home/nafiz/Documents/ChatGPT/Nafizur/reverse-cloud/ \
-  nafz@192.168.6.34:/home/nafz/reverse-cloud-preview/
+tail -f /home/nafz/reverse-cloud-hosting/logs/deploy.log
 ```
 
-The SSH command above uses a dedicated key; if `rsync` asks for a password,
-set `RSYNC_RSH='ssh -i /home/nafiz/.ssh/satellite_c50_hosting'` for that command.
-Transfer `.env.local` separately only if it changed, then set its permissions
-to `600` on the server. If only the server environment file changes, build with
-`--no-cache` because Docker does not invalidate a cached build step when its
-secret contents change.
-
-On the server, build using a Docker secret so `.env.local` is not copied into
-the image:
+Check the cron entry:
 
 ```sh
-cd /home/nafz/reverse-cloud-preview
-DOCKER_BUILDKIT=1 docker build \
-  --secret id=web_env,src=/home/nafz/reverse-cloud-preview/apps/web/.env.local \
-  -f Dockerfile.preview -t reverse-cloud-preview:local .
+crontab -l
 ```
 
-After a successful build, replace only the website container. Use the current
-Quick Tunnel URL in `TRUSTED_PUBLIC_ORIGINS`:
+It should contain:
+
+```cron
+* * * * * /home/nafz/reverse-cloud-hosting/deploy.sh >> /home/nafz/reverse-cloud-hosting/logs/deploy.log 2>&1
+```
+
+## Manual update
+
+First commit and merge or push the desired code to GitHub `Dev`. Then run the
+same safe deployment program used by cron:
 
 ```sh
-docker stop reverse-cloud-web
-docker rm reverse-cloud-web
-docker run -d --name reverse-cloud-web --restart unless-stopped --network host \
-  --mount type=bind,src=/home/nafz/reverse-cloud-preview/apps/web/.env.local,dst=/app/apps/web/.env.local,readonly \
-  -e LOCAL_OLLAMA_PREVIEW=true \
-  -e OLLAMA_URL=http://127.0.0.1:11434 \
-  -e OLLAMA_MODEL=llama3.2:1b \
-  -e TRUSTED_PUBLIC_ORIGINS=https://likely-eve-cleanup-admissions.trycloudflare.com \
-  reverse-cloud-preview:local
+/home/nafz/reverse-cloud-hosting/deploy.sh
 ```
 
-Check `/`, `/api/health`, and `/api/chat` after every update. The source changes
-in this checkout are not pushed to GitHub automatically.
-
-## Tunnel lifecycle
-
-To stop public access without stopping the local website:
+Use a forced, no-cache rebuild only after changing the server environment or
+tunnel URL without changing the Git commit:
 
 ```sh
-docker stop reverse-cloud-tunnel
+/home/nafz/reverse-cloud-hosting/deploy.sh --force
 ```
 
-To resume, run `docker start reverse-cloud-tunnel` and read
-`docker logs --tail 60 reverse-cloud-tunnel`. A new `trycloudflare.com` link
-may appear. If it does, set the server's `NEXT_PUBLIC_SITE_URL` to the new
-HTTPS origin, rebuild with `--no-cache`, and replace the website container with
-the new URL in `TRUSTED_PUBLIC_ORIGINS`. Update Supabase Authentication → URL
-Configuration: Site URL and the exact `/en/auth/callback` and
-`/bn/auth/callback` Redirect URLs. Otherwise Google login may return to the
-old address. You can always use `http://127.0.0.1:3000/en` on the server while
-the tunnel is stopped.
+Never manually build a `:local` image or replace `reverse-cloud-web` with
+`docker run`; that bypasses commit tracking and rollback.
 
-For a stable address later, get a domain and a named Cloudflare Tunnel. Set
-`NEXT_PUBLIC_SITE_URL` to that HTTPS origin before rebuilding; update your
-authentication provider's allowed redirect URLs; then test login, forms, and
-chat. Keep Ollama on localhost, use a persistent rate-limit store, add backups,
-and monitor the laptop before calling it production.
+## Private environment
+
+The only server environment file is:
+
+```text
+/home/nafz/reverse-cloud-hosting/secrets/web.env
+```
+
+It must remain mode `600`, must never be committed, and must not be replaced by
+the PC's localhost environment. After editing it, run `deploy.sh --force` so
+public Next.js variables are rebuilt into the image.
+
+## Quick Tunnel lifecycle
+
+The account-less Cloudflare Quick Tunnel has no uptime guarantee. It can briefly
+return HTTP 530 while reconnecting, and its `trycloudflare.com` address can
+change whenever the tunnel container is recreated or restarted.
+
+Stop or start public access without stopping the local web application:
+
+```sh
+cd /home/nafz/reverse-cloud-hosting
+docker compose --env-file .deploy.env stop tunnel
+docker compose --env-file .deploy.env start tunnel
+docker logs --tail 80 reverse-cloud-tunnel
+```
+
+If Cloudflare issues a new URL:
+
+1. Update `NEXT_PUBLIC_SITE_URL` and `TURNSTILE_EXPECTED_HOSTNAME` in
+   `secrets/web.env`.
+2. Run `deploy.sh --force`.
+3. Update Supabase Authentication URL Configuration: Site URL plus the exact
+   `/en/auth/callback` and `/bn/auth/callback` redirect URLs.
+4. Test the root page, `/api/health`, login, forms, scheduling, and chat.
+
+For a stable address, replace the Quick Tunnel with a named Cloudflare Tunnel
+and a domain.

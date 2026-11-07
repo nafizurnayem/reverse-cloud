@@ -1,0 +1,15 @@
+# Reverse Cloud Compose hosting
+
+This directory contains the server control plane for the Ubuntu laptop preview:
+
+- `docker-compose.yml` defines pinned Ollama and Cloudflared services plus the
+  commit-tagged web service.
+- `deploy.sh` polls GitHub `Dev` through SSH on port 443, tests a candidate on
+  port 3001, deploys on port 3000, and rolls back a failed live replacement.
+
+Installed server root: `/home/nafz/reverse-cloud-hosting`.
+
+The server-only files `secrets/web.env`, `.deploy.env`, `state/`, `logs/`, and
+`repository/` are intentionally not stored in this repository. Operational
+commands and the Quick Tunnel lifecycle are documented in
+[`HOSTING_PREVIEW.md`](../../HOSTING_PREVIEW.md).

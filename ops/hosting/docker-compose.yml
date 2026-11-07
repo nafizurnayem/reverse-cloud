@@ -1,0 +1,77 @@
+name: reverse-cloud-hosting
+
+services:
+  ollama:
+    image: ollama/ollama@sha256:b2f0122c476bc9fe7ce679d8bb4bd555351e25e2554eefb156f61cb0a89cf429
+    container_name: reverse-cloud-ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  web:
+    image: ${WEB_IMAGE:-reverse-cloud-preview:unconfigured}
+    container_name: reverse-cloud-web
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./secrets/web.env:/app/apps/web/.env.local:ro
+    environment:
+      LOCAL_OLLAMA_PREVIEW: "true"
+      OLLAMA_URL: http://127.0.0.1:11434
+      OLLAMA_MODEL: llama3.2:1b
+      TRUSTED_PUBLIC_ORIGINS: ${PUBLIC_ORIGIN:-https://invalid.example}
+    command:
+      - pnpm
+      - --filter
+      - "@reverse-cloud/web"
+      - exec
+      - next
+      - start
+      - -H
+      - 127.0.0.1
+      - -p
+      - "3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  tunnel:
+    image: cloudflare/cloudflared@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
+    container_name: reverse-cloud-tunnel
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - tunnel
+      - --protocol
+      - http2
+      - --metrics
+      - 127.0.0.1:2000
+      - --no-autoupdate
+      - --url
+      - http://127.0.0.1:3000
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:2000", "ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  ollama_models:
+    external: true
+    name: hosting_ollama_models

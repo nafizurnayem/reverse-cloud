@@ -47,7 +47,7 @@ jobs:
         run: pnpm test
 
       - name: Verify preview image runtime permissions
-        run: bash ops/auto-deploy/tests/dockerfile-runtime-permissions.sh
+        run: bash ops/hosting/tests/dockerfile-runtime-permissions.sh
 
       - name: Verify Next.js production build
         env:
