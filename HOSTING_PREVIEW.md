@@ -9,7 +9,7 @@ private knowledge documents. The site runs on the server laptop at
 public. The router does not need port forwarding.
 
 Current public link (temporary):
-https://likely-eve-cleanup-admissions.trycloudflare.com/
+https://table-engagement-independently-nations.trycloudflare.com/
 
 Cloudflare Quick Tunnel can change this address after a restart. It has no
 uptime guarantee and does not support Server-Sent Events, so preview chat
@@ -89,7 +89,7 @@ docker run -d --name reverse-cloud-web --restart unless-stopped --network host \
   -e LOCAL_OLLAMA_PREVIEW=true \
   -e OLLAMA_URL=http://127.0.0.1:11434 \
   -e OLLAMA_MODEL=llama3.2:1b \
-  -e TRUSTED_PUBLIC_ORIGINS=https://likely-eve-cleanup-admissions.trycloudflare.com \
+  -e TRUSTED_PUBLIC_ORIGINS=https://table-engagement-independently-nations.trycloudflare.com \
   reverse-cloud-preview:local
 ```
 
