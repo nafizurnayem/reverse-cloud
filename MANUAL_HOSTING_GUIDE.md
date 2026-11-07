@@ -379,6 +379,24 @@ ssh -i /home/nafiz/.ssh/satellite_c50_hosting nafz@192.168.6.34 \
   'docker logs --follow --tail 200 --timestamps reverse-cloud-web'
 ```
 
+Show only the live website activity stream (page visits, clicks, form actions,
+API results, and browser errors):
+
+```sh
+./ops/hosting/watch-activity.sh
+```
+
+The helper runs this equivalent SSH command:
+
+```sh
+ssh -i /home/nafiz/.ssh/satellite_c50_hosting nafz@192.168.6.34 \
+  "docker logs --follow --tail 200 --timestamps reverse-cloud-web 2>&1 | grep --line-buffered '\[activity\]'"
+```
+
+Each line has an anonymous browser-session ID so simultaneous visitors can be
+distinguished. Activity logging intentionally excludes passwords, field
+contents, emails, phone numbers, messages, Turnstile tokens, and API bodies.
+
 Deployment and GitHub update logs:
 
 ```sh
