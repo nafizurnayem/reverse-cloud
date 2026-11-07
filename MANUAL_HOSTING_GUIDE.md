@@ -1,6 +1,6 @@
 # Reverse Cloud manual hosting and operations guide
 
-This runbook explains how to host the Reverse Cloud preview manually on an
+This runbook explains how to host the Reverse Cloud website manually on an
 Ubuntu computer, deploy code from the GitHub `Dev` branch, publish it through a
 Cloudflare Tunnel, monitor it from another PC, and recover common failures.
 
@@ -14,10 +14,9 @@ Hosting root: /home/nafz/reverse-cloud-hosting
 
 Replace these example values if the server, username, or address changes.
 
-> This setup uses an account-less Cloudflare Quick Tunnel. Its
-> `trycloudflare.com` URL is temporary and may change after the tunnel is
-> recreated. Use a named Cloudflare Tunnel and your own domain when a permanent
-> URL and stronger uptime guarantees are required.
+The public origin is the named Cloudflare Tunnel at
+`https://reverse-cloud.dev`. Container and server restarts do not change this
+hostname.
 
 ## 1. Understand the hosting layout
 
@@ -43,7 +42,8 @@ The server filesystem should look like this:
 ├── .deploy.env
 ├── repository/
 ├── secrets/
-│   └── web.env
+│   ├── web.env
+│   └── cloudflare-tunnel-token
 ├── state/
 │   └── deployed-dev-sha
 └── logs/
@@ -187,12 +187,11 @@ nano /home/nafz/reverse-cloud-hosting/secrets/web.env
 Never commit this file or paste its secret values into logs, issues, or chat.
 Do not replace it with a development file that contains localhost URLs.
 
-For the first boot, before a Quick Tunnel URL exists, use this temporary exact
-HTTPS origin:
+Use the permanent exact HTTPS origin:
 
 ```dotenv
-NEXT_PUBLIC_SITE_URL=https://preview.invalid
-TURNSTILE_EXPECTED_HOSTNAME=preview.invalid
+NEXT_PUBLIC_SITE_URL=https://reverse-cloud.dev
+TURNSTILE_EXPECTED_HOSTNAME=reverse-cloud.dev
 ```
 
 Configure the remaining values needed by the enabled website features:
@@ -264,9 +263,36 @@ Test the local website before publishing it:
 curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-## 8. Start the Cloudflare Quick Tunnel
+## 8. Create and start the named Cloudflare Tunnel
 
-On the server:
+In the Cloudflare dashboard, go to **Networking → Tunnels**, create a
+Cloudflared tunnel named `reverse-cloud-production`, and choose Docker as the
+connector type. The Docker command shown by Cloudflare contains the tunnel
+token. Do not paste that token into chat, source code, or documentation.
+
+Store the token through an interactive SSH session so it is not echoed:
+
+```sh
+umask 077
+read -rsp 'Cloudflare tunnel token: ' CLOUDFLARE_TUNNEL_TOKEN
+printf '%s' "$CLOUDFLARE_TUNNEL_TOKEN" > /home/nafz/reverse-cloud-hosting/secrets/cloudflare-tunnel-token
+unset CLOUDFLARE_TUNNEL_TOKEN
+printf '\n'
+chmod 600 /home/nafz/reverse-cloud-hosting/secrets/cloudflare-tunnel-token
+```
+
+In the tunnel's **Published application routes**, add:
+
+| Setting | Value |
+| --- | --- |
+| Hostname | `reverse-cloud.dev` |
+| Service type | `HTTP` |
+| Service URL | `localhost:3000` |
+
+Cloudflare automatically creates the proxied DNS record pointing the hostname
+to the named tunnel. Do not create an A record pointing at the home network.
+
+Start the connector on the server:
 
 ```sh
 cd /home/nafz/reverse-cloud-hosting
@@ -274,49 +300,29 @@ docker compose --env-file .deploy.env up -d tunnel
 docker logs --tail 100 reverse-cloud-tunnel
 ```
 
-Find the generated public URL:
+The logs should show registered tunnel connections. The token file is mounted
+read-only and the container runs as the unprivileged hosting user.
 
-```sh
-docker logs reverse-cloud-tunnel 2>&1 | grep -Eo 'https://[-a-z0-9]+\.trycloudflare\.com' | tail -n 1
-```
+In the Cloudflare Turnstile dashboard, allow `reverse-cloud.dev`. Turnstile
+error `110200` means this hostname is not authorized for the selected site key.
 
-Suppose Cloudflare returns:
+Update Supabase Authentication URL Configuration:
 
-```text
-https://example-name.trycloudflare.com
-```
+- Site URL: `https://reverse-cloud.dev`
+- Redirect URL: `https://reverse-cloud.dev/en/auth/callback`
+- Redirect URL: `https://reverse-cloud.dev/bn/auth/callback`
 
-Update `secrets/web.env`:
-
-```dotenv
-NEXT_PUBLIC_SITE_URL=https://example-name.trycloudflare.com
-TURNSTILE_EXPECTED_HOSTNAME=example-name.trycloudflare.com
-```
-
-`TURNSTILE_EXPECTED_HOSTNAME` must be only the hostname. Do not include
-`https://`, a path, or a trailing slash.
-
-In the Cloudflare Turnstile dashboard, add
-`example-name.trycloudflare.com` to the widget's allowed hostnames. Turnstile
-error `110200` means the current hostname is not authorized for that site key.
-
-Also update Supabase Authentication URL Configuration:
-
-- Site URL: `https://example-name.trycloudflare.com`
-- Redirect URL: `https://example-name.trycloudflare.com/en/auth/callback`
-- Redirect URL: `https://example-name.trycloudflare.com/bn/auth/callback`
-
-Rebuild the website so public Next.js variables contain the real URL:
+Run a forced rebuild after setting the permanent origin:
 
 ```sh
 /home/nafz/reverse-cloud-hosting/deploy.sh --force
 ```
 
-Verify the public endpoints from the main PC:
+Verify from the main PC:
 
 ```sh
-curl -I https://example-name.trycloudflare.com/
-curl -fsS https://example-name.trycloudflare.com/api/health
+curl -I https://reverse-cloud.dev/
+curl -fsS https://reverse-cloud.dev/api/health
 ```
 
 Finally test login, Turnstile-protected forms, scheduling, email/Telegram
@@ -357,7 +363,7 @@ on the server:
 ```
 
 Use a forced, no-cache build only when the Git commit has not changed but a
-server environment value or public tunnel URL has changed:
+server environment value or public origin has changed:
 
 ```sh
 /home/nafz/reverse-cloud-hosting/deploy.sh --force
@@ -498,21 +504,10 @@ Avoid `docker compose down -v`. The `-v` flag can delete Docker volumes. The
 Ollama model volume is deliberately external, but destructive volume commands
 should still not be part of normal operation.
 
-## 14. Handle a changed Quick Tunnel URL
+## 14. Recover the named tunnel
 
-The Quick Tunnel address can change after the tunnel container is recreated.
-When it changes:
-
-1. Read the new address from `docker logs reverse-cloud-tunnel`.
-2. Update `NEXT_PUBLIC_SITE_URL` in `secrets/web.env`.
-3. Update `TURNSTILE_EXPECTED_HOSTNAME` with the hostname only.
-4. Add the hostname to the Cloudflare Turnstile widget.
-5. Update the Supabase Site URL and both locale callback URLs.
-6. Run `deploy.sh --force`.
-7. Test health, login, forms, scheduling, and chat.
-
-A temporary HTTP 530 usually means the Quick Tunnel is disconnected or
-reconnecting. Check:
+The public hostname remains `reverse-cloud.dev`. If Cloudflare returns a tunnel
+error, check:
 
 ```sh
 docker ps --filter name=reverse-cloud-tunnel
@@ -521,7 +516,17 @@ curl -fsS http://127.0.0.1:3000/api/health
 ```
 
 If the local health endpoint works but the public URL does not, the problem is
-normally the tunnel or its URL rather than the website container.
+normally the named connector, tunnel route, or DNS record. Restart only the
+tunnel first:
+
+```sh
+cd /home/nafz/reverse-cloud-hosting
+docker compose --env-file .deploy.env restart tunnel
+docker logs --tail 100 reverse-cloud-tunnel
+```
+
+If the token is rejected, rotate it in **Networking → Tunnels**, securely
+replace `secrets/cloudflare-tunnel-token`, and recreate only the tunnel service.
 
 ## 15. Troubleshooting
 
@@ -556,7 +561,7 @@ docker compose --env-file /home/nafz/reverse-cloud-hosting/.deploy.env \
 docker logs --tail 100 reverse-cloud-tunnel
 ```
 
-If Cloudflare issued a new URL, follow section 14.
+If local health works, follow the named-tunnel recovery steps in section 14.
 
 ### Cloudflare verification displays error `110200`
 
@@ -607,6 +612,8 @@ Use `--force` only if the same commit must be rebuilt.
 ## 16. Backups and security checklist
 
 - Keep `secrets/web.env` mode `600` and back it up to an encrypted location.
+- Keep `secrets/cloudflare-tunnel-token` mode `600`; rotate it immediately if
+  exposed.
 - Keep the GitHub deploy key read-only and dedicated to this repository.
 - Never commit `.deploy.env`, `secrets/`, server logs, or private keys.
 - Keep ports 3000 and 11434 bound to loopback, not `0.0.0.0`.

@@ -11,7 +11,7 @@ Installed server root: `/home/nafz/reverse-cloud-hosting`.
 
 The server-only files `secrets/web.env`, `.deploy.env`, `state/`, `logs/`, and
 `repository/` are intentionally not stored in this repository. Operational
-commands and the Quick Tunnel lifecycle are documented in
+commands and the named Cloudflare Tunnel lifecycle are documented in
 [`HOSTING_PREVIEW.md`](../../HOSTING_PREVIEW.md).
 
 After the activity logger is deployed, stream page visits, clicks, form
