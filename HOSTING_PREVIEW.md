@@ -8,7 +8,7 @@ For a complete first-time setup, manual deployment, monitoring, and recovery
 runbook, see [`MANUAL_HOSTING_GUIDE.md`](MANUAL_HOSTING_GUIDE.md).
 
 Current public link (temporary):
-https://write-shannon-divine-reflected.trycloudflare.com/
+https://profits-deer-establishing-giant.trycloudflare.com/
 
 The site uses the local `llama3.2:1b` Ollama model and public-catalog keyword
 retrieval. It does not use the separate AI service, vector database, or private
