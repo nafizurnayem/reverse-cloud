@@ -4,6 +4,9 @@ The preview is managed as one Docker Compose project on the Ubuntu laptop.
 GitHub `Dev` is the only source of application code; do not copy or `rsync`
 source files into the server checkout.
 
+For a complete first-time setup, manual deployment, monitoring, and recovery
+runbook, see [`MANUAL_HOSTING_GUIDE.md`](MANUAL_HOSTING_GUIDE.md).
+
 Current public link (temporary):
 https://write-shannon-divine-reflected.trycloudflare.com/
 
