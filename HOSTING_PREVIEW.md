@@ -7,12 +7,12 @@ source files into the server checkout.
 For a complete first-time setup, manual deployment, monitoring, and recovery
 runbook, see [`MANUAL_HOSTING_GUIDE.md`](MANUAL_HOSTING_GUIDE.md).
 
-Current public link (temporary):
-https://profits-deer-establishing-giant.trycloudflare.com/
+Permanent public link:
+https://reverse-cloud.dev/
 
 The site uses the local `llama3.2:1b` Ollama model and public-catalog keyword
 retrieval. It does not use the separate AI service, vector database, or private
-knowledge documents. This is a temporary preview, not production hosting.
+knowledge documents. The origin remains the self-hosted Ubuntu laptop.
 
 ## Server layout
 
@@ -25,6 +25,7 @@ Everything is under one root:
 ├── .deploy.env              # generated image tag and public origin
 ├── repository/              # clean Git checkout of GitHub Dev
 ├── secrets/web.env          # private web environment, mode 600
+├── secrets/cloudflare-tunnel-token # named-tunnel token, mode 600
 ├── state/deployed-dev-sha   # exact live Dev commit
 └── logs/deploy.log          # automatic and manual deployment log
 ```
@@ -40,8 +41,8 @@ The Ollama model is stored in the external Docker volume
   `127.0.0.1:3000`.
 - `reverse-cloud-ollama` publishes port 11434 only on `127.0.0.1` and retains
   models in `hosting_ollama_models`.
-- `reverse-cloud-tunnel` uses host networking and proxies the temporary public
-  HTTPS URL to `http://127.0.0.1:3000` over HTTP/2.
+- `reverse-cloud-tunnel` uses a named Cloudflare Tunnel and proxies
+  `https://reverse-cloud.dev` to `http://127.0.0.1:3000` over HTTP/2.
 - The router requires no port forwarding. Cloudflare is the only public entry
   point.
 
@@ -116,7 +117,7 @@ same safe deployment program used by cron:
 ```
 
 Use a forced, no-cache rebuild only after changing the server environment or
-tunnel URL without changing the Git commit:
+public origin without changing the Git commit:
 
 ```sh
 /home/nafz/reverse-cloud-hosting/deploy.sh --force
@@ -125,7 +126,7 @@ tunnel URL without changing the Git commit:
 Never manually build a `:local` image or replace `reverse-cloud-web` with
 `docker run`; that bypasses commit tracking and rollback.
 
-## Private environment
+## Private environment and tunnel credential
 
 The only server environment file is:
 
@@ -137,11 +138,19 @@ It must remain mode `600`, must never be committed, and must not be replaced by
 the PC's localhost environment. After editing it, run `deploy.sh --force` so
 public Next.js variables are rebuilt into the image.
 
-## Quick Tunnel lifecycle
+The named-tunnel credential is:
 
-The account-less Cloudflare Quick Tunnel has no uptime guarantee. It can briefly
-return HTTP 530 while reconnecting, and its `trycloudflare.com` address can
-change whenever the tunnel container is recreated or restarted.
+```text
+/home/nafz/reverse-cloud-hosting/secrets/cloudflare-tunnel-token
+```
+
+It must also remain mode `600`. Anyone with this token can connect a replica to
+the tunnel, so rotate it in Cloudflare immediately if it is exposed.
+
+## Named Cloudflare Tunnel lifecycle
+
+The named tunnel keeps the stable `reverse-cloud.dev` hostname across container
+and server restarts. Restarting it does not create a new public URL.
 
 Stop or start public access without stopping the local web application:
 
@@ -152,14 +161,6 @@ docker compose --env-file .deploy.env start tunnel
 docker logs --tail 80 reverse-cloud-tunnel
 ```
 
-If Cloudflare issues a new URL:
-
-1. Update `NEXT_PUBLIC_SITE_URL` and `TURNSTILE_EXPECTED_HOSTNAME` in
-   `secrets/web.env`.
-2. Run `deploy.sh --force`.
-3. Update Supabase Authentication URL Configuration: Site URL plus the exact
-   `/en/auth/callback` and `/bn/auth/callback` redirect URLs.
-4. Test the root page, `/api/health`, login, forms, scheduling, and chat.
-
-For a stable address, replace the Quick Tunnel with a named Cloudflare Tunnel
-and a domain.
+If Cloudflare reports the tunnel token as invalid, rotate the tunnel token in
+the dashboard, replace the server token file, and recreate only the tunnel
+service. Do not delete the tunnel or its DNS record during normal recovery.

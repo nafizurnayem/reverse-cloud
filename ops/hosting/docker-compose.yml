@@ -55,6 +55,14 @@ services:
     container_name: reverse-cloud-tunnel
     restart: unless-stopped
     network_mode: host
+    user: "1000:1000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - ./secrets/cloudflare-tunnel-token:/run/secrets/cloudflare-tunnel-token:ro
     command:
       - tunnel
       - --protocol
@@ -62,8 +70,9 @@ services:
       - --metrics
       - 127.0.0.1:2000
       - --no-autoupdate
-      - --url
-      - http://127.0.0.1:3000
+      - run
+      - --token-file
+      - /run/secrets/cloudflare-tunnel-token
     healthcheck:
       test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:2000", "ready"]
       interval: 30s

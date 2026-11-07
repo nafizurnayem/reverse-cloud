@@ -10,6 +10,7 @@ readonly STATE_DIR="${HOSTING_ROOT}/state"
 readonly COMPOSE_FILE="${HOSTING_ROOT}/docker-compose.yml"
 readonly DEPLOY_ENV="${HOSTING_ROOT}/.deploy.env"
 readonly WEB_ENV="${SECRETS_DIR}/web.env"
+readonly TUNNEL_TOKEN="${SECRETS_DIR}/cloudflare-tunnel-token"
 readonly STATE_FILE="${STATE_DIR}/deployed-dev-sha"
 readonly LOCK_FILE="${STATE_DIR}/deploy.lock"
 readonly DEPLOY_KEY="/home/nafz/.ssh/reverse_cloud_deploy"
@@ -70,7 +71,7 @@ if ! flock --nonblock 9; then
   exit 0
 fi
 
-for required_file in "$COMPOSE_FILE" "$WEB_ENV" "$DEPLOY_KEY"; do
+for required_file in "$COMPOSE_FILE" "$WEB_ENV" "$TUNNEL_TOKEN" "$DEPLOY_KEY"; do
   if [[ ! -r "$required_file" ]]; then
     log "ERROR: required file is missing or unreadable: ${required_file}"
     exit 1
