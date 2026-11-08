@@ -61,7 +61,7 @@ export default async function ProjectsPage({ params, searchParams }: {
   const canUpdate = access.permissions.includes("projects.update");
   const [projectsResult, clientsResult] = await Promise.all([
     supabase.from("projects").select("*").order("updated_at", { ascending: false }).limit(200),
-    canCreate
+    canCreate || canUpdate
       ? supabase.from("clients").select("id,full_name,company,archived_at").is("archived_at", null).order("full_name").limit(500)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -78,6 +78,7 @@ export default async function ProjectsPage({ params, searchParams }: {
   let members: Member[] = [];
   let staff: Staff[] = [];
   let updates: Update[] = [];
+  let selectedClientName = "";
   if (selected) {
     const [milestonesResult, membersResult, updatesResult, staffResult] = await Promise.all([
       supabase.from("milestones").select("*").eq("project_id", selected.id).order("sort_order"),
@@ -90,6 +91,18 @@ export default async function ProjectsPage({ params, searchParams }: {
     members = (membersResult.data ?? []) as Member[];
     updates = (updatesResult.data ?? []) as Update[];
     staff = (staffResult.data ?? []) as Staff[];
+
+    const matchedClient = clients.find((client) => client.id === selected.client_id);
+    if (matchedClient) {
+      selectedClientName = matchedClient.company ? `${matchedClient.company} — ${matchedClient.full_name}` : matchedClient.full_name;
+    } else {
+      const singleClient = await supabase.from("clients").select("id,full_name,company").eq("id", selected.client_id).maybeSingle();
+      if (singleClient.data) {
+        selectedClientName = singleClient.data.company ? `${singleClient.data.company} — ${singleClient.data.full_name}` : singleClient.data.full_name;
+      } else {
+        selectedClientName = clientNames.get(selected.client_id) ?? t("unknownClient");
+      }
+    }
   }
 
   const saved = typeof search.saved === "string" && savedKeys.has(search.saved) ? t(`saved.${search.saved}`) : null;
@@ -118,11 +131,17 @@ export default async function ProjectsPage({ params, searchParams }: {
           <form action={saveProject} className="content-form">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={selected?.id ?? ""} />
-            <SelectField label={t("fields.client")} name="client_id" defaultValue={selected?.client_id ?? ""}>
-              <option value="" disabled>{t("fields.selectClient")}</option>
-              {selected && !clients.some((client) => client.id === selected.client_id) ? <option value={selected.client_id}>{clientNames.get(selected.client_id) ?? t("unknownClient")}</option> : null}
-              {clients.map((client) => <option key={client.id} value={client.id}>{client.company ? `${client.company} — ${client.full_name}` : client.full_name}</option>)}
-            </SelectField>
+            {selected ? (
+              <>
+                <input type="hidden" name="client_id" value={selected.client_id} />
+                <Field label={t("fields.client")} name="client_name" defaultValue={selectedClientName} readOnly />
+              </>
+            ) : (
+              <SelectField label={t("fields.client")} name="client_id" defaultValue="">
+                <option value="" disabled>{t("fields.selectClient")}</option>
+                {clients.map((client) => <option key={client.id} value={client.id}>{client.company ? `${client.company} — ${client.full_name}` : client.full_name}</option>)}
+              </SelectField>
+            )}
             <Field label={t("fields.projectTitle")} name="title" defaultValue={selected?.title} maxLength={200} required />
             <TextareaField label={t("fields.description")} name="description" defaultValue={selected?.description} rows={4} />
             <SelectField label={t("fields.status")} name="status" defaultValue={selected?.status ?? "on_hold"}>
