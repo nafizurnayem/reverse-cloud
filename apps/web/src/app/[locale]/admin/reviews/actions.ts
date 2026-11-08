@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { requirePermission } from "@/lib/auth/guards";
 import type { Locale } from "@/lib/auth/routes";
+import { staffDashboardPath } from "@/lib/auth/permissions";
 import { checkbox, integer, optionalText, text } from "@/lib/admin/content-values";
 
 function formLocale(formData: FormData): Locale {
@@ -15,8 +16,8 @@ function formLocale(formData: FormData): Locale {
 
 export async function saveReview(formData: FormData) {
   const locale = formLocale(formData);
-  const path = `/${locale}/admin/reviews`;
-  const { supabase, user } = await requirePermission(locale, "reviews.moderate");
+  const { supabase, user, access } = await requirePermission(locale, "reviews.moderate");
+  const path = staffDashboardPath(access, "/reviews");
   const id = text(formData, "id");
   const reviewerName = text(formData, "reviewer_name");
   const body = text(formData, "body");
@@ -35,14 +36,14 @@ export async function saveReview(formData: FormData) {
     ? await supabase.from("reviews").update(payload).eq("id", id)
     : await supabase.from("reviews").insert(payload);
   if (result.error) redirect(`${path}?error=saveFailed`);
-  revalidatePath(path);
+  revalidatePath(`/${locale}/admin/reviews`);
   redirect(`${path}?saved=1`);
 }
 
 export async function moderateReview(formData: FormData) {
   const locale = formLocale(formData);
-  const path = `/${locale}/admin/reviews`;
-  const { supabase, user } = await requirePermission(locale, "reviews.moderate");
+  const { supabase, user, access } = await requirePermission(locale, "reviews.moderate");
+  const path = staffDashboardPath(access, "/reviews");
   const id = text(formData, "id");
   const targetStatus = text(formData, "status");
 
@@ -61,7 +62,6 @@ export async function moderateReview(formData: FormData) {
     .eq("id", id);
 
   if (result.error) redirect(`${path}?error=saveFailed`);
-  revalidatePath(path);
+  revalidatePath(`/${locale}/admin/reviews`);
   redirect(`${path}?saved=1`);
 }
-

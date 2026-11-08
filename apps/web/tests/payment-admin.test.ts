@@ -43,7 +43,7 @@ function builder(result = { data: { id: itemId }, error: null }) {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.rpc.mockResolvedValue({ data: paymentId, error: null });
-  mocks.requirePermission.mockResolvedValue({ user: { id: "00000000-0000-4000-8000-000000000204" }, supabase: { from: mocks.from, rpc: mocks.rpc } });
+  mocks.requirePermission.mockResolvedValue({ access: { roles: [{ key: "admin", name: "Admin" }] }, user: { id: "00000000-0000-4000-8000-000000000204" }, supabase: { from: mocks.from, rpc: mocks.rpc } });
 });
 
 describe("payment values", () => {
@@ -61,20 +61,20 @@ describe("payment values", () => {
 describe("payment actions", () => {
   it("creates an installment with the authenticated recorder", async () => {
     const query = builder(); mocks.from.mockReturnValue(query);
-    await expect(savePaymentItem(itemForm())).rejects.toThrow(`redirect:/en/admin/payments?item=${itemId}&saved=item`);
+    await expect(savePaymentItem(itemForm())).rejects.toThrow(`redirect:/admin/payments?item=${itemId}&saved=item`);
     expect(mocks.requirePermission).toHaveBeenCalledWith("en", "payments.manage");
     expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({ project_id: projectId, currency: "USD", created_by: expect.any(String) }));
   });
 
   it("records currency-safe payment details", async () => {
     const query = builder({ data: { id: paymentId }, error: null }); mocks.from.mockReturnValue(query);
-    await expect(savePayment(paymentForm())).rejects.toThrow(`redirect:/en/admin/payments?item=${itemId}&saved=payment`);
+    await expect(savePayment(paymentForm())).rejects.toThrow(`redirect:/admin/payments?item=${itemId}&saved=payment`);
     expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({ payment_item_id: itemId, currency: "USD", amount_paid: 500.25, recorded_by: expect.any(String) }));
   });
 
   it("corrects mutable payment fields without moving a record to another installment", async () => {
     const query = builder(); query.eq.mockResolvedValue({ data: null, error: null }); mocks.from.mockReturnValue(query);
-    await expect(savePayment(paymentForm({ id: paymentId }))).rejects.toThrow(`redirect:/en/admin/payments?item=${itemId}&saved=payment`);
+    await expect(savePayment(paymentForm({ id: paymentId }))).rejects.toThrow(`redirect:/admin/payments?item=${itemId}&saved=payment`);
     expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 500.25, reference: "TX-100" }));
     expect(query.update.mock.calls[0][0]).not.toHaveProperty("payment_item_id");
     expect(query.update.mock.calls[0][0]).not.toHaveProperty("currency");
@@ -82,7 +82,7 @@ describe("payment actions", () => {
 
   it("voids a payment through the restricted RPC with an audit reason", async () => {
     const data = form({ locale: "bn", payment_item_id: itemId, payment_id: paymentId, reason: "Transfer reversed" });
-    await expect(voidPayment(data)).rejects.toThrow(`redirect:/bn/admin/payments?item=${itemId}&saved=voided`);
+    await expect(voidPayment(data)).rejects.toThrow(`redirect:/admin/payments?item=${itemId}&saved=voided`);
     expect(mocks.requirePermission).toHaveBeenCalledWith("bn", "payments.manage");
     expect(mocks.rpc).toHaveBeenCalledWith("void_payment", {
       p_payment_id: paymentId,
@@ -92,7 +92,7 @@ describe("payment actions", () => {
 
   it("rejects a void without a valid reason before calling the database", async () => {
     const data = form({ locale: "en", payment_item_id: itemId, payment_id: paymentId, reason: "" });
-    await expect(voidPayment(data)).rejects.toThrow(`redirect:/en/admin/payments?item=${itemId}&error=invalidVoid`);
+    await expect(voidPayment(data)).rejects.toThrow(`redirect:/admin/payments?item=${itemId}&error=invalidVoid`);
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 });

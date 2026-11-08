@@ -7,6 +7,7 @@ import { routing } from "@/i18n/routing";
 import { staffRoleStatusPayload } from "@/lib/admin/staff-values";
 import { requirePermission } from "@/lib/auth/guards";
 import type { Locale } from "@/lib/auth/routes";
+import { staffDashboardPath, type StaffAccess } from "@/lib/auth/permissions";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -18,9 +19,9 @@ function localeFrom(formData: FormData): Locale {
   return hasLocale(routing.locales, value) ? value : routing.defaultLocale;
 }
 
-function staffPath(locale: Locale, params?: Record<string, string>) {
+function staffPath(access: StaffAccess, params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  return `/${locale}/admin/staff${query}`;
+  return `${staffDashboardPath(access, "/staff")}${query}`;
 }
 
 function validEmail(value: string) {
@@ -33,15 +34,15 @@ function validUuid(value: string) {
 
 export async function addStaffMember(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "staff.manage");
+  const { supabase, access } = await requirePermission(locale, "staff.manage");
   const email = text(formData, "email").toLowerCase();
   const roleId = text(formData, "role_id");
   if (!validEmail(email) || !validUuid(roleId)) {
-    redirect(staffPath(locale, { error: "invalidInput" }));
+    redirect(staffPath(access, { error: "invalidInput" }));
   }
 
   const lookup = await supabase.rpc("lookup_user_by_email", { p_email: email });
-  if (lookup.error) redirect(staffPath(locale, { error: "saveFailed" }));
+  if (lookup.error) redirect(staffPath(access, { error: "saveFailed" }));
   const row = Array.isArray(lookup.data) ? lookup.data[0] : lookup.data;
   const userId = row && typeof row.user_id === "string" ? row.user_id : "";
 
@@ -52,10 +53,10 @@ export async function addStaffMember(formData: FormData) {
       p_is_active: true,
     });
     if (assigned.error || assigned.data !== true) {
-      redirect(staffPath(locale, { error: "saveFailed" }));
+      redirect(staffPath(access, { error: "saveFailed" }));
     }
 
-    revalidatePath(staffPath(locale));
+    revalidatePath(`/${locale}/admin/staff`);
     revalidatePath(`/${locale}/admin`, "layout");
     return;
   }
@@ -65,35 +66,35 @@ export async function addStaffMember(formData: FormData) {
     p_role_id: roleId,
   });
   if (preauth.error) {
-    redirect(staffPath(locale, { error: "saveFailed" }));
+    redirect(staffPath(access, { error: "saveFailed" }));
   }
 
-  revalidatePath(staffPath(locale));
+  revalidatePath(`/${locale}/admin/staff`);
   revalidatePath(`/${locale}/admin`, "layout");
 }
 
 export async function revokeStaffInvite(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "staff.manage");
+  const { supabase, access } = await requirePermission(locale, "staff.manage");
   const inviteId = text(formData, "invite_id");
   if (!validUuid(inviteId)) {
-    redirect(staffPath(locale, { error: "invalidInput" }));
+    redirect(staffPath(access, { error: "invalidInput" }));
   }
 
   const result = await supabase.rpc("revoke_staff_invite", { p_invite_id: inviteId });
   if (result.error || result.data !== true) {
-    redirect(staffPath(locale, { error: "saveFailed" }));
+    redirect(staffPath(access, { error: "saveFailed" }));
   }
 
-  revalidatePath(staffPath(locale));
+  revalidatePath(`/${locale}/admin/staff`);
   revalidatePath(`/${locale}/admin`, "layout");
 }
 
 export async function setStaffRoleStatus(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "staff.manage");
+  const { supabase, access } = await requirePermission(locale, "staff.manage");
   const payload = staffRoleStatusPayload(formData);
-  if (!payload) redirect(staffPath(locale, { error: "invalidInput" }));
+  if (!payload) redirect(staffPath(access, { error: "invalidInput" }));
 
   const result = await supabase.rpc("set_staff_role_status", {
     p_user_id: payload.userId,
@@ -105,9 +106,9 @@ export async function setStaffRoleStatus(formData: FormData) {
     const code = result.error?.message?.includes("last_active_admin")
       ? "lastActiveAdmin"
       : "saveFailed";
-    redirect(staffPath(locale, { error: code }));
+    redirect(staffPath(access, { error: code }));
   }
 
-  revalidatePath(staffPath(locale));
+  revalidatePath(`/${locale}/admin/staff`);
   revalidatePath(`/${locale}/admin`, "layout");
 }

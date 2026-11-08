@@ -68,6 +68,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://reverse-cloud.example/some/path");
   mocks.requirePermission.mockResolvedValue({
+    access: { roles: [{ key: "admin", name: "Admin" }] },
     supabase: { from: mocks.from, rpc: mocks.rpc },
   });
 });
@@ -109,7 +110,7 @@ describe("Clients admin actions", () => {
     mocks.from.mockReturnValue(builder);
 
     await expect(saveClient(clientForm())).rejects.toThrow(
-      `redirect:/en/admin/clients?edit=${clientId}&saved=client`,
+      `redirect:/admin/clients?edit=${clientId}&saved=client`,
     );
 
     expect(mocks.requirePermission).toHaveBeenCalledWith("en", "clients.manage");
@@ -128,7 +129,7 @@ describe("Clients admin actions", () => {
     mocks.from.mockReturnValue(builder);
     const archive = clientForm({ id: clientId, archived: "true" });
     await expect(setClientArchived(archive)).rejects.toThrow(
-      `redirect:/en/admin/clients?edit=${clientId}&saved=archived`,
+      `redirect:/admin/clients?edit=${clientId}&saved=archived`,
     );
     expect(builder.update).toHaveBeenCalledWith({ archived_at: expect.any(String) });
 
@@ -136,7 +137,7 @@ describe("Clients admin actions", () => {
     mocks.from.mockReturnValue(builder);
     const restore = clientForm({ id: clientId, archived: "false" });
     await expect(setClientArchived(restore)).rejects.toThrow(
-      `redirect:/en/admin/clients?edit=${clientId}&saved=restored`,
+      `redirect:/admin/clients?edit=${clientId}&saved=restored`,
     );
     expect(builder.update).toHaveBeenCalledWith({ archived_at: null });
   });
@@ -209,7 +210,7 @@ describe("Clients admin actions", () => {
     formData.set("invite_id", inviteId);
 
     await expect(revokeClientInvite(formData)).rejects.toThrow(
-      `redirect:/en/admin/clients?edit=${clientId}&saved=inviteRevoked`,
+      `redirect:/admin/clients?edit=${clientId}&saved=inviteRevoked`,
     );
     expect(mocks.rpc).toHaveBeenCalledWith("revoke_client_invite", {
       p_invite_id: inviteId,

@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin/project-values";
 import { requirePermission } from "@/lib/auth/guards";
 import type { Locale } from "@/lib/auth/routes";
+import { staffDashboardPath, type StaffAccess } from "@/lib/auth/permissions";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -23,32 +24,32 @@ function localeFrom(formData: FormData): Locale {
   return hasLocale(routing.locales, value) ? value : routing.defaultLocale;
 }
 
-function projectsPath(locale: Locale, params?: Record<string, string>) {
+function projectsPath(access: StaffAccess, params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  return `/${locale}/admin/projects${query}`;
+  return `${staffDashboardPath(access, "/projects")}${query}`;
 }
 
-function actionError(locale: Locale, code: string, id?: string): never {
-  redirect(projectsPath(locale, { ...(id ? { edit: id } : {}), error: code }));
+function actionError(access: StaffAccess, code: string, id?: string): never {
+  redirect(projectsPath(access, { ...(id ? { edit: id } : {}), error: code }));
 }
 
 function revalidate(locale: Locale) {
-  revalidatePath(projectsPath(locale));
+  revalidatePath(`/${locale}/admin/projects`);
   revalidatePath(`/${locale}/portal`);
 }
 
 export async function saveProject(formData: FormData) {
   const locale = localeFrom(formData);
   const id = text(formData, "id");
-  const session = await requirePermission(locale, id ? ["projects.create", "projects.update"] : "projects.create");
+  const { supabase, user, access } = await requirePermission(locale, id ? ["projects.create", "projects.update"] : "projects.create");
   const payload = projectPayload(formData);
-  if ((id && !validProjectId(id)) || !payload) actionError(locale, "invalidInput", id);
+  if ((id && !validProjectId(id)) || !payload) actionError(access, "invalidInput", id);
 
   if (payload.status === "active") {
-    if (!id) actionError(locale, "activationNeedsMilestones");
-    const milestones = await session.supabase.from("milestones").select("weight").eq("project_id", id);
+    if (!id) actionError(access, "activationNeedsMilestones");
+    const milestones = await supabase.from("milestones").select("weight").eq("project_id", id);
     const total = (milestones.data ?? []).reduce((sum, row) => sum + Number(row.weight), 0);
-    if (milestones.error || Math.abs(total - 100) > 0.001) actionError(locale, "activationNeedsMilestones", id);
+    if (milestones.error || Math.abs(total - 100) > 0.001) actionError(access, "activationNeedsMilestones", id);
   }
 
   let result;
@@ -62,69 +63,69 @@ export async function saveProject(formData: FormData) {
       due_on: payload.due_on,
       completed_at: payload.completed_at,
     };
-    result = await session.supabase.from("projects").update(updates).eq("id", id).select("id").single();
+    result = await supabase.from("projects").update(updates).eq("id", id).select("id").single();
   } else {
-    result = await session.supabase.from("projects")
-      .insert({ ...payload, status: "on_hold", completed_at: null, created_by: session.user.id })
+    result = await supabase.from("projects")
+      .insert({ ...payload, status: "on_hold", completed_at: null, created_by: user.id })
       .select("id")
       .single();
   }
-  if (result.error || !result.data?.id) actionError(locale, "saveFailed", id);
+  if (result.error || !result.data?.id) actionError(access, "saveFailed", id);
 
   const projectId = result.data.id as string;
   revalidate(locale);
-  redirect(projectsPath(locale, { edit: projectId, saved: "project" }));
+  redirect(projectsPath(access, { edit: projectId, saved: "project" }));
 }
 
 export async function replaceProjectMilestones(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "projects.update");
+  const { supabase, access } = await requirePermission(locale, "projects.update");
   const projectId = text(formData, "project_id");
   const milestones = milestonePlanPayload(text(formData, "milestones"));
-  if (!validProjectId(projectId) || !milestones) actionError(locale, "invalidMilestones", projectId);
+  if (!validProjectId(projectId) || !milestones) actionError(access, "invalidMilestones", projectId);
 
   const result = await supabase.rpc("replace_project_milestones", { p_project_id: projectId, p_milestones: milestones });
-  if (result.error) actionError(locale, "milestoneSaveFailed", projectId);
+  if (result.error) actionError(access, "milestoneSaveFailed", projectId);
   revalidate(locale);
-  redirect(projectsPath(locale, { edit: projectId, saved: "milestones" }));
+  redirect(projectsPath(access, { edit: projectId, saved: "milestones" }));
 }
 
 export async function saveProjectMember(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "projects.create");
+  const { supabase, access } = await requirePermission(locale, "projects.create");
   const projectId = text(formData, "project_id");
   const userId = text(formData, "user_id");
   const role = text(formData, "role");
-  if (!validProjectId(projectId) || !validProjectId(userId) || !validProjectMemberRole(role)) actionError(locale, "invalidInput", projectId);
+  if (!validProjectId(projectId) || !validProjectId(userId) || !validProjectMemberRole(role)) actionError(access, "invalidInput", projectId);
 
   const result = await supabase.from("project_members").upsert(
     { project_id: projectId, user_id: userId, role },
     { onConflict: "project_id,user_id" },
   );
-  if (result.error) actionError(locale, "memberSaveFailed", projectId);
+  if (result.error) actionError(access, "memberSaveFailed", projectId);
   revalidate(locale);
-  redirect(projectsPath(locale, { edit: projectId, saved: "member" }));
+  redirect(projectsPath(access, { edit: projectId, saved: "member" }));
 }
 
 export async function removeProjectMember(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "projects.create");
+  const { supabase, access } = await requirePermission(locale, "projects.create");
   const projectId = text(formData, "project_id");
   const userId = text(formData, "user_id");
-  if (!validProjectId(projectId) || !validProjectId(userId)) actionError(locale, "invalidInput", projectId);
+  if (!validProjectId(projectId) || !validProjectId(userId)) actionError(access, "invalidInput", projectId);
 
   const result = await supabase.from("project_members").delete().eq("project_id", projectId).eq("user_id", userId);
-  if (result.error) actionError(locale, "memberSaveFailed", projectId);
+  if (result.error) actionError(access, "memberSaveFailed", projectId);
   revalidate(locale);
-  redirect(projectsPath(locale, { edit: projectId, saved: "memberRemoved" }));
+  redirect(projectsPath(access, { edit: projectId, saved: "memberRemoved" }));
 }
 
 export async function addProjectUpdate(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase, user } = await requirePermission(locale, "projects.update");
+  const { supabase, user, access } = await requirePermission(locale, "projects.update");
   const projectId = text(formData, "project_id");
   const body = text(formData, "body");
-  if (!validProjectId(projectId) || !body || body.length > 10000) actionError(locale, "invalidUpdate", projectId);
+  if (!validProjectId(projectId) || !body || body.length > 10000) actionError(access, "invalidUpdate", projectId);
 
   const result = await supabase.from("project_updates").insert({
     project_id: projectId,
@@ -132,20 +133,20 @@ export async function addProjectUpdate(formData: FormData) {
     body,
     is_client_visible: formData.get("is_client_visible") === "on",
   });
-  if (result.error) actionError(locale, "updateSaveFailed", projectId);
+  if (result.error) actionError(access, "updateSaveFailed", projectId);
   revalidate(locale);
-  redirect(projectsPath(locale, { edit: projectId, saved: "update" }));
+  redirect(projectsPath(access, { edit: projectId, saved: "update" }));
 }
 
 export async function deleteProjectUpdate(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "projects.update");
+  const { supabase, access } = await requirePermission(locale, "projects.update");
   const projectId = text(formData, "project_id");
   const updateId = text(formData, "update_id");
-  if (!validProjectId(projectId) || !validProjectId(updateId)) actionError(locale, "invalidInput", projectId);
+  if (!validProjectId(projectId) || !validProjectId(updateId)) actionError(access, "invalidInput", projectId);
 
   const result = await supabase.from("project_updates").delete().eq("project_id", projectId).eq("id", updateId);
-  if (result.error) actionError(locale, "updateSaveFailed", projectId);
+  if (result.error) actionError(access, "updateSaveFailed", projectId);
   revalidate(locale);
-  redirect(projectsPath(locale, { edit: projectId, saved: "updateRemoved" }));
+  redirect(projectsPath(access, { edit: projectId, saved: "updateRemoved" }));
 }

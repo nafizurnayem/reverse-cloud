@@ -43,7 +43,7 @@ beforeEach(() => {
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.in.mockReturnValue(query);
-  mocks.requireAdmin.mockResolvedValue({ supabase: { from: vi.fn(() => query) } });
+  mocks.requireAdmin.mockResolvedValue({ access: { roles: [{ key: "admin", name: "Admin" }] }, supabase: { from: vi.fn(() => query) } });
   mocks.meeting.mockResolvedValue({ data: {
     id: meetingId,
     client_id: "client-1",
@@ -59,7 +59,7 @@ describe("admin meeting cancellation", () => {
   it("requires an administrator, cancels Cal.com, and removes the local meeting", async () => {
     const data = form({ locale: "en", meeting_id: meetingId, reason: "Client requested cancellation", confirm: "yes" });
 
-    await expect(cancelAdminAppointment(data)).rejects.toThrow("redirect:/en/admin/meetings?saved=cancelled");
+    await expect(cancelAdminAppointment(data)).rejects.toThrow("redirect:/admin/meetings?saved=cancelled");
     expect(mocks.requireAdmin).toHaveBeenCalledWith("en");
     expect(mocks.cancelCalcomBooking).toHaveBeenCalledWith(expect.objectContaining({
       apiKey: "cal_test_key",
@@ -76,7 +76,7 @@ describe("admin meeting cancellation", () => {
     const data = form({ locale: "bn", meeting_id: meetingId, reason: "Client asked to cancel", confirm: "yes" });
 
     await expect(cancelAdminAppointment(data)).rejects.toThrow(
-      `redirect:/bn/admin/meetings?meeting=${meetingId}&error=calcomFailed`,
+      `redirect:/admin/meetings?meeting=${meetingId}&error=calcomFailed`,
     );
     expect(mocks.adminFrom).not.toHaveBeenCalled();
   });
@@ -85,7 +85,7 @@ describe("admin meeting cancellation", () => {
     const data = form({ locale: "en", meeting_id: meetingId, reason: "Client asked to cancel" });
 
     await expect(cancelAdminAppointment(data)).rejects.toThrow(
-      `redirect:/en/admin/meetings?meeting=${meetingId}&error=invalidInput`,
+      `redirect:/admin/meetings?meeting=${meetingId}&error=invalidInput`,
     );
     expect(mocks.meeting).not.toHaveBeenCalled();
     expect(mocks.cancelCalcomBooking).not.toHaveBeenCalled();

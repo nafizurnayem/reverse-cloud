@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { requirePermission } from "@/lib/auth/guards";
 import type { Locale } from "@/lib/auth/routes";
+import { staffDashboardPath, type StaffAccess } from "@/lib/auth/permissions";
 import {
   checkbox,
   contentErrorKey,
@@ -27,17 +28,17 @@ function localeFrom(formData: FormData): Locale {
   return hasLocale(routing.locales, value) ? value : routing.defaultLocale;
 }
 
-function resourcePath(locale: Locale, resource: Resource) {
-  return `/${locale}/admin/content/${resource}`;
+function resourcePath(access: StaffAccess, resource: Resource) {
+  return staffDashboardPath(access, `/content/${resource}`);
 }
 
-function actionError(locale: Locale, resource: Resource, error: ContentErrorKey): never {
-  redirect(`${resourcePath(locale, resource)}?error=${error}`);
+function actionError(access: StaffAccess, resource: Resource, error: ContentErrorKey): never {
+  redirect(`${resourcePath(access, resource)}?error=${error}`);
 }
 
-function actionSuccess(locale: Locale, resource: Resource): never {
-  revalidatePath(resourcePath(locale, resource));
-  redirect(`${resourcePath(locale, resource)}?saved=1`);
+function actionSuccess(locale: Locale, access: StaffAccess, resource: Resource): never {
+  revalidatePath(`/${locale}/admin/content/${resource}`);
+  redirect(`${resourcePath(access, resource)}?saved=1`);
 }
 
 function validId(value: string) {
@@ -46,12 +47,12 @@ function validId(value: string) {
 
 export async function saveService(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (id && !validId(id)) actionError(locale, "services", "invalidInput");
+  if (id && !validId(id)) actionError(access, "services", "invalidInput");
   const nameEn = text(formData, "name_en");
   const slug = normalizeSlug(text(formData, "slug") || nameEn);
-  if (!nameEn || !slug) actionError(locale, "services", "invalidInput");
+  if (!nameEn || !slug) actionError(access, "services", "invalidInput");
   const payload = {
     slug, name_en: nameEn,
     name_bn: optionalText(formData, "name_bn"),
@@ -66,32 +67,32 @@ export async function saveService(formData: FormData) {
   const result = id && validId(id)
     ? await supabase.from("services").update(payload).eq("id", id)
     : await supabase.from("services").insert(payload);
-  if (result.error) actionError(locale, "services", contentErrorKey(result.error));
-  actionSuccess(locale, "services");
+  if (result.error) actionError(access, "services", contentErrorKey(result.error));
+  actionSuccess(locale, access, "services");
 }
 
 export async function setServiceArchived(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (!validId(id)) actionError(locale, "services", "invalidInput");
+  if (!validId(id)) actionError(access, "services", "invalidInput");
   const archived = checkbox(formData, "archived");
   const result = await supabase.from("services").update({
     archived_at: archived ? new Date().toISOString() : null,
     ...(archived ? { is_published: false } : {}),
   }).eq("id", id);
-  if (result.error) actionError(locale, "services", contentErrorKey(result.error));
-  actionSuccess(locale, "services");
+  if (result.error) actionError(access, "services", contentErrorKey(result.error));
+  actionSuccess(locale, access, "services");
 }
 
 export async function saveFaq(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (id && !validId(id)) actionError(locale, "faqs", "invalidInput");
+  if (id && !validId(id)) actionError(access, "faqs", "invalidInput");
   const questionEn = text(formData, "question_en");
   const answerEn = text(formData, "answer_en");
-  if (!questionEn || !answerEn) actionError(locale, "faqs", "invalidInput");
+  if (!questionEn || !answerEn) actionError(access, "faqs", "invalidInput");
   const serviceId = text(formData, "service_id");
   const payload = {
     service_id: validId(serviceId) ? serviceId : null,
@@ -102,28 +103,28 @@ export async function saveFaq(formData: FormData) {
   const result = id && validId(id)
     ? await supabase.from("faqs").update(payload).eq("id", id)
     : await supabase.from("faqs").insert(payload);
-  if (result.error) actionError(locale, "faqs", contentErrorKey(result.error));
-  actionSuccess(locale, "faqs");
+  if (result.error) actionError(access, "faqs", contentErrorKey(result.error));
+  actionSuccess(locale, access, "faqs");
 }
 
 export async function deleteFaq(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (!validId(id)) actionError(locale, "faqs", "invalidInput");
+  if (!validId(id)) actionError(access, "faqs", "invalidInput");
   const result = await supabase.from("faqs").delete().eq("id", id);
-  if (result.error) actionError(locale, "faqs", contentErrorKey(result.error));
-  actionSuccess(locale, "faqs");
+  if (result.error) actionError(access, "faqs", contentErrorKey(result.error));
+  actionSuccess(locale, access, "faqs");
 }
 
 export async function savePortfolio(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (id && !validId(id)) actionError(locale, "portfolio", "invalidInput");
+  if (id && !validId(id)) actionError(access, "portfolio", "invalidInput");
   const titleEn = text(formData, "title_en");
   const slug = normalizeSlug(text(formData, "slug") || titleEn);
-  if (!titleEn || !slug) actionError(locale, "portfolio", "invalidInput");
+  if (!titleEn || !slug) actionError(access, "portfolio", "invalidInput");
   const published = checkbox(formData, "is_published");
   const payload = {
     slug, title_en: titleEn, title_bn: optionalText(formData, "title_bn"),
@@ -142,18 +143,18 @@ export async function savePortfolio(formData: FormData) {
   const result = id
     ? await supabase.from("portfolio_items").update(payload).eq("id", id).select("id").single()
     : await supabase.from("portfolio_items").insert(payload).select("id").single();
-  if (result.error) actionError(locale, "portfolio", contentErrorKey(result.error));
+  if (result.error) actionError(access, "portfolio", contentErrorKey(result.error));
   const portfolioId = result.data.id;
   const serviceIds = stringValues(formData, "service_ids").filter(validId);
   const removed = await supabase.from("portfolio_services").delete().eq("portfolio_item_id", portfolioId);
-  if (removed.error) actionError(locale, "portfolio", contentErrorKey(removed.error));
+  if (removed.error) actionError(access, "portfolio", contentErrorKey(removed.error));
   if (serviceIds.length) {
     const linked = await supabase.from("portfolio_services").insert(
       serviceIds.map((serviceId) => ({ portfolio_item_id: portfolioId, service_id: serviceId })),
     );
-    if (linked.error) actionError(locale, "portfolio", contentErrorKey(linked.error));
+    if (linked.error) actionError(access, "portfolio", contentErrorKey(linked.error));
   }
-  actionSuccess(locale, "portfolio");
+  actionSuccess(locale, access, "portfolio");
 }
 
 const mediaTypes = new Map([
@@ -162,15 +163,15 @@ const mediaTypes = new Map([
 
 export async function uploadPortfolioMedia(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const portfolioId = text(formData, "portfolio_item_id");
   const file = formData.get("file");
   if (!validId(portfolioId) || !(file instanceof File) || !file.size || file.size > 5_242_880 || !mediaTypes.has(file.type)) {
-    actionError(locale, "portfolio", "invalidFile");
+    actionError(access, "portfolio", "invalidFile");
   }
   const path = `portfolio/${portfolioId}/${crypto.randomUUID()}.${mediaTypes.get(file.type)}`;
   const uploaded = await supabase.storage.from("public-media").upload(path, file, { contentType: file.type, upsert: false });
-  if (uploaded.error) actionError(locale, "portfolio", "saveFailed");
+  if (uploaded.error) actionError(access, "portfolio", "saveFailed");
   const inserted = await supabase.from("portfolio_media").insert({
     portfolio_item_id: portfolioId,
     storage_path: path,
@@ -180,53 +181,53 @@ export async function uploadPortfolioMedia(formData: FormData) {
   }).select("id").single();
   if (inserted.error) {
     await supabase.storage.from("public-media").remove([path]);
-    actionError(locale, "portfolio", contentErrorKey(inserted.error));
+    actionError(access, "portfolio", contentErrorKey(inserted.error));
   }
   if (checkbox(formData, "use_as_cover")) {
     const covered = await supabase.from("portfolio_items").update({ cover_path: path }).eq("id", portfolioId);
-    if (covered.error) actionError(locale, "portfolio", contentErrorKey(covered.error));
+    if (covered.error) actionError(access, "portfolio", contentErrorKey(covered.error));
   }
-  revalidatePath(resourcePath(locale, "portfolio"));
-  redirect(`${resourcePath(locale, "portfolio")}?edit=${portfolioId}&saved=1`);
+  revalidatePath(`/${locale}/admin/content/portfolio`);
+  redirect(`${resourcePath(access, "portfolio")}?edit=${portfolioId}&saved=1`);
 }
 
 export async function deletePortfolioMedia(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const portfolioId = text(formData, "portfolio_item_id");
   const mediaId = text(formData, "media_id");
-  if (!validId(portfolioId) || !validId(mediaId)) actionError(locale, "portfolio", "invalidInput");
+  if (!validId(portfolioId) || !validId(mediaId)) actionError(access, "portfolio", "invalidInput");
   const removed = await supabase.from("portfolio_media").delete().eq("id", mediaId).eq("portfolio_item_id", portfolioId).select("storage_path").single();
-  if (removed.error) actionError(locale, "portfolio", contentErrorKey(removed.error));
+  if (removed.error) actionError(access, "portfolio", contentErrorKey(removed.error));
   await supabase.from("portfolio_items").update({ cover_path: null })
     .eq("id", portfolioId)
     .eq("cover_path", removed.data.storage_path);
   await supabase.storage.from("public-media").remove([removed.data.storage_path]);
-  revalidatePath(resourcePath(locale, "portfolio"));
-  redirect(`${resourcePath(locale, "portfolio")}?edit=${portfolioId}&saved=1`);
+  revalidatePath(`/${locale}/admin/content/portfolio`);
+  redirect(`${resourcePath(access, "portfolio")}?edit=${portfolioId}&saved=1`);
 }
 
 export async function deletePortfolio(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (!validId(id)) actionError(locale, "portfolio", "invalidInput");
+  if (!validId(id)) actionError(access, "portfolio", "invalidInput");
   const media = await supabase.from("portfolio_media").select("storage_path").eq("portfolio_item_id", id);
   const result = await supabase.from("portfolio_items").delete().eq("id", id);
-  if (result.error) actionError(locale, "portfolio", contentErrorKey(result.error));
+  if (result.error) actionError(access, "portfolio", contentErrorKey(result.error));
   const paths = (media.data ?? []).map((item) => item.storage_path).filter(Boolean);
   if (paths.length) await supabase.storage.from("public-media").remove(paths);
-  actionSuccess(locale, "portfolio");
+  actionSuccess(locale, access, "portfolio");
 }
 
 export async function saveBlogPost(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase, user } = await requirePermission(locale, "content.manage");
+  const { supabase, user, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (id && !validId(id)) actionError(locale, "blog", "invalidInput");
+  if (id && !validId(id)) actionError(access, "blog", "invalidInput");
   const titleEn = text(formData, "title_en");
   const slug = normalizeSlug(text(formData, "slug") || titleEn);
-  if (!slug) actionError(locale, "blog", "invalidInput");
+  if (!slug) actionError(access, "blog", "invalidInput");
   const status = text(formData, "status") || "draft";
   const payload = {
     slug, title_en: optionalText(formData, "title_en"), title_bn: optionalText(formData, "title_bn"),
@@ -239,46 +240,46 @@ export async function saveBlogPost(formData: FormData) {
   const result = id && validId(id)
     ? await supabase.from("blog_posts").update(payload).eq("id", id)
     : await supabase.from("blog_posts").insert({ ...payload, author_id: user.id });
-  if (result.error) actionError(locale, "blog", contentErrorKey(result.error));
-  actionSuccess(locale, "blog");
+  if (result.error) actionError(access, "blog", contentErrorKey(result.error));
+  actionSuccess(locale, access, "blog");
 }
 
 export async function deleteBlogPost(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const id = text(formData, "id");
-  if (!validId(id)) actionError(locale, "blog", "invalidInput");
+  if (!validId(id)) actionError(access, "blog", "invalidInput");
   const current = await supabase.from("blog_posts").select("cover_path").eq("id", id).maybeSingle();
   const result = await supabase.from("blog_posts").delete().eq("id", id);
-  if (result.error) actionError(locale, "blog", contentErrorKey(result.error));
+  if (result.error) actionError(access, "blog", contentErrorKey(result.error));
   const coverPath = current.data?.cover_path;
   if (typeof coverPath === "string" && coverPath && !coverPath.includes("://")) {
     await supabase.storage.from("public-media").remove([coverPath]);
   }
-  actionSuccess(locale, "blog");
+  actionSuccess(locale, access, "blog");
 }
 
 export async function saveSetting(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase, user } = await requirePermission(locale, "content.manage");
+  const { supabase, user, access } = await requirePermission(locale, "content.manage");
   const key = text(formData, "key");
-  if (!/^[a-z0-9_]+$/.test(key)) actionError(locale, "settings", "invalidInput");
+  if (!/^[a-z0-9_]+$/.test(key)) actionError(access, "settings", "invalidInput");
   let value: unknown;
   try { value = parseJson(text(formData, "value")); }
-  catch { actionError(locale, "settings", "invalidJson"); }
+  catch { actionError(access, "settings", "invalidJson"); }
   const result = await supabase.from("site_settings").upsert({
     key, value: value!, is_public: checkbox(formData, "is_public"), updated_by: user.id,
   });
-  if (result.error) actionError(locale, "settings", contentErrorKey(result.error));
-  actionSuccess(locale, "settings");
+  if (result.error) actionError(access, "settings", contentErrorKey(result.error));
+  actionSuccess(locale, access, "settings");
 }
 
 export async function deleteSetting(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "content.manage");
+  const { supabase, access } = await requirePermission(locale, "content.manage");
   const key = text(formData, "key");
-  if (!key) actionError(locale, "settings", "invalidInput");
+  if (!key) actionError(access, "settings", "invalidInput");
   const result = await supabase.from("site_settings").delete().eq("key", key);
-  if (result.error) actionError(locale, "settings", contentErrorKey(result.error));
-  actionSuccess(locale, "settings");
+  if (result.error) actionError(access, "settings", contentErrorKey(result.error));
+  actionSuccess(locale, access, "settings");
 }

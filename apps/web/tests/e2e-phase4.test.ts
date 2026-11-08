@@ -246,6 +246,7 @@ describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
   describe("5. Admin Moderation & Manual Add (Task 4.4)", () => {
     it("moderates review status with moderator attribution", async () => {
       mocks.requirePermission.mockResolvedValue({
+        access: { roles: [{ key: "admin", name: "Admin" }] },
         user: { id: "moderator-uuid-99" },
         supabase: { from: mocks.from },
       });
@@ -261,7 +262,7 @@ describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
       formData.set("id", "review-pending-1");
       formData.set("status", "approved");
 
-      await expect(moderateReview(formData)).rejects.toThrow("redirect:/en/admin/reviews?saved=1");
+      await expect(moderateReview(formData)).rejects.toThrow("redirect:/admin/reviews?saved=1");
       expect(updateChain.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "approved",
@@ -272,6 +273,7 @@ describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
 
     it("saves manual reviews with bounded rating and redirect", async () => {
       mocks.requirePermission.mockResolvedValue({
+        access: { roles: [{ key: "admin", name: "Admin" }] },
         user: { id: "moderator-uuid-99" },
         supabase: { from: mocks.from },
       });
@@ -288,7 +290,7 @@ describe("Phase 4 End-to-End Suite (Task 4.9)", () => {
       formData.set("body", "Exceptional security posture.");
       formData.set("status", "approved");
 
-      await expect(saveReview(formData)).rejects.toThrow("redirect:/en/admin/reviews?saved=1");
+      await expect(saveReview(formData)).rejects.toThrow("redirect:/admin/reviews?saved=1");
       expect(insertChain.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           reviewer_name: "Sarah Connor",
