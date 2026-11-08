@@ -122,7 +122,10 @@ export async function proxy(request: NextRequest) {
           `/${locale}/admin${staffRoute.suffix}${request.nextUrl.search}`,
           request.url,
         );
-        const response = copyLocaleCookies(localeResponse, NextResponse.rewrite(internal));
+        const response = copyLocaleCookies(
+          localeResponse,
+          NextResponse.rewrite(internal, { request: { headers: request.headers } }),
+        );
         return session.applyTo(response, true);
       }
     }

@@ -147,6 +147,20 @@ describe("session proxy", () => {
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
+  it("forwards refreshed session cookies to rewritten admin requests", async () => {
+    mocks.getClaims.mockImplementation(async () => {
+      await cookieAdapter.setAll!([
+        { name: "sb-session.0", value: "fresh", options: { path: "/", secure: true } },
+      ], {});
+      return { data: { claims: { sub: "admin-1" } }, error: null };
+    });
+    mocks.limit.mockResolvedValue({ data: [{ roles: { key: "admin" } }], error: null });
+
+    const response = await proxy(request("/admin", { Cookie: "sb-session.0=stale" }));
+
+    expect(response.headers.get("x-middleware-request-cookie")).toBe("sb-session.0=fresh");
+  });
+
   it("removes locale prefixes and corrects the dashboard for the signed-in role", async () => {
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "manager-1" } }, error: null });
     mocks.limit.mockResolvedValue({
