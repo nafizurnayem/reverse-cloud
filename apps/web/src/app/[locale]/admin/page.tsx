@@ -1,9 +1,10 @@
 import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 import { routing } from "@/i18n/routing";
 import { visibleAdminSections } from "@/lib/auth/admin-sections";
+import { staffDashboardPath } from "@/lib/auth/permissions";
 import { requireStaff } from "@/lib/auth/guards";
 
 export default async function AdminPage({ params }: {
@@ -17,6 +18,7 @@ export default async function AdminPage({ params }: {
     getTranslations({ locale, namespace: "Admin" }),
   ]);
   const sections = visibleAdminSections(access.permissions);
+  const dashboardPath = staffDashboardPath(access);
 
   return (
     <main className="admin-page">
@@ -38,7 +40,7 @@ export default async function AdminPage({ params }: {
         {sections.length ? (
           <div className="admin-card-grid">
             {sections.map((section, index) => (
-              <Link className="admin-card" href={`/admin/${section.slug}`} key={section.slug}>
+              <Link className="admin-card" href={`${dashboardPath}/${section.slug}`} key={section.slug}>
                 <span className="admin-card-index" aria-hidden="true">
                   {String(index + 1).padStart(2, "0")}
                 </span>

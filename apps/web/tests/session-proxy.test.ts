@@ -52,7 +52,13 @@ describe("session proxy", () => {
   });
 
   it("matches protected dotted paths while excluding APIs and assets", () => {
-    for (const url of ["/admin/user.json", "/bn/portal/file.pdf", "/en/admin"]) {
+    for (const url of [
+      "/admin/user.json",
+      "/developer/project.json",
+      "/project_manager/reports.pdf",
+      "/bn/portal/file.pdf",
+      "/en/admin",
+    ]) {
       expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
     }
     for (const url of ["/api/leads", "/_next/static/file.js", "/favicon.ico"]) {
@@ -64,7 +70,7 @@ describe("session proxy", () => {
     const response = await proxy(request("/admin?tab=staff", { "accept-language": "bn" }));
     const location = new URL(response.headers.get("location")!);
     expect(location.pathname).toBe("/bn/login");
-    expect(location.searchParams.get("next")).toBe("/bn/admin?tab=staff");
+    expect(location.searchParams.get("next")).toBe("/admin?tab=staff");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
@@ -117,10 +123,42 @@ describe("session proxy", () => {
 
   it("allows any active staff role and keeps session responses private", async () => {
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "developer-1" } }, error: null });
-    mocks.limit.mockResolvedValue({ data: [{ role_id: "developer-role" }], error: null });
+    mocks.limit.mockResolvedValue({ data: [{ roles: { key: "developer" } }], error: null });
     const response = await proxy(request("/admin", { Cookie: "NEXT_LOCALE=bn" }));
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/bn/admin");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/developer");
     expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it.each([
+    ["admin", "/admin"],
+    ["project_manager", "/project_manager"],
+    ["developer", "/developer"],
+  ])("keeps the %s dashboard on the locale-free %s URL", async (role, path) => {
+    mocks.getClaims.mockResolvedValue({ data: { claims: { sub: `${role}-1` } }, error: null });
+    mocks.limit.mockResolvedValue({ data: [{ roles: { key: role } }], error: null });
+
+    const response = await proxy(request(path, { Cookie: "NEXT_LOCALE=bn" }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "http://localhost:3000/bn/admin",
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("removes locale prefixes and corrects the dashboard for the signed-in role", async () => {
+    mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "manager-1" } }, error: null });
+    mocks.limit.mockResolvedValue({
+      data: [{ roles: { key: "project_manager" } }],
+      error: null,
+    });
+
+    const response = await proxy(request("/bn/developer/projects?tab=active"));
+
+    expect(response.headers.get("location")).toBe(
+      "https://reverse-cloud.example/project_manager/projects?tab=active",
+    );
   });
 
   it("fails closed when auth is unavailable", async () => {

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Separator } from "@/components/ui/separator";
+import { isDashboardDestination } from "@/lib/auth/routes";
 
 export function Footer({ accountHref = null }: { accountHref?: string | null }) {
   const t = useTranslations("Footer");
@@ -104,7 +105,7 @@ export function Footer({ accountHref = null }: { accountHref?: string | null }) 
                   href={accountHref ?? "/login"}
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
+                  {accountHref ? t(isDashboardDestination(accountHref) ? "dashboard" : "account") : t("login")}
                 </Link>
               </li>
             </ul>
@@ -168,7 +169,7 @@ export function Footer({ accountHref = null }: { accountHref?: string | null }) 
               {t("services")}
             </Link>
             <Link href={accountHref ?? "/login"} className="transition-colors hover:text-foreground">
-              {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
+              {accountHref ? t(isDashboardDestination(accountHref) ? "dashboard" : "account") : t("login")}
             </Link>
             <Link href="/privacy" className="transition-colors hover:text-foreground">{t("privacy")}</Link>
             <Link href="/terms" className="transition-colors hover:text-foreground">{t("terms")}</Link>

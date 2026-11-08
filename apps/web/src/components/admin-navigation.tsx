@@ -1,6 +1,7 @@
 "use client";
 
-import { Link, usePathname } from "@/i18n/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type Item = {
   href: string;
@@ -13,7 +14,7 @@ export function AdminNavigation({ items, label }: { items: Item[]; label: string
   return (
     <nav className="admin-navigation" aria-label={label}>
       {items.map((item) => {
-        const active = item.href === "/admin"
+        const active = !item.href.slice(1).includes("/")
           ? pathname === item.href
           : pathname.startsWith(`${item.href}/`) || pathname === item.href;
 

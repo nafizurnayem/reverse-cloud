@@ -35,6 +35,29 @@ export const noStaffAccess: StaffAccess = {
   permissions: [],
 };
 
+export const staffDashboardSegments = ["admin", "project_manager", "developer"] as const;
+
+export type StaffDashboardSegment = (typeof staffDashboardSegments)[number];
+
+export function staffDashboardSegmentForRoles(
+  roleKeys: Iterable<string>,
+): StaffDashboardSegment {
+  const roles = new Set(roleKeys);
+  if (roles.has("admin")) return "admin";
+  if (roles.has("project_manager")) return "project_manager";
+  if (roles.has("developer")) return "developer";
+  return "admin";
+}
+
+export function staffDashboardPath(
+  access: Pick<StaffAccess, "roles">,
+  suffix = "",
+) {
+  const segment = staffDashboardSegmentForRoles(access.roles.map((role) => role.key));
+  const normalizedSuffix = suffix && !suffix.startsWith("/") ? `/${suffix}` : suffix;
+  return `/${segment}${normalizedSuffix}`;
+}
+
 export function hasAnyPermission(
   access: Pick<StaffAccess, "permissions">,
   required: Permission | readonly Permission[],

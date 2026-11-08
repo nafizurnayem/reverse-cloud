@@ -4,10 +4,11 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/[locale]/(auth)/actions";
 import { AdminNavigation } from "@/components/admin-navigation";
-import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { visibleAdminSections } from "@/lib/auth/admin-sections";
+import { staffDashboardPath } from "@/lib/auth/permissions";
 import { requireStaff } from "@/lib/auth/guards";
+import Link from "next/link";
 
 export default async function AdminLayout({ children, params }: {
   children: ReactNode;
@@ -25,10 +26,11 @@ export default async function AdminLayout({ children, params }: {
     (typeof user.user_metadata.name === "string" && user.user_metadata.name) ||
     user.email ||
     t("unknownUser");
+  const dashboardPath = staffDashboardPath(access);
   const items = [
-    { href: "/admin", label: t("dashboard") },
+    { href: dashboardPath, label: t("dashboard") },
     ...visibleAdminSections(access.permissions).map((section) => ({
-      href: `/admin/${section.slug}`,
+      href: `${dashboardPath}/${section.slug}`,
       label: t(`sections.${section.slug}.title`),
     })),
   ];
@@ -36,7 +38,7 @@ export default async function AdminLayout({ children, params }: {
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/admin">
+        <Link className="admin-brand" href={dashboardPath}>
           <span className="admin-brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>{t("brand")}</strong>

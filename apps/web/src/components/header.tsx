@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { UserMenu } from "@/components/user-menu";
+import { isDashboardDestination } from "@/lib/auth/routes";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -121,7 +122,7 @@ export function Header({
               href={accountHref ?? "/login"}
               className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:px-3.5 sm:text-sm"
             >
-              {accountHref ? t(accountHref.endsWith("/admin") || accountHref.endsWith("/portal") ? "dashboard" : "account") : t("login")}
+              {accountHref ? t(isDashboardDestination(accountHref) ? "dashboard" : "account") : t("login")}
             </Link>
           )}
 

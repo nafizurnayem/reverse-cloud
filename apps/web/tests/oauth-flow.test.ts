@@ -80,7 +80,7 @@ describe("magic-link start", () => {
     formData.set("email", "not-an-email");
 
     await expect(signInWithMagicLink("en", "/en/admin", formData)).rejects.toThrow(
-      "redirect:/en/login?error=invalid_email&next=%2Fen%2Fadmin",
+      "redirect:/en/login?error=invalid_email&next=%2Fadmin",
     );
     expect(mocks.signInWithOtp).not.toHaveBeenCalled();
   });
@@ -104,7 +104,7 @@ describe("Google OAuth start", () => {
     expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "https://reverse-cloud.example/bn/auth/callback?next=%2Fbn%2Fadmin%3Ftab%3Dstaff",
+        redirectTo: "https://reverse-cloud.example/bn/auth/callback?next=%2Fadmin%3Ftab%3Dstaff",
         skipBrowserRedirect: true,
       },
     });
@@ -195,7 +195,7 @@ describe("OAuth callback", () => {
 
     mocks.exchangeCodeForSession.mockResolvedValue({ data: {}, error: new Error("expired") });
     response = await GET(
-      new NextRequest("https://reverse-cloud.example/bn/auth/callback?code=expired&next=%2Fen%2Fadmin"),
+      new NextRequest("https://reverse-cloud.example/bn/auth/callback?code=expired&next=%2Fen%2Fportal"),
       context("bn"),
     );
     const destination = new URL(response.headers.get("location")!);
@@ -245,24 +245,24 @@ describe("OAuth callback", () => {
 
     mocks.rpc.mockClear();
     mocks.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
-    mocks.staffLimit.mockResolvedValue({ data: [{ role_id: "admin-role" }], error: null });
+    mocks.staffLimit.mockResolvedValue({ data: [{ roles: { key: "admin" } }], error: null });
     response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=twice&next=%2Fen%2Fadmin"),
       context("en"),
     );
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/admin");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/admin");
     expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
     expect(mocks.rpc).not.toHaveBeenCalledWith("link_my_client_account");
   });
 
   it("sends a staff member from ordinary sign-in to the admin dashboard", async () => {
-    mocks.staffLimit.mockResolvedValue({ data: [{ role_id: "admin-role" }], error: null });
+    mocks.staffLimit.mockResolvedValue({ data: [{ roles: { key: "admin" } }], error: null });
     const response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen"),
       context("en"),
     );
     expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/admin");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/admin");
     expect(mocks.rpc).not.toHaveBeenCalledWith("link_my_client_account");
   });
 
