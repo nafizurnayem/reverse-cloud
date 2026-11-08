@@ -57,7 +57,7 @@ export async function addStaffMember(formData: FormData) {
 
     revalidatePath(staffPath(locale));
     revalidatePath(`/${locale}/admin`, "layout");
-    redirect(staffPath(locale, { saved: "added" }));
+    return;
   }
 
   const preauth = await supabase.rpc("preauthorize_staff_member", {
@@ -70,7 +70,6 @@ export async function addStaffMember(formData: FormData) {
 
   revalidatePath(staffPath(locale));
   revalidatePath(`/${locale}/admin`, "layout");
-  redirect(staffPath(locale, { saved: "preauthorized" }));
 }
 
 export async function revokeStaffInvite(formData: FormData) {
@@ -88,7 +87,6 @@ export async function revokeStaffInvite(formData: FormData) {
 
   revalidatePath(staffPath(locale));
   revalidatePath(`/${locale}/admin`, "layout");
-  redirect(staffPath(locale, { saved: "inviteRevoked" }));
 }
 
 export async function setStaffRoleStatus(formData: FormData) {
@@ -112,5 +110,4 @@ export async function setStaffRoleStatus(formData: FormData) {
 
   revalidatePath(staffPath(locale));
   revalidatePath(`/${locale}/admin`, "layout");
-  redirect(staffPath(locale, { saved: payload.isActive ? "activated" : "deactivated" }));
 }

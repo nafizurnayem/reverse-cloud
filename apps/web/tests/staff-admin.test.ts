@@ -60,9 +60,8 @@ describe("staff role action", () => {
       role_id: roleId,
     });
 
-    await expect(addStaffMember(data)).rejects.toThrow(
-      "redirect:/en/admin/staff?saved=added",
-    );
+    await expect(addStaffMember(data)).resolves.toBeUndefined();
+    expect(mocks.redirect).not.toHaveBeenCalled();
     expect(mocks.requirePermission).toHaveBeenCalledWith("en", "staff.manage");
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, "lookup_user_by_email", {
       p_email: "person@example.com",
@@ -80,9 +79,8 @@ describe("staff role action", () => {
       .mockResolvedValueOnce({ data: { status: "preauthorized" }, error: null });
     const data = form({ locale: "en", email: "newperson@example.com", role_id: roleId });
 
-    await expect(addStaffMember(data)).rejects.toThrow(
-      "redirect:/en/admin/staff?saved=preauthorized",
-    );
+    await expect(addStaffMember(data)).resolves.toBeUndefined();
+    expect(mocks.redirect).not.toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, "lookup_user_by_email", {
       p_email: "newperson@example.com",
     });
@@ -97,9 +95,8 @@ describe("staff role action", () => {
     mocks.rpc.mockResolvedValueOnce({ data: true, error: null });
     const data = form({ locale: "en", invite_id: inviteId });
 
-    await expect(revokeStaffInvite(data)).rejects.toThrow(
-      "redirect:/en/admin/staff?saved=inviteRevoked",
-    );
+    await expect(revokeStaffInvite(data)).resolves.toBeUndefined();
+    expect(mocks.redirect).not.toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenCalledWith("revoke_staff_invite", {
       p_invite_id: inviteId,
     });
@@ -107,9 +104,8 @@ describe("staff role action", () => {
 
   it("requires staff.manage and activates through the atomic RPC", async () => {
     const data = form({ locale: "bn", user_id: userId, role_id: roleId, is_active: "true" });
-    await expect(setStaffRoleStatus(data)).rejects.toThrow(
-      "redirect:/bn/admin/staff?saved=activated",
-    );
+    await expect(setStaffRoleStatus(data)).resolves.toBeUndefined();
+    expect(mocks.redirect).not.toHaveBeenCalled();
     expect(mocks.requirePermission).toHaveBeenCalledWith("bn", "staff.manage");
     expect(mocks.rpc).toHaveBeenCalledWith("set_staff_role_status", {
       p_user_id: userId,
