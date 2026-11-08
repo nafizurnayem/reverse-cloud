@@ -155,7 +155,7 @@ export function Header({
           role="dialog"
           aria-modal="true"
           aria-label={t("brand")}
-          className="fixed inset-x-0 top-16 z-50 border-b border-border bg-background/95 backdrop-blur-md px-4 py-6 shadow-xl xl:hidden"
+          className="fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-border bg-background/95 backdrop-blur-md px-4 py-6 shadow-xl xl:hidden"
         >
           <nav className="flex flex-col space-y-3" aria-label="Mobile Navigation">
             {navLinks.map((link) => {

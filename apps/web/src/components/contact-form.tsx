@@ -99,7 +99,7 @@ export function ContactForm({
           privacy: (chunks) => <Link href="/privacy" className="font-semibold underline">{chunks}</Link>,
           terms: (chunks) => <Link href="/terms" className="font-semibold underline">{chunks}</Link>,
         })}</span></label>
-        {siteKey ? <div className="contact-turnstile"><div className="cf-turnstile" data-sitekey={siteKey} data-action="contact" data-language={locale} /></div> : <p className="contact-alert contact-alert-error" role="alert">{t("errors.not_configured")}</p>}
+        {siteKey ? <div className="contact-turnstile"><div className="cf-turnstile" data-sitekey={siteKey} data-action="contact" data-language={locale} data-size="compact" /></div> : <p className="contact-alert contact-alert-error" role="alert">{t("errors.not_configured")}</p>}
         {state === "sent" ? <p className="contact-alert contact-alert-success" role="status">{t(proposalMode ? "proposalSuccess" : "success")}</p> : null}
         {state === "error" ? <p className="contact-alert contact-alert-error" role="alert">{t(`errors.${errorCode}`)}</p> : null}
         <button type="submit" disabled={state === "sending" || !siteKey}>{state === "sending" ? t("sending") : t(proposalMode ? "proposalSubmit" : "submit")}</button>
@@ -107,4 +107,3 @@ export function ContactForm({
     </>
   );
 }
-
