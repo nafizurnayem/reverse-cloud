@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { SERVICES_CATALOG } from "@/lib/services-catalog";
 import { getPortfolioItems } from "@/lib/portfolio-catalog";
@@ -23,12 +24,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const entries: MetadataRoute.Sitemap = [];
+  const localizedUrl = (locale: (typeof routing.locales)[number], path: string) =>
+    `${baseUrl}${getPathname({ href: path || "/", locale })}`;
 
   // Static Pages with alternate language links
   for (const route of staticRoutes) {
     for (const locale of routing.locales) {
       entries.push({
-        url: `${baseUrl}/${locale}${route}`,
+        url: localizedUrl(locale, route),
         lastModified: now,
         changeFrequency: route === "" ? "daily" : "weekly",
         priority:
@@ -39,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             : 0.8,
         alternates: {
           languages: Object.fromEntries(
-            routing.locales.map((loc) => [loc, `${baseUrl}/${loc}${route}`]),
+            routing.locales.map((loc) => [loc, localizedUrl(loc, route)]),
           ),
         },
       });
@@ -50,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const service of SERVICES_CATALOG) {
     for (const locale of routing.locales) {
       entries.push({
-        url: `${baseUrl}/${locale}/services/${service.slug}`,
+        url: localizedUrl(locale, `/services/${service.slug}`),
         lastModified: now,
         changeFrequency: "weekly",
         priority: 0.85,
@@ -58,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           languages: Object.fromEntries(
             routing.locales.map((loc) => [
               loc,
-              `${baseUrl}/${loc}/services/${service.slug}`,
+              localizedUrl(loc, `/services/${service.slug}`),
             ]),
           ),
         },
@@ -72,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const item of portfolioItems) {
       for (const locale of routing.locales) {
         entries.push({
-          url: `${baseUrl}/${locale}/portfolio/${item.slug}`,
+          url: localizedUrl(locale, `/portfolio/${item.slug}`),
           lastModified: now,
           changeFrequency: "monthly",
           priority: 0.75,
@@ -80,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             languages: Object.fromEntries(
               routing.locales.map((loc) => [
                 loc,
-                `${baseUrl}/${loc}/portfolio/${item.slug}`,
+                localizedUrl(loc, `/portfolio/${item.slug}`),
               ]),
             ),
           },
@@ -97,7 +100,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const post of blogPosts) {
       for (const locale of routing.locales) {
         entries.push({
-          url: `${baseUrl}/${locale}/blog/${post.slug}`,
+          url: localizedUrl(locale, `/blog/${post.slug}`),
           lastModified: post.published_at ? new Date(post.published_at) : now,
           changeFrequency: "monthly",
           priority: 0.7,
@@ -105,7 +108,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             languages: Object.fromEntries(
               routing.locales.map((loc) => [
                 loc,
-                `${baseUrl}/${loc}/blog/${post.slug}`,
+                localizedUrl(loc, `/blog/${post.slug}`),
               ]),
             ),
           },

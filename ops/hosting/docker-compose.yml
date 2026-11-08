@@ -36,7 +36,7 @@ services:
       - next
       - start
       - -H
-      - 127.0.0.1
+      - localhost
       - -p
       - "3000"
     healthcheck:

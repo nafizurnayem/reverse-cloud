@@ -4,6 +4,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -39,6 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "Metadata" });
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://revcloud.dev";
   const isBn = locale === "bn";
+  const canonical = getPathname({ href: "/", locale });
 
   return {
     metadataBase: new URL(siteUrl),
@@ -48,16 +50,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     description: t("description"),
     alternates: {
-      canonical: `/${locale}`,
+      canonical,
       languages: {
-        en: "/en",
-        bn: "/bn",
+        en: getPathname({ href: "/", locale: "en" }),
+        bn: getPathname({ href: "/", locale: "bn" }),
       },
     },
     openGraph: {
       type: "website",
       locale: isBn ? "bn_BD" : "en_US",
-      url: `/${locale}`,
+      url: canonical,
       siteName: "Reverse Cloud",
       title: t("title"),
       description: t("description"),

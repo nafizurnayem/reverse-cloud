@@ -31,31 +31,31 @@ describe("Phase 5 Wave 1: SEO, Robots & Sitemap Verification", () => {
     const urls = entries.map((e) => e.url);
 
     // Verify static routes in both languages
-    expect(urls.some((u) => u.endsWith("/en"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/");
     expect(urls.some((u) => u.endsWith("/bn"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/en/services"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/services");
     expect(urls.some((u) => u.endsWith("/bn/services"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/en/schedule"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/schedule");
     expect(urls.some((u) => u.endsWith("/bn/schedule"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/en/pricing"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/pricing");
     expect(urls.some((u) => u.endsWith("/bn/pricing"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/en/about"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/about");
     expect(urls.some((u) => u.endsWith("/bn/about"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/en/contact"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/contact");
     expect(urls.some((u) => u.endsWith("/bn/contact"))).toBe(true);
-    expect(urls.some((u) => u.endsWith("/en/terms"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/terms");
     expect(urls.some((u) => u.endsWith("/bn/privacy"))).toBe(true);
 
     // Verify alternate language tags exist
-    const rootEntry = entries.find((e) => e.url.endsWith("/en"));
+    const rootEntry = entries.find((e) => e.url === "https://revcloud.dev/");
     expect(rootEntry).toBeDefined();
     expect(rootEntry?.alternates?.languages).toBeDefined();
-    expect(rootEntry?.alternates?.languages?.en).toContain("/en");
+    expect(rootEntry?.alternates?.languages?.en).toBe("https://revcloud.dev/");
     expect(rootEntry?.alternates?.languages?.bn).toContain("/bn");
 
     // Verify priority weighting
     expect(rootEntry?.priority).toBe(1.0);
-    const servicesEntry = entries.find((e) => e.url.endsWith("/en/services"));
+    const servicesEntry = entries.find((e) => e.url === "https://revcloud.dev/services");
     expect(servicesEntry?.priority).toBeGreaterThanOrEqual(0.8);
   });
 
