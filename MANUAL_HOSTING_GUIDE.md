@@ -20,11 +20,14 @@ hostname.
 
 ## 1. Understand the hosting layout
 
-The hosting stack has three Docker containers:
+The hosting stack has six Docker containers:
 
 | Container | Purpose | Network exposure |
 | --- | --- | --- |
 | `reverse-cloud-web` | Next.js website | `127.0.0.1:3000` only |
+| `reverse-cloud-ai` | Guarded FastAPI agent, tools, RAG, and chat persistence | `127.0.0.1:8000` only |
+| `reverse-cloud-knowledge-sync` | Refreshes public website knowledge every five minutes | Host network; no listening port |
+| `reverse-cloud-ai-monitor` | Records daily token usage and sends threshold alerts | Host network; no listening port |
 | `reverse-cloud-ollama` | Local `llama3.2:1b` model | `127.0.0.1:11434` only |
 | `reverse-cloud-tunnel` | Cloudflare HTTPS tunnel to the web container | Outbound connection only |
 
@@ -116,19 +119,19 @@ Copy the printed public key. In GitHub, open the Reverse Cloud repository and
 go to **Settings → Deploy keys → Add deploy key**. Add it without enabling
 write access.
 
-This network uses GitHub SSH on port 443 because normal SSH port 22 may be
-blocked. Add GitHub's port-443 host key after comparing its fingerprint with
-the fingerprint published in GitHub's official documentation:
+This server uses GitHub's standard SSH endpoint on port 22. Add GitHub's host
+key after comparing its fingerprint with the fingerprint published in
+GitHub's official documentation:
 
 ```sh
-ssh-keyscan -p 443 ssh.github.com >> /home/nafz/.ssh/known_hosts
+ssh-keyscan github.com >> /home/nafz/.ssh/known_hosts
 chmod 600 /home/nafz/.ssh/known_hosts
 ```
 
 Test read-only access:
 
 ```sh
-GIT_SSH_COMMAND='ssh -p 443 -o Hostname=ssh.github.com -i /home/nafz/.ssh/reverse_cloud_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
+GIT_SSH_COMMAND='ssh -i /home/nafz/.ssh/reverse_cloud_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
   git ls-remote git@github.com:nafizurnayem/reverse-cloud.git refs/heads/Dev
 ```
 
@@ -205,11 +208,29 @@ Configure the remaining values needed by the enabled website features:
 | Scheduling | `CALCOM_API_KEY`, `CALCOM_API_BASE_URL`, API versions, and webhook secrets |
 | Notifications | Resend/email variables and/or Telegram variables |
 | Google login | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| Optional external AI | `DATABASE_URL_AI`, `AI_SERVICE_URL`, provider keys and model variables |
+| AI agent | `DATABASE_URL_AI`, `AI_HMAC_SECRET_CURRENT`, `AI_DAILY_TOKEN_BUDGET`; provider keys are optional because hosting uses Ollama |
 
-The Compose setup supplies `LOCAL_OLLAMA_PREVIEW`, `OLLAMA_URL`, and
-`OLLAMA_MODEL` to the live web container. The current preview uses the local
-Ollama model instead of the separate AI service.
+`DATABASE_URL_AI` must be a Postgres connection string for the least-privilege
+`ai_service` role, not the public Supabase URL and not the service-role API key.
+After applying all repository migrations to Supabase, generate a unique
+database password and run the following once in the Supabase SQL editor,
+substituting the generated value:
+
+```sql
+alter role ai_service login password 'GENERATED_AI_DATABASE_PASSWORD';
+```
+
+Then copy the Supabase session-pooler connection string, change its username to
+the project-qualified `ai_service` username required by the pooler, insert that
+password, and save the result as `DATABASE_URL_AI` in `web.env`. Use the exact
+host, port, and project reference shown by **Supabase → Connect**; do not guess
+them. Apply migration `0036_public_ai_knowledge.sql` before starting the AI
+service so retrieval can only return explicitly public knowledge.
+
+The Compose setup supplies the internal AI URL to the web container and the
+local Ollama URL/model names to the private FastAPI AI container. Do not set
+`LOCAL_OLLAMA_PREVIEW=true` on hosting; that bypasses the agent guardrails,
+tools, RAG, usage accounting, and chat persistence.
 
 Generate independent random server secrets when required:
 
@@ -245,10 +266,13 @@ Run the safe deployment script:
 The first run will:
 
 1. Clone the GitHub `Dev` branch.
-2. Build an image tagged with the full Git commit SHA.
-3. Start Ollama.
-4. test a candidate website on `127.0.0.1:3001`.
-5. Start the successful website on `127.0.0.1:3000`.
+2. Build web and AI images tagged with the full Git commit SHA.
+3. Start Ollama and download the configured chat and embedding models.
+4. Test a candidate AI service on `127.0.0.1:8001`.
+5. Synchronize published website content and run the live AI regression smoke test.
+6. Test a candidate website on `127.0.0.1:3001`.
+7. Start the AI service, knowledge sync, budget monitor, and website only after
+   every candidate check succeeds.
 
 Download the configured local model:
 
@@ -261,6 +285,7 @@ Test the local website before publishing it:
 
 ```sh
 curl -fsS http://127.0.0.1:3000/api/health
+curl -fsS http://127.0.0.1:8000/ready
 ```
 
 ## 8. Create and start the named Cloudflare Tunnel

@@ -8,6 +8,7 @@ from app.agents import chat_agent
 from app.agents.chat_agent import (
     CardEvent,
     TextChunk,
+    UsageEvent,
     convert_chat_messages,
     create_chat_agent,
     load_system_prompt,
@@ -117,7 +118,10 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_run_agent_stream_with_test_model() -> None:
-    test_model = TestModel(custom_output_text="Reverse Cloud builds production web apps.")
+    test_model = TestModel(
+        call_tools=[],
+        custom_output_text="Reverse Cloud builds production web apps.",
+    )
     payload = ChatRequest(
         messages=[
             ChatMessage(role="user", content="What do you build?"),
@@ -130,8 +134,10 @@ async def test_run_agent_stream_with_test_model() -> None:
     async for delta in run_agent_stream(payload, model=test_model):
         if isinstance(delta, TextChunk):
             chunks.append(delta.text)
-        else:
+        elif isinstance(delta, CardEvent):
             assert isinstance(delta, CardEvent)
+        else:
+            assert isinstance(delta, UsageEvent)
 
     full_text = "".join(chunks)
     assert "Reverse Cloud builds production web apps." in full_text

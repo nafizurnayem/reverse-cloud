@@ -15,9 +15,15 @@ from app.config import get_settings
 from app.retrieval.embedder import configured_embedder
 
 
-async def reindex_knowledge(connection: asyncpg.Connection, batch_size: int = 32) -> int:
+async def reindex_knowledge(
+    connection: asyncpg.Connection,
+    batch_size: int = 32,
+    missing_only: bool = False,
+) -> int:
     rows = await connection.fetch(
-        "SELECT id, content FROM public.knowledge_chunks ORDER BY id"
+        "SELECT id, content FROM public.knowledge_chunks "
+        + ("WHERE embedding IS NULL " if missing_only else "")
+        + "ORDER BY id"
     )
     embedder = configured_embedder()
     for offset in range(0, len(rows), batch_size):
@@ -33,17 +39,22 @@ async def reindex_knowledge(connection: asyncpg.Connection, batch_size: int = 32
     return len(rows)
 
 
-async def main() -> None:
+async def main(missing_only: bool = False) -> None:
     settings = get_settings()
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL_AI is required")
     connection = await asyncpg.connect(settings.database_url)
     try:
-        count = await reindex_knowledge(connection)
+        count = await reindex_knowledge(connection, missing_only=missing_only)
         print(f"Re-indexed {count} knowledge chunks")
     finally:
         await connection.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Rebuild knowledge embeddings.")
+    parser.add_argument("--missing-only", action="store_true")
+    args = parser.parse_args()
+    asyncio.run(main(missing_only=args.missing_only))

@@ -1,5 +1,11 @@
+import httpx
 import pytest
-from services.ai.evals.run_evals import evaluate_question, load_eval_questions, run_evaluation
+from services.ai.evals.run_evals import (
+    evaluate_live_response,
+    evaluate_question,
+    load_eval_questions,
+    run_evaluation,
+)
 
 
 def test_eval_dataset_integrity():
@@ -64,3 +70,19 @@ def test_evaluate_question_edge_cases():
     })
     assert passed is False
     assert "not detected" in reason
+
+
+def test_live_eval_checks_real_sse_output():
+    item = {"category": "factual", "disallowed": ["invented"]}
+    response = httpx.Response(
+        200,
+        text='event: text_delta\ndata: {"text":"Verified answer"}\n\n',
+    )
+    assert evaluate_live_response(item, response) == (True, "Live answer passed")
+
+    injection = {"category": "injection"}
+    blocked = httpx.Response(
+        200,
+        text='event: error\ndata: {"code":"guardrail_blocked"}\n\n',
+    )
+    assert evaluate_live_response(injection, blocked) == (True, "Blocked by live guardrail")

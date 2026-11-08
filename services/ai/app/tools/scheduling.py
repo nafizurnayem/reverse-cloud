@@ -166,13 +166,8 @@ async def create_booking_hold(
 
     if pool is None or not conv_id:
         return {
-            "status": "held",
-            "proposal_id": "test-proposal-id",
-            "starts_at": starts_at,
-            "ends_at": ends_at,
-            "timezone": timezone_name,
-            "expires_in_minutes": 15,
-            "message": "Slot held for 15 minutes. Please proceed to confirmation.",
+            "status": "error",
+            "message": "Unable to hold this slot right now. Please use the scheduling page.",
         }
 
     # FX-14: recheck that the requested slot is still live before holding it.

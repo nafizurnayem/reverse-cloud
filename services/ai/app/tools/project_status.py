@@ -67,20 +67,9 @@ async def get_project_status(
 
     pool = ctx.deps.db_pool if ctx else None
     if pool is None:
-        logger.debug("Database pool unavailable; returning mock project status for testing.")
         return {
-            "status": "in_progress",
-            "title": "Reverse Cloud Client Platform",
-            "client_progress_pct": 65,
-            "due_on": "2026-11-15",
-            "milestones": [
-                {"title": "Core System Architecture", "is_done": True},
-                {"title": "Bilingual Next.js Frontend", "is_done": True},
-                {"title": "AI Agent Integration & Guardrails", "is_done": False},
-            ],
-            "recent_updates": [
-                {"body": "Phase 2 agent tools and retrieval pipeline deployed to staging."}
-            ],
+            "error": "service_unavailable",
+            "message": "Project status is temporarily unavailable. Please try again later.",
         }
 
     try:

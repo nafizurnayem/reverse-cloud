@@ -6,6 +6,7 @@ SELECT
     source_type,
     chunk_index,
     content,
+    metadata,
     locale,
     similarity,
     combined_score
@@ -14,5 +15,6 @@ FROM public.match_knowledge_chunks(
     $2::extensions.vector,
     $3,
     $4,
-    $5
+    $5,
+    $6
 );
