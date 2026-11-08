@@ -60,6 +60,7 @@ describe("Admin Review Moderation Action", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.requirePermission.mockResolvedValue({
+      access: { roles: [{ key: "admin", name: "Admin" }] },
       user: { id: moderatorId },
       supabase: { from: mocks.from },
     });
@@ -78,7 +79,7 @@ describe("Admin Review Moderation Action", () => {
     formData.set("status", "approved");
 
     await expect(moderateReview(formData)).rejects.toThrow(
-      "redirect:/en/admin/reviews?saved=1"
+      "redirect:/admin/reviews?saved=1"
     );
 
     expect(mocks.requirePermission).toHaveBeenCalledWith("en", "reviews.moderate");
@@ -104,7 +105,7 @@ describe("Admin Review Moderation Action", () => {
     formData.set("status", "rejected");
 
     await expect(moderateReview(formData)).rejects.toThrow(
-      "redirect:/bn/admin/reviews?saved=1"
+      "redirect:/admin/reviews?saved=1"
     );
 
     expect(mocks.requirePermission).toHaveBeenCalledWith("bn", "reviews.moderate");
@@ -123,7 +124,7 @@ describe("Admin Review Moderation Action", () => {
     formData.set("status", "approved");
 
     await expect(moderateReview(formData)).rejects.toThrow(
-      "redirect:/en/admin/reviews?error=invalidInput"
+      "redirect:/admin/reviews?error=invalidInput"
     );
   });
 });

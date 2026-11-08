@@ -31,7 +31,7 @@ function form(values: Record<string, string>) {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.rpc.mockResolvedValue({ data: true, error: null });
-  mocks.requirePermission.mockResolvedValue({ supabase: { rpc: mocks.rpc } });
+  mocks.requirePermission.mockResolvedValue({ access: { roles: [{ key: "admin", name: "Admin" }] }, supabase: { rpc: mocks.rpc } });
 });
 
 describe("staff role input", () => {
@@ -119,7 +119,7 @@ describe("staff role action", () => {
   it("rejects invalid input before calling the database", async () => {
     const data = form({ locale: "en", user_id: "bad", role_id: roleId, is_active: "false" });
     await expect(setStaffRoleStatus(data)).rejects.toThrow(
-      "redirect:/en/admin/staff?error=invalidInput",
+      "redirect:/admin/staff?error=invalidInput",
     );
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
@@ -128,7 +128,7 @@ describe("staff role action", () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { message: "last_active_admin" } });
     const data = form({ locale: "en", user_id: userId, role_id: roleId, is_active: "false" });
     await expect(setStaffRoleStatus(data)).rejects.toThrow(
-      "redirect:/en/admin/staff?error=lastActiveAdmin",
+      "redirect:/admin/staff?error=lastActiveAdmin",
     );
   });
 });

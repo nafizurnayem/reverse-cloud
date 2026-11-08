@@ -7,6 +7,7 @@ import { routing } from "@/i18n/routing";
 import { clientPayload, validClientEmail, validClientId } from "@/lib/admin/client-values";
 import { requirePermission } from "@/lib/auth/guards";
 import type { Locale } from "@/lib/auth/routes";
+import { staffDashboardPath, type StaffAccess } from "@/lib/auth/permissions";
 import { validInviteToken } from "@/lib/invites/routes";
 import { requireSiteUrl } from "@/lib/supabase/env";
 
@@ -27,49 +28,48 @@ function localeFrom(formData: FormData): Locale {
   return hasLocale(routing.locales, value) ? value : routing.defaultLocale;
 }
 
-function clientsPath(locale: Locale, params?: Record<string, string>) {
+function clientsPath(access: StaffAccess, params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  return `/${locale}/admin/clients${query}`;
+  return `${staffDashboardPath(access, "/clients")}${query}`;
 }
 
-function saveError(locale: Locale, code: string, id?: string): never {
-  redirect(clientsPath(locale, { ...(id ? { edit: id } : {}), error: code }));
+function saveError(access: StaffAccess, code: string, id?: string): never {
+  redirect(clientsPath(access, { ...(id ? { edit: id } : {}), error: code }));
 }
 
 export async function saveClient(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "clients.manage");
+  const { supabase, access } = await requirePermission(locale, "clients.manage");
   const id = text(formData, "id");
   const payload = clientPayload(formData);
-  if ((id && !validClientId(id)) || !payload) saveError(locale, "invalidInput", id);
+  if ((id && !validClientId(id)) || !payload) saveError(access, "invalidInput", id);
 
   const result = id
     ? await supabase.from("clients").update(payload).eq("id", id).select("id").single()
     : await supabase.from("clients").insert(payload).select("id").single();
   if (result.error || !result.data?.id) {
-    saveError(locale, result.error?.code === "23505" ? "duplicateEmail" : "saveFailed", id);
+    saveError(access, result.error?.code === "23505" ? "duplicateEmail" : "saveFailed", id);
   }
 
   const clientId = result.data.id as string;
-  const path = clientsPath(locale);
-  revalidatePath(path);
-  redirect(clientsPath(locale, { edit: clientId, saved: "client" }));
+  revalidatePath(`/${locale}/admin/clients`);
+  redirect(clientsPath(access, { edit: clientId, saved: "client" }));
 }
 
 export async function setClientArchived(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "clients.manage");
+  const { supabase, access } = await requirePermission(locale, "clients.manage");
   const id = text(formData, "id");
   const archived = text(formData, "archived") === "true";
-  if (!validClientId(id)) saveError(locale, "invalidInput");
+  if (!validClientId(id)) saveError(access, "invalidInput");
 
   const result = await supabase.from("clients")
     .update({ archived_at: archived ? new Date().toISOString() : null })
     .eq("id", id);
-  if (result.error) saveError(locale, "saveFailed", id);
+  if (result.error) saveError(access, "saveFailed", id);
 
-  revalidatePath(clientsPath(locale));
-  redirect(clientsPath(locale, { edit: id, saved: archived ? "archived" : "restored" }));
+  revalidatePath(`/${locale}/admin/clients`);
+  redirect(clientsPath(access, { edit: id, saved: archived ? "archived" : "restored" }));
 }
 
 export async function createClientInvite(
@@ -115,22 +115,22 @@ export async function createClientInvite(
     return { status: "error", error: "inviteFailed" };
   }
 
-  revalidatePath(clientsPath(locale));
+  revalidatePath(`/${locale}/admin/clients`);
   return { status: "success", inviteUrl, expiresAt: row.expires_at };
 }
 
 export async function revokeClientInvite(formData: FormData) {
   const locale = localeFrom(formData);
-  const { supabase } = await requirePermission(locale, "clients.manage");
+  const { supabase, access } = await requirePermission(locale, "clients.manage");
   const clientId = text(formData, "client_id");
   const inviteId = text(formData, "invite_id");
   if (!validClientId(clientId) || !validClientId(inviteId)) {
-    saveError(locale, "invalidInput", validClientId(clientId) ? clientId : undefined);
+    saveError(access, "invalidInput", validClientId(clientId) ? clientId : undefined);
   }
 
   const result = await supabase.rpc("revoke_client_invite", { p_invite_id: inviteId });
-  if (result.error || result.data !== true) saveError(locale, "inviteFailed", clientId);
+  if (result.error || result.data !== true) saveError(access, "inviteFailed", clientId);
 
-  revalidatePath(clientsPath(locale));
-  redirect(clientsPath(locale, { edit: clientId, saved: "inviteRevoked" }));
+  revalidatePath(`/${locale}/admin/clients`);
+  redirect(clientsPath(access, { edit: clientId, saved: "inviteRevoked" }));
 }

@@ -50,6 +50,7 @@ function mutationBuilder(result = { data: { id: projectId }, error: null }) {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.requirePermission.mockResolvedValue({
+    access: { roles: [{ key: "admin", name: "Admin" }] },
     user: { id: "00000000-0000-4000-8000-000000000103" },
     supabase: { from: mocks.from, rpc: mocks.rpc },
   });
@@ -81,7 +82,7 @@ describe("Projects admin actions", () => {
     const builder = mutationBuilder();
     mocks.from.mockReturnValue(builder);
     await expect(saveProject(projectForm({ status: "completed" }))).rejects.toThrow(
-      `redirect:/en/admin/projects?edit=${projectId}&saved=project`,
+      `redirect:/admin/projects?edit=${projectId}&saved=project`,
     );
     expect(mocks.requirePermission).toHaveBeenCalledWith("en", "projects.create");
     expect(builder.insert).toHaveBeenCalledWith(expect.objectContaining({
@@ -97,7 +98,7 @@ describe("Projects admin actions", () => {
     milestoneQuery.eq.mockResolvedValue({ data: [{ weight: 80 }], error: null });
     mocks.from.mockReturnValue(milestoneQuery);
     await expect(saveProject(projectForm({ id: projectId, status: "active" }))).rejects.toThrow(
-      `redirect:/en/admin/projects?edit=${projectId}&error=activationNeedsMilestones`,
+      `redirect:/admin/projects?edit=${projectId}&error=activationNeedsMilestones`,
     );
   });
 
@@ -110,7 +111,7 @@ describe("Projects admin actions", () => {
       { id: null, title: "Delivery", description: "", weight: 100, is_done: false, is_client_visible: true, preview_url: "", due_on: "" },
     ]));
     await expect(replaceProjectMilestones(formData)).rejects.toThrow(
-      `redirect:/bn/admin/projects?edit=${projectId}&saved=milestones`,
+      `redirect:/admin/projects?edit=${projectId}&saved=milestones`,
     );
     expect(mocks.rpc).toHaveBeenCalledWith("replace_project_milestones", {
       p_project_id: projectId,
