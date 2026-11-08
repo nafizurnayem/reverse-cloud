@@ -283,7 +283,7 @@ export function ChatWidget({
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] flex-col items-end">
       {/* Floating Launcher Button */}
       {!isOpen && (
         <button
@@ -303,14 +303,14 @@ export function ChatWidget({
       {/* Main Chat Panel */}
       {isOpen && (
         <div
-          className={`flex flex-col w-[370px] sm:w-[410px] rounded-2xl border bg-card text-card-foreground shadow-2xl transition-all duration-300 overflow-hidden ${
-            isMinimized ? "h-14" : "h-[590px] max-h-[85vh]"
+          className={`flex w-[min(410px,calc(100vw-2rem))] flex-col rounded-2xl border bg-card text-card-foreground shadow-2xl transition-all duration-300 overflow-hidden ${
+            isMinimized ? "h-auto" : "h-[min(590px,calc(100dvh-2rem))]"
           }`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-3 shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-3 py-3 shrink-0">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                 <Bot className="h-4 w-4" />
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500" />
               </div>
@@ -327,7 +327,7 @@ export function ChatWidget({
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="ml-auto flex shrink-0 items-center gap-1">
               {/* Mock stream toggle for development */}
               {process.env.NODE_ENV !== "production" && <button
                 type="button"

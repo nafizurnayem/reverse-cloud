@@ -34,7 +34,7 @@ export function ChatMessageList({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4 text-xs scroll-smooth"
+      className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 space-y-4 text-xs scroll-smooth"
     >
       {messages.map((msg) => {
         const isUser = msg.role === "user";
@@ -54,7 +54,7 @@ export function ChatMessageList({
               {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5 text-primary" />}
             </div>
 
-            <div className={`flex flex-col space-y-1.5 max-w-[85%] ${isUser ? "items-end" : "items-start"}`}>
+            <div className={`flex min-w-0 flex-col space-y-1.5 max-w-[85%] [overflow-wrap:anywhere] ${isUser ? "items-end" : "items-start"}`}>
               {msg.content && (
                 <div
                   className={`rounded-2xl px-3.5 py-2.5 leading-relaxed text-xs ${

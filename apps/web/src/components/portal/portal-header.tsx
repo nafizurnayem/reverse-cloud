@@ -22,8 +22,8 @@ export function PortalHeader({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/75">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-wrap items-center gap-4">
           <Link
             href={`/${locale}/portal`}
             className="flex items-center gap-2.5 font-bold tracking-tight text-foreground"
@@ -52,9 +52,10 @@ export function PortalHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex max-w-full flex-wrap items-center gap-2 sm:gap-3">
           <Link
             href={`/${locale}/portal/payments`}
+            aria-label={isBn ? "পেমেন্ট" : "Payments"}
             className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <CreditCard className="h-3.5 w-3.5" />
@@ -64,7 +65,7 @@ export function PortalHeader({
           <LanguageSwitcher />
 
           {(clientName || companyName) && (
-            <div className="hidden md:flex flex-col text-right">
+            <div className="hidden max-w-48 break-words md:flex flex-col text-right">
               <span className="text-xs font-semibold text-foreground">
                 {clientName || "Client"}
               </span>
