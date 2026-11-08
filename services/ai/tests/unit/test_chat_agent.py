@@ -118,7 +118,10 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_run_agent_stream_with_test_model() -> None:
-    test_model = TestModel(custom_output_text="Reverse Cloud builds production web apps.")
+    test_model = TestModel(
+        call_tools=[],
+        custom_output_text="Reverse Cloud builds production web apps.",
+    )
     payload = ChatRequest(
         messages=[
             ChatMessage(role="user", content="What do you build?"),

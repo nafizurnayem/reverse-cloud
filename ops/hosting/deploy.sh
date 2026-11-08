@@ -111,7 +111,9 @@ if [[ ! -r "$DEPLOY_ENV" ]]; then
     "$public_origin"
 fi
 
-export GIT_SSH_COMMAND="ssh -p 443 -o Hostname=ssh.github.com -i ${DEPLOY_KEY} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes"
+# Use GitHub's standard SSH endpoint. This server can reach github.com:22,
+# while ssh.github.com:443 is blocked by the local network and stalls updates.
+export GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY} -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes"
 
 if [[ ! -d "${REPOSITORY_DIR}/.git" ]]; then
   log "Cloning ${DEPLOY_BRANCH} from GitHub"
@@ -188,6 +190,10 @@ if ! wait_for_ai_health 8001; then
   exit 1
 fi
 
+log "Synchronizing public website knowledge"
+docker exec "$AI_CANDIDATE_CONTAINER" python -m scripts.sync_content_knowledge
+docker exec "$AI_CANDIDATE_CONTAINER" python -m scripts.reindex_knowledge --missing-only
+
 log "Running live AI regression smoke test"
 if ! docker exec "$AI_CANDIDATE_CONTAINER" \
   python -m evals.run_evals --base-url http://127.0.0.1:8001 --smoke; then
@@ -234,12 +240,14 @@ if ! compose up --detach --no-deps --force-recreate ai || ! wait_for_ai_health 8
   exit 1
 fi
 
-docker run --rm \
-  --network host \
-  --mount "type=bind,src=${WEB_ENV},dst=/app/services/ai/.env.local,readonly" \
-  --env OLLAMA_URL=http://127.0.0.1:11434 \
-  --env OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b \
-  "$ai_image" python -m scripts.reindex_knowledge --missing-only
+if ! compose up --detach --no-deps --force-recreate knowledge-sync ai-monitor; then
+  if [[ -r "$previous_env" ]]; then
+    cp "$previous_env" "$DEPLOY_ENV"
+    compose up --detach --no-deps --force-recreate ai knowledge-sync ai-monitor || true
+  fi
+  log "ERROR: AI worker startup failed; previous Compose configuration restored"
+  exit 1
+fi
 
 log "Starting web service for ${target_sha} on port 3000"
 if ! compose up --detach --no-deps --force-recreate web || ! wait_for_health 3000; then
@@ -247,6 +255,8 @@ if ! compose up --detach --no-deps --force-recreate web || ! wait_for_health 300
   if [[ -r "$previous_env" ]]; then
     cp "$previous_env" "$DEPLOY_ENV"
     compose up --detach --no-deps --force-recreate ai || true
+    compose up --detach --no-deps --force-recreate knowledge-sync || true
+    compose up --detach --no-deps --force-recreate ai-monitor || true
     compose up --detach --no-deps --force-recreate web || true
     wait_for_health 3000 || log "ERROR: rollback image did not become healthy"
   fi

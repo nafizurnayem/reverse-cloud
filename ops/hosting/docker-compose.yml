@@ -87,6 +87,39 @@ services:
       retries: 5
       start_period: 30s
 
+  knowledge-sync:
+    image: ${AI_IMAGE:-reverse-cloud-ai:unconfigured}
+    container_name: reverse-cloud-knowledge-sync
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./secrets/web.env:/app/services/ai/.env.local:ro
+    environment:
+      OLLAMA_URL: http://127.0.0.1:11434
+      OLLAMA_EMBEDDING_MODEL: qwen3-embedding:0.6b
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command:
+      - python
+      - -m
+      - scripts.sync_content_knowledge
+      - --watch
+      - --interval
+      - "300"
+
+  ai-monitor:
+    image: ${AI_IMAGE:-reverse-cloud-ai:unconfigured}
+    container_name: reverse-cloud-ai-monitor
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./secrets/web.env:/app/services/ai/.env.local:ro
+    command:
+      - python
+      - -m
+      - app.jobs.monitor
+
   tunnel:
     image: cloudflare/cloudflared@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
     container_name: reverse-cloud-tunnel

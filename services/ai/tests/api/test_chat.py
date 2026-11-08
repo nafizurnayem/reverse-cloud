@@ -66,6 +66,5 @@ def test_chat_streams_contract_events(monkeypatch):
 	assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 	assert 'event: message_start' in response.text
 	assert '"conversation_id": ""' not in response.text
-	assert 'event: text_delta\ndata: {"text": "Hi"}' in response.text
-	assert 'event: text_delta\ndata: {"text": " there"}' in response.text
+	assert 'event: text_delta\ndata: {"text": "Hi there"}' in response.text
 	assert response.text.endswith('event: message_end\ndata: {"reason": "stop"}\n\n')

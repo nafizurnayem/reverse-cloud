@@ -97,5 +97,6 @@ def test_chat_stream_timeout_emits_sse_error(monkeypatch):
         )
 
     assert response.status_code == 200
-    assert 'event: text_delta\ndata: {"text": "First part"}\n\n' in response.text
+    # Output is buffered until PII redaction completes, so timed-out partial text is not emitted.
+    assert 'event: text_delta' not in response.text
     assert 'event: error\ndata: {"code": "timeout", "message": "Response generation timed out.", "request_id": "' in response.text

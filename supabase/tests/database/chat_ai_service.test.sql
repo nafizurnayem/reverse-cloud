@@ -9,7 +9,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(35);
 
 -- ============================================================= test data
 
@@ -34,11 +34,19 @@ insert into public.projects (id, client_id, title, created_by) values
    'Confidential Project', '00000000-0000-0000-0000-000000001801');
 
 -- Seed a test knowledge document & chunk
-insert into public.knowledge_documents (id, source_type, title, locale, content_hash) values
-  ('00000000-0000-0000-0000-0000000018d1', 'policy', 'Privacy and AI Guidelines', 'en', 'hash123');
+insert into public.knowledge_documents
+  (id, source_type, title, locale, content_hash, visibility)
+values
+  ('00000000-0000-0000-0000-0000000018d1', 'policy',
+   'Privacy and AI Guidelines', 'en', 'hash123', 'public'),
+  ('00000000-0000-0000-0000-0000000018d2', 'policy',
+   'Internal Operations', 'en', 'hash-private', 'private');
 
 insert into public.knowledge_chunks (document_id, chunk_index, content, locale) values
-  ('00000000-0000-0000-0000-0000000018d1', 0, 'Reverse Cloud develops custom web software and cloud solutions.', 'en');
+  ('00000000-0000-0000-0000-0000000018d1', 0,
+   'Reverse Cloud develops custom web software and cloud solutions.', 'en'),
+  ('00000000-0000-0000-0000-0000000018d2', 0,
+   'Confidential internal deployment instructions.', 'en');
 
 -- ============================================================= schema checks
 
@@ -93,12 +101,19 @@ select is_empty(
 -- ============================================================= hybrid search function
 
 select has_function('public', 'match_knowledge_chunks',
-  array['text', 'extensions.vector(768)', 'integer', 'double precision', 'text'],
+  array['text', 'extensions.vector(768)', 'integer', 'double precision', 'text', 'boolean'],
   'match_knowledge_chunks function exists');
 
 select isnt_empty(
   $$ select 1 from public.match_knowledge_chunks('software cloud', null, 5, 0.0, 'en') $$,
   'match_knowledge_chunks returns results for keyword match'
+);
+
+select is_empty(
+  $$ select 1
+     from public.match_knowledge_chunks('internal deployment', null, 50, 0.0, 'en')
+     where document_id = '00000000-0000-0000-0000-0000000018d2' $$,
+  'match_knowledge_chunks excludes private knowledge by default'
 );
 
 -- ============================================================= ai_service role: allowed actions

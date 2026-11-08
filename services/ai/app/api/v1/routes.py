@@ -101,6 +101,11 @@ async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | Non
     payload.conversation_id = str(session_id)
     yield _sse("message_start", {"conversation_id": payload.conversation_id})
     settings = get_settings()
+    model_name = (
+        getattr(settings, "ollama_model", "ollama")
+        if getattr(settings, "ollama_url", None)
+        else getattr(settings, "llm_model", "unknown")
+    )
 
     # 1. Kill switch check
     if not getattr(settings, "ai_enabled", True):
@@ -165,6 +170,7 @@ async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | Non
     # FX-25: raw exception text is never forwarded to the client; a request_id is
     #        included so the error can be correlated with server logs.
     assistant_text: list[str] = []
+    cards: list[CardEvent] = []
     usage = UsageEvent(input_tokens=0, output_tokens=0, tool_names=[])
     started_at = time.monotonic()
     try:
@@ -177,12 +183,9 @@ async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | Non
         timeout_seconds = getattr(settings, "ai_stream_timeout_seconds", 60.0)
         async for event in stream_with_timeout(stream, timeout_seconds=timeout_seconds):
             if isinstance(event, TextChunk):
-                # shortcut: redaction is per model delta; use a buffered redactor if providers split PII tokens.
-                safe_text = redact_pii(event.text)
-                assistant_text.append(safe_text)
-                yield _sse("text_delta", {"text": safe_text})
+                assistant_text.append(event.text)
             elif isinstance(event, CardEvent):
-                yield _sse("card", {"type": event.card_type, "data": event.data})
+                cards.append(event)
             elif isinstance(event, UsageEvent):
                 usage = event
     except StreamTimeoutError:
@@ -197,6 +200,11 @@ async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | Non
         )
         yield _sse("error", {"code": "server_error", "message": "Something went wrong. Please try again.", "request_id": request_id})
     else:
+        safe_text = redact_pii("".join(assistant_text))
+        if safe_text:
+            yield _sse("text_delta", {"text": safe_text})
+        for card in cards:
+            yield _sse("card", {"type": card.card_type, "data": card.data})
         if db_pool is not None:
             try:
                 await _persist_message(
@@ -204,9 +212,9 @@ async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | Non
                     session_id=session_id,
                     locale=payload.locale,
                     role="assistant",
-                    content="".join(assistant_text),
+                    content=safe_text,
                     request_id=request_id,
-                    model=settings.ollama_model if settings.ollama_url else settings.llm_model,
+                    model=model_name,
                     tokens_in=usage.input_tokens,
                     tokens_out=usage.output_tokens,
                 )
@@ -225,7 +233,7 @@ async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | Non
         logger.info(
             "AI chat complete request_id=%s model=%s tokens_in=%s tokens_out=%s tools=%s duration_ms=%s",
             request_id,
-            settings.ollama_model if settings.ollama_url else settings.llm_model,
+            model_name,
             usage.input_tokens,
             usage.output_tokens,
             ",".join(usage.tool_names),

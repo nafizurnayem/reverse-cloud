@@ -287,7 +287,7 @@ async def run_agent_stream(
         except Exception as exc:
             logger.warning("Card event extraction failed: %s", exc)
 
-        usage = result_stream.usage()
+        usage = result_stream.usage
         yield UsageEvent(
             input_tokens=int(getattr(usage, "input_tokens", getattr(usage, "request_tokens", 0)) or 0),
             output_tokens=int(getattr(usage, "output_tokens", getattr(usage, "response_tokens", 0)) or 0),

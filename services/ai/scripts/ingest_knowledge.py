@@ -136,11 +136,12 @@ async def ingest_entries(
             raise ValueError(f"Unsupported locale: {locale}")
         if visibility not in {"public", "private"}:
             raise ValueError(f"Unsupported visibility: {visibility}")
-        content_hash = hashlib.sha256(entry["content"].encode("utf-8")).hexdigest()
+        full_text = f"{title}\n\n{entry['content']}"
+        content_hash = hashlib.sha256(full_text.encode("utf-8")).hexdigest()
 
         existing = await connection.fetchrow(
             """
-            SELECT id, content_hash
+            SELECT id, title, content_hash, visibility
             FROM public.knowledge_documents
             WHERE source_type = $1
               AND source_id IS NOT DISTINCT FROM $2
@@ -153,7 +154,12 @@ async def ingest_entries(
             locale,
             title,
         )
-        if existing and existing["content_hash"] == content_hash:
+        if (
+            existing
+            and existing["title"] == title
+            and existing["content_hash"] == content_hash
+            and existing["visibility"] == visibility
+        ):
             docs_skipped += 1
             continue
 
@@ -176,7 +182,6 @@ async def ingest_entries(
             docs_inserted += 1
 
         # Split content into chunks
-        full_text = f"{title}\n\n{entry['content']}"
         chunks = split_content(full_text, chunk_size=1200)
 
         for idx, chunk_text in enumerate(chunks):
