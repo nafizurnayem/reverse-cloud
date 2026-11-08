@@ -145,7 +145,7 @@ docker run --detach \
   --env OLLAMA_MODEL=llama3.2:1b \
   --env "TRUSTED_PUBLIC_ORIGINS=${public_origin}" \
   "$image" \
-  pnpm --filter @reverse-cloud/web exec next start -H 127.0.0.1 -p 3001 >/dev/null
+  pnpm --filter @reverse-cloud/web exec next start -H localhost -p 3001 >/dev/null
 
 if ! wait_for_health 3001; then
   docker logs --tail 100 "$CANDIDATE_CONTAINER" || true

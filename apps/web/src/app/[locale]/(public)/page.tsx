@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Link } from "@/i18n/navigation";
+import { getPathname, Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,10 +22,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${t("brand")} — ${t("heading")}`,
     description: t("description"),
     alternates: {
-      canonical: `/${locale}`,
+      canonical: getPathname({ href: "/", locale }),
       languages: {
-        en: "/en",
-        bn: "/bn",
+        en: getPathname({ href: "/", locale: "en" }),
+        bn: getPathname({ href: "/", locale: "bn" }),
       },
     },
   };

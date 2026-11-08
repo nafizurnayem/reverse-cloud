@@ -25,33 +25,38 @@ test("English and Bangla have matching translation keys", () => {
   assert.deepEqual(keys(messages.en), keys(messages.bn));
 });
 
-for (const locale of ["en", "bn"]) {
+for (const [locale, pathname] of Object.entries({ en: "/", bn: "/bn" })) {
   test(`${locale} renders translated content and language links`, async () => {
-    const response = await fetch(`${baseURL}/${locale}`, {
-      // A preference for the other locale must not override an explicit URL.
-      headers: { "Accept-Language": locale === "en" ? "bn" : "en" },
+    const response = await fetch(`${baseURL}${pathname}`, {
+      headers: { "Accept-Language": locale },
       redirect: "manual",
     });
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.ok(html.includes(`<html lang="${locale}">`));
     assert.ok(html.includes(`<h1>${messages[locale].Home.heading}</h1>`));
-    assert.ok(html.includes(`<title>${messages[locale].Metadata.title}</title>`));
+    assert.ok(
+      html.includes(
+        `<title>${messages[locale].Home.brand} — ${messages[locale].Home.heading} | Reverse Cloud</title>`,
+      ),
+    );
+    // The explicit English switch link uses /en so middleware can update the
+    // locale cookie before redirecting to the clean canonical root URL.
     assert.ok(html.includes('href="/en"'));
     assert.ok(html.includes('href="/bn"'));
     assert.ok(html.includes(`aria-label="${messages[locale].LanguageSwitcher.label}"`));
   });
 }
 
-test("root falls back to English and preserves the query string", async () => {
+test("root renders English without a locale prefix", async () => {
   const response = await fetch(`${baseURL}/?source=test`, {
     headers: { "Accept-Language": "fr" },
     redirect: "manual",
   });
-  assert.equal(response.status, 307);
-  const destination = new URL(response.headers.get("location"), baseURL);
-  assert.equal(destination.pathname, "/en");
-  assert.equal(destination.search, "?source=test");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("location"), null);
+  const html = await response.text();
+  assert.ok(html.includes('<html lang="en">'));
 });
 
 test("root respects Bangla browser preference and the saved locale", async () => {
@@ -71,6 +76,14 @@ test("unsupported locales and missing pages end in a 404", async () => {
       headers: { "Accept-Language": "en" },
     });
     assert.equal(response.status, 404, path);
+  }
+});
+
+test("legacy English-prefixed URLs redirect to clean canonical paths", async () => {
+  for (const [source, destination] of [["/en", "/"], ["/en/services", "/services"]]) {
+    const response = await fetch(`${baseURL}${source}`, { redirect: "manual" });
+    assert.equal(response.status, 307);
+    assert.equal(new URL(response.headers.get("location"), baseURL).pathname, destination);
   }
 });
 
@@ -97,7 +110,7 @@ test("API endpoints bypass localization", async () => {
 });
 
 test("static assets bypass localization", async () => {
-  const html = await (await fetch(`${baseURL}/en`)).text();
+  const html = await (await fetch(baseURL)).text();
   const asset = html.match(/(?:src|href)="(\/_next\/static\/[^\"]+)"/);
   assert.ok(asset, "Expected a Next.js asset in the rendered page");
   const response = await fetch(new URL(asset[1].replaceAll("&amp;", "&"), baseURL), {
