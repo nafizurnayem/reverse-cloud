@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { routing } from "@/i18n/routing";
+import { staffDashboardSegmentForRoles } from "@/lib/auth/permissions";
 import { requireUser } from "@/lib/auth/guards";
+import { getActiveStaffRoleKeys } from "@/lib/supabase/roles";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ChatWidget } from "@/components/chat";
@@ -18,14 +20,9 @@ export default async function PortalLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   const { supabase, user } = await requireUser(locale);
-  const { data: staffRoles, error: staffError } = await supabase
-    .from("staff_roles")
-    .select("role_id")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1);
-  if (staffError || !Array.isArray(staffRoles)) throw new Error("Unable to verify portal access");
-  if (staffRoles.length) redirect(`/${locale}/admin`);
+  const staffRoleKeys = await getActiveStaffRoleKeys(supabase, user.id);
+  if (!staffRoleKeys) throw new Error("Unable to verify portal access");
+  if (staffRoleKeys.length) redirect(`/${staffDashboardSegmentForRoles(staffRoleKeys)}`);
   const isBn = locale === "bn";
   const accountHref = `/${locale}/portal`;
   const meta = user.user_metadata as Record<string, unknown> | undefined;

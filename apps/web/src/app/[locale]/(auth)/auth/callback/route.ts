@@ -1,9 +1,11 @@
 import { hasLocale } from "next-intl";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
+import { staffDashboardSegmentForRoles } from "@/lib/auth/permissions";
 import { trustedPublicOrigin } from "@/lib/auth/public-origin";
 import { protectedArea, safePostLoginPath } from "@/lib/auth/routes";
 import { inviteTokenFromDestination } from "@/lib/invites/routes";
+import { getActiveStaffRoleKeys } from "@/lib/supabase/roles";
 import { createClient } from "@/lib/supabase/server";
 
 type Context = { params: Promise<{ locale: string }> };
@@ -77,14 +79,13 @@ export async function GET(request: NextRequest, { params }: Context) {
     if (inviteError) return loginError(publicSiteUrl, locale, "account_link_failed", next);
 
     // Staff are never provisioned as clients, even if they opened a portal link.
-    const { data: staffRoles, error: staffError } = await supabase
-      .from("staff_roles")
-      .select("role_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .limit(1);
-    if (staffError || !Array.isArray(staffRoles)) return loginError(publicSiteUrl, locale, "account_link_failed", next);
-    if (staffRoles.length) return privateRedirect(new URL(`/${locale}/admin`, publicSiteUrl));
+    const staffRoleKeys = await getActiveStaffRoleKeys(supabase, user.id);
+    if (!staffRoleKeys) return loginError(publicSiteUrl, locale, "account_link_failed", next);
+    if (staffRoleKeys.length) {
+      return privateRedirect(
+        new URL(`/${staffDashboardSegmentForRoles(staffRoleKeys)}`, publicSiteUrl),
+      );
+    }
 
     const { data: existingClient, error: clientError } = await supabase
       .from("clients")

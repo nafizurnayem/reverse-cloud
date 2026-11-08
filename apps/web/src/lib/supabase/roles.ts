@@ -84,6 +84,31 @@ export async function isActiveStaff(supabase: SupabaseClient, userId: string) {
   }
 }
 
+export async function getActiveStaffRoleKeys(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("staff_roles")
+      .select("roles!inner(key)")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .limit(10);
+
+    if (error || !Array.isArray(data)) return null;
+    const keys = new Set<string>();
+    for (const row of data as StaffRoleRow[]) {
+      for (const role of many(row.roles)) {
+        if (typeof role.key === "string") keys.add(role.key);
+      }
+    }
+    return [...keys];
+  } catch {
+    return null;
+  }
+}
+
 export async function isActiveAdmin(supabase: SupabaseClient, userId: string) {
   const access = await getStaffAccess(supabase, userId);
   return access.isAdmin;

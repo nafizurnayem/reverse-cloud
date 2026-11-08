@@ -1,11 +1,13 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isActiveStaff } from "@/lib/supabase/roles";
+import { staffDashboardSegmentForRoles } from "./permissions";
+import { getActiveStaffRoleKeys } from "@/lib/supabase/roles";
 import type { Locale } from "./routes";
 
 export async function accountDestination(supabase: SupabaseClient, userId: string, locale: Locale) {
-  if (await isActiveStaff(supabase, userId)) return `/${locale}/admin`;
+  const staffRoleKeys = await getActiveStaffRoleKeys(supabase, userId);
+  if (staffRoleKeys?.length) return `/${staffDashboardSegmentForRoles(staffRoleKeys)}`;
 
   try {
     const { data, error } = await supabase

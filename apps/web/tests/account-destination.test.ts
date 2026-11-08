@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ isActiveStaff: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getActiveStaffRoleKeys: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/roles", () => ({ isActiveStaff: mocks.isActiveStaff }));
+vi.mock("@/lib/supabase/roles", () => ({
+  getActiveStaffRoleKeys: mocks.getActiveStaffRoleKeys,
+}));
 
 import { accountDestination } from "../src/lib/auth/destination";
 
@@ -20,14 +22,18 @@ function clientWith(id: string | null) {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.isActiveStaff.mockResolvedValue(false);
+  mocks.getActiveStaffRoleKeys.mockResolvedValue([]);
 });
 
 describe("post-login account destination", () => {
-  it("sends staff to admin without treating them as clients", async () => {
+  it.each([
+    [["admin"], "/admin"],
+    [["project_manager"], "/project_manager"],
+    [["developer"], "/developer"],
+  ])("sends the %s role to %s without treating staff as clients", async (roles, expected) => {
     const { supabase } = clientWith(null);
-    mocks.isActiveStaff.mockResolvedValue(true);
-    expect(await accountDestination(supabase as never, "staff-1", "en")).toBe("/en/admin");
+    mocks.getActiveStaffRoleKeys.mockResolvedValue(roles);
+    expect(await accountDestination(supabase as never, "staff-1", "en")).toBe(expected);
     expect(supabase.from).not.toHaveBeenCalled();
   });
 
