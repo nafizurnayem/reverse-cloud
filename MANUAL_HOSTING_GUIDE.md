@@ -205,11 +205,12 @@ Configure the remaining values needed by the enabled website features:
 | Scheduling | `CALCOM_API_KEY`, `CALCOM_API_BASE_URL`, API versions, and webhook secrets |
 | Notifications | Resend/email variables and/or Telegram variables |
 | Google login | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| Optional external AI | `DATABASE_URL_AI`, `AI_SERVICE_URL`, provider keys and model variables |
+| AI agent | `DATABASE_URL_AI`, `AI_HMAC_SECRET_CURRENT`, `AI_DAILY_TOKEN_BUDGET`; provider keys are optional because hosting uses Ollama |
 
-The Compose setup supplies `LOCAL_OLLAMA_PREVIEW`, `OLLAMA_URL`, and
-`OLLAMA_MODEL` to the live web container. The current preview uses the local
-Ollama model instead of the separate AI service.
+The Compose setup supplies the internal AI URL to the web container and the
+local Ollama URL/model names to the private FastAPI AI container. Do not set
+`LOCAL_OLLAMA_PREVIEW=true` on hosting; that bypasses the agent guardrails,
+tools, RAG, usage accounting, and chat persistence.
 
 Generate independent random server secrets when required:
 

@@ -20,5 +20,6 @@ class AgentDeps:
     embedder: Embedder | None = None
     client_id: str | None = None
     calcom_api_key: str | None = None
+    sensitive_action_confirmed: bool = False
     handoff_requested: bool = False
     handoff_details: dict[str, Any] = field(default_factory=dict)

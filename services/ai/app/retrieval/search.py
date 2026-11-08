@@ -26,6 +26,7 @@ SELECT
     source_type,
     chunk_index,
     content,
+    metadata,
     locale,
     similarity,
     combined_score
@@ -34,7 +35,8 @@ FROM public.match_knowledge_chunks(
     $2::extensions.vector,
     $3,
     $4,
-    $5
+    $5,
+    $6
 );
 """
 
@@ -87,6 +89,7 @@ async def hybrid_search(
                 top_k,
                 min_similarity,
                 locale,
+                True,
             )
             return [
                 {
@@ -96,6 +99,7 @@ async def hybrid_search(
                     "source_type": row["source_type"],
                     "chunk_index": row["chunk_index"],
                     "content": row["content"],
+                    "metadata": dict(row["metadata"] or {}),
                     "locale": row["locale"],
                     "similarity": float(row["similarity"]) if row["similarity"] is not None else 0.0,
                     "combined_score": float(row["combined_score"]) if row["combined_score"] is not None else 0.0,

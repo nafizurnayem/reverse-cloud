@@ -24,10 +24,12 @@ services:
     volumes:
       - ./secrets/web.env:/app/apps/web/.env.local:ro
     environment:
-      LOCAL_OLLAMA_PREVIEW: "true"
-      OLLAMA_URL: http://127.0.0.1:11434
-      OLLAMA_MODEL: llama3.2:1b
+      LOCAL_OLLAMA_PREVIEW: "false"
+      AI_SERVICE_URL: http://127.0.0.1:8000
       TRUSTED_PUBLIC_ORIGINS: ${PUBLIC_ORIGIN:-https://invalid.example}
+    depends_on:
+      ai:
+        condition: service_healthy
     command:
       - pnpm
       - --filter
@@ -49,6 +51,41 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+
+  ai:
+    image: ${AI_IMAGE:-reverse-cloud-ai:unconfigured}
+    container_name: reverse-cloud-ai
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./secrets/web.env:/app/services/ai/.env.local:ro
+    environment:
+      OLLAMA_URL: http://127.0.0.1:11434
+      OLLAMA_MODEL: llama3.2:1b
+      OLLAMA_EMBEDDING_MODEL: qwen3-embedding:0.6b
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command:
+      - python
+      - -m
+      - uvicorn
+      - app.main:app
+      - --host
+      - 127.0.0.1
+      - --port
+      - "8000"
+      - --proxy-headers
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   tunnel:
     image: cloudflare/cloudflared@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba

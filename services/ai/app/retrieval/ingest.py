@@ -28,9 +28,11 @@ class Embedder(Protocol):
     async def embed(self, text: str) -> Sequence[float]: ...
 
 
-def split_content(text: str, *, chunk_size: int = 1200) -> list[str]:
+def split_content(text: str, *, chunk_size: int = 1200, overlap: int = 150) -> list[str]:
     if chunk_size < 1:
         raise ValueError("chunk_size must be positive")
+    if overlap < 0 or overlap >= chunk_size:
+        raise ValueError("overlap must be non-negative and smaller than chunk_size")
     words = text.split()
     chunks: list[str] = []
     current: list[str] = []
@@ -38,8 +40,18 @@ def split_content(text: str, *, chunk_size: int = 1200) -> list[str]:
     for word in words:
         if current and current_length + len(word) + 1 > chunk_size:
             chunks.append(" ".join(current))
-            current = []
-            current_length = 0
+            retained: list[str] = []
+            retained_length = 0
+            for previous in reversed(current):
+                added = len(previous) + (1 if retained else 0)
+                if retained and retained_length + added > overlap:
+                    break
+                if len(previous) > overlap and not retained:
+                    break
+                retained.append(previous)
+                retained_length += added
+            current = list(reversed(retained))
+            current_length = len(" ".join(current))
         current.append(word)
         current_length += len(word) + (1 if current_length else 0)
     if current:

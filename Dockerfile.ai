@@ -1,0 +1,15 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYDANTIC_AI_NO_BANNER=1
+
+WORKDIR /app/services/ai
+COPY services/ai/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir --requirement requirements.txt
+
+COPY services/ai ./
+RUN useradd --uid 1000 --create-home ai && chown -R ai:ai /app/services/ai
+
+USER ai
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--proxy-headers"]

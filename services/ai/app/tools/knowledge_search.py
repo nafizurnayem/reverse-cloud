@@ -13,6 +13,7 @@ from pydantic_ai import RunContext
 
 from ..agents.deps import AgentDeps
 from ..retrieval.search import hybrid_search
+from ..security.guardrails import detect_prompt_injection
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,15 @@ def format_search_results(results: list[dict[str, Any]]) -> str:
         title = r.get("document_title", "General Information")
         source = r.get("source_type", "document")
         content = r.get("content", "").strip()
-        formatted_parts.append(f"[{idx}] {title} ({source}):\n{content}")
+        if detect_prompt_injection(content):
+            logger.warning("Dropped suspicious retrieved chunk %s", r.get("chunk_id"))
+            continue
+        formatted_parts.append(
+            f"[{idx}] Citation: {title} ({source})\n"
+            f"<retrieved_knowledge>\n{content}\n</retrieved_knowledge>"
+        )
 
-    return "\n\n---\n\n".join(formatted_parts)
+    return "\n\n---\n\n".join(formatted_parts) or "No safe knowledge found for the query."
 
 
 async def search_knowledge(

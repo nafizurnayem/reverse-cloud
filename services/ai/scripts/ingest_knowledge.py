@@ -8,8 +8,10 @@ Each line in the JSONL file should be a JSON object with:
     {
         "title":       "How long does a website project take?",
         "content":     "A typical website project takes 4-8 weeks depending on ...",
-        "source_type": "faq",           // optional, defaults to "faq"
-        "locale":      "en"             // optional, defaults to "en"
+        "source_type": "manual",        // optional, defaults to "manual"
+        "source_id":   null,             // required for service/faq/portfolio/blog
+        "visibility":  "private",        // set "public" for website chat
+        "locale":      "en"              // optional, defaults to "en"
     }
 
 The script will:
@@ -23,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import logging
 import sys
@@ -41,9 +44,16 @@ from app.retrieval.ingest import split_content
 logger = logging.getLogger(__name__)
 
 INSERT_DOCUMENT_SQL = """
-INSERT INTO public.knowledge_documents (id, title, source_type, locale, status)
-VALUES ($1, $2, $3, $4, 'published')
+INSERT INTO public.knowledge_documents
+  (id, title, source_type, source_id, locale, content_hash, visibility, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, $7, true)
 RETURNING id;
+"""
+
+UPDATE_DOCUMENT_SQL = """
+UPDATE public.knowledge_documents
+SET title = $2, content_hash = $3, visibility = $4, is_active = true
+WHERE id = $1;
 """
 
 INSERT_CHUNK_SQL = """
@@ -74,7 +84,9 @@ def load_entries(filepath: Path) -> list[dict[str, Any]]:
                 {
                     "title": entry["title"],
                     "content": entry["content"],
-                    "source_type": entry.get("source_type", "faq"),
+                    "source_type": entry.get("source_type", "manual"),
+                    "source_id": entry.get("source_id"),
+                    "visibility": entry.get("visibility", "private"),
                     "locale": entry.get("locale", "en"),
                 }
             )
@@ -105,6 +117,8 @@ async def ingest_entries(
             logger.warning("No embedding provider configured; inserting chunks without embeddings")
 
     docs_inserted = 0
+    docs_updated = 0
+    docs_skipped = 0
     chunks_inserted = 0
 
     for entry in entries:
@@ -112,10 +126,54 @@ async def ingest_entries(
         title = entry["title"]
         locale = entry["locale"]
         source_type = entry["source_type"]
+        source_id = uuid.UUID(entry["source_id"]) if entry.get("source_id") else None
+        visibility = entry.get("visibility", "private")
+        if source_type not in {"service", "faq", "portfolio", "blog", "policy", "manual"}:
+            raise ValueError(f"Unsupported source_type: {source_type}")
+        if source_type not in {"policy", "manual"} and source_id is None:
+            raise ValueError(f"source_id is required for source_type={source_type}")
+        if locale not in {"en", "bn"}:
+            raise ValueError(f"Unsupported locale: {locale}")
+        if visibility not in {"public", "private"}:
+            raise ValueError(f"Unsupported visibility: {visibility}")
+        content_hash = hashlib.sha256(entry["content"].encode("utf-8")).hexdigest()
 
-        # Insert the document
-        await connection.execute(INSERT_DOCUMENT_SQL, doc_id, title, source_type, locale)
-        docs_inserted += 1
+        existing = await connection.fetchrow(
+            """
+            SELECT id, content_hash
+            FROM public.knowledge_documents
+            WHERE source_type = $1
+              AND source_id IS NOT DISTINCT FROM $2
+              AND locale = $3
+              AND ($2 IS NOT NULL OR title = $4)
+            LIMIT 1;
+            """,
+            source_type,
+            source_id,
+            locale,
+            title,
+        )
+        if existing and existing["content_hash"] == content_hash:
+            docs_skipped += 1
+            continue
+
+        if existing:
+            doc_id = existing["id"]
+            await connection.execute(UPDATE_DOCUMENT_SQL, doc_id, title, content_hash, visibility)
+            await connection.execute("DELETE FROM public.knowledge_chunks WHERE document_id = $1", doc_id)
+            docs_updated += 1
+        else:
+            await connection.execute(
+                INSERT_DOCUMENT_SQL,
+                doc_id,
+                title,
+                source_type,
+                source_id,
+                locale,
+                content_hash,
+                visibility,
+            )
+            docs_inserted += 1
 
         # Split content into chunks
         full_text = f"{title}\n\n{entry['content']}"
@@ -140,7 +198,12 @@ async def ingest_entries(
             )
             chunks_inserted += 1
 
-    return {"documents_inserted": docs_inserted, "chunks_inserted": chunks_inserted}
+    return {
+        "documents_inserted": docs_inserted,
+        "documents_updated": docs_updated,
+        "documents_skipped": docs_skipped,
+        "chunks_inserted": chunks_inserted,
+    }
 
 
 async def main(filepath: Path, skip_embeddings: bool = False) -> None:
@@ -160,7 +223,10 @@ async def main(filepath: Path, skip_embeddings: bool = False) -> None:
     conn = await asyncpg.connect(settings.database_url)
     try:
         result = await ingest_entries(conn, entries, generate_embeddings=not skip_embeddings)
-        print(f"✓ Ingested {result['documents_inserted']} documents, {result['chunks_inserted']} chunks")
+        print(
+            f"Ingested {result['documents_inserted']} new, {result['documents_updated']} updated, "
+            f"{result['documents_skipped']} unchanged documents and {result['chunks_inserted']} chunks"
+        )
     finally:
         await conn.close()
 

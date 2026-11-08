@@ -50,7 +50,12 @@ _INJECTION_PATTERNS = [
     re.compile(r"you\s+are\s+now\s+(in\s+developer\s+mode|dan|an\s+unrestricted\s+ai)", re.IGNORECASE),
     re.compile(r"bypass\s+(all\s+)?(safety|security|rules|filters)", re.IGNORECASE),
     re.compile(r"jailbreak", re.IGNORECASE),
+    re.compile(r"পূর্বের\s+সকল\s+নির্দেশ.*(বাতিল|উপেক্ষা)", re.IGNORECASE),
+    re.compile(r"আসল\s+নির্দেশাবলী.*(দেখাও|প্রকাশ)", re.IGNORECASE),
 ]
+
+_EMAIL_PATTERN = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
+_PHONE_PATTERN = re.compile(r"(?<!\w)(?:\+?\d[\d\s().-]{7,}\d)(?!\w)")
 
 MAX_HISTORY_MESSAGES = 20
 MAX_TOOL_CALLS_PER_TURN = 6
@@ -69,6 +74,18 @@ def detect_prompt_injection(text: str) -> bool:
     if not text:
         return False
     return any(pattern.search(text) for pattern in _INJECTION_PATTERNS)
+
+
+def redact_pii(text: str) -> str:
+    """Remove common contact details before text reaches logs or chat output."""
+    if not text:
+        return text
+    return _PHONE_PATTERN.sub("[REDACTED_PHONE]", _EMAIL_PATTERN.sub("[REDACTED_EMAIL]", text))
+
+
+def estimate_token_count(text: str) -> int:
+    """Conservative provider-independent estimate used for the daily budget gate."""
+    return max(1, (len(text) + 2) // 3)
 
 
 def cap_message_history(messages: Sequence[ChatMessage], max_history: int = MAX_HISTORY_MESSAGES) -> list[ChatMessage]:

@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import AsyncIterator
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import asyncpg
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, UsageLimits
 from dataclasses import dataclass
 from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolReturnPart, UserPromptPart
@@ -30,6 +31,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from ..config import get_settings, resolved_gemini_api_key, resolved_gemini_model
 from ..retrieval.ingest import Embedder
 from ..schemas.chat import ChatMessage, ChatRequest
+from ..security.guardrails import MAX_TOOL_CALLS_PER_TURN
 from ..tools.estimate_tool import get_estimate
 from ..tools.human_handoff import request_human_handoff
 from ..tools.knowledge_search import search_knowledge
@@ -55,6 +57,14 @@ class CardEvent:
     """A tool result that the UI should render as a card."""
     card_type: str
     data: dict
+
+
+@dataclass
+class UsageEvent:
+    """Final model usage and tool names for persistence and cost controls."""
+    input_tokens: int
+    output_tokens: int
+    tool_names: list[str]
 
 
 # Maps pydantic_ai tool function names to the card type the frontend expects.
@@ -185,13 +195,27 @@ def convert_chat_messages(
     return latest_prompt, history
 
 
+def has_explicit_save_confirmation(messages: list[ChatMessage]) -> bool:
+    """Require an affirmative reply immediately after the assistant asks to save details."""
+    if len(messages) < 2 or messages[-1].role != "user" or messages[-2].role != "assistant":
+        return False
+    asked = re.search(r"\b(confirm|save|record)\b|নিশ্চিত|সংরক্ষণ", messages[-2].content, re.IGNORECASE)
+    agreed = re.fullmatch(
+        r"\s*(yes|confirm|confirmed|go ahead|please do|ok(?:ay)?|হ্যাঁ|জি|ঠিক আছে)\s*[.!]?\s*",
+        messages[-1].content,
+        re.IGNORECASE,
+    )
+    return bool(asked and agreed)
+
+
 async def run_agent_stream(
     payload: ChatRequest,
     pool: asyncpg.Pool | None = None,
     embedder: Embedder | None = None,
     model: Any = None,
     client_id: str | None = None,
-) -> AsyncIterator[TextChunk | CardEvent]:
+    token_limit: int | None = None,
+) -> AsyncIterator[TextChunk | CardEvent | UsageEvent]:
     """Execute the agent in streaming mode, yielding text chunks and card events.
 
     FX-08: After all text deltas have been streamed, the completed tool results are
@@ -215,16 +239,22 @@ async def run_agent_stream(
         conversation_id=payload.conversation_id,
         embedder=embedder,
         client_id=client_id or payload.client_id,
+        sensitive_action_confirmed=has_explicit_save_confirmation(payload.messages),
     )
 
     user_prompt, history = convert_chat_messages(payload.messages)
     if not user_prompt:
         return
 
+    limits = {"tool_calls_limit": MAX_TOOL_CALLS_PER_TURN}
+    if token_limit is not None:
+        limits["total_tokens_limit"] = max(1, token_limit)
+
     async with agent.run_stream(
         user_prompt=user_prompt,
         message_history=history,
         deps=deps,
+        usage_limits=UsageLimits(**limits),
     ) as result_stream:
         # Stream text deltas first
         async for chunk in result_stream.stream_text(delta=True):
@@ -233,6 +263,7 @@ async def run_agent_stream(
 
         # FX-08: after the text stream ends, inspect all new messages for tool
         # return parts and emit a CardEvent for each one the UI can render.
+        tool_names: list[str] = []
         try:
             for msg in result_stream.new_messages():
                 if not isinstance(msg, ModelRequest):
@@ -240,6 +271,7 @@ async def run_agent_stream(
                 for part in msg.parts:
                     if not isinstance(part, ToolReturnPart):
                         continue
+                    tool_names.append(part.tool_name)
                     card_type = _TOOL_CARD_TYPES.get(part.tool_name)
                     if card_type is None:
                         continue
@@ -254,3 +286,10 @@ async def run_agent_stream(
                     yield CardEvent(card_type=card_type, data=data)
         except Exception as exc:
             logger.warning("Card event extraction failed: %s", exc)
+
+        usage = result_stream.usage()
+        yield UsageEvent(
+            input_tokens=int(getattr(usage, "input_tokens", getattr(usage, "request_tokens", 0)) or 0),
+            output_tokens=int(getattr(usage, "output_tokens", getattr(usage, "response_tokens", 0)) or 0),
+            tool_names=tool_names,
+        )

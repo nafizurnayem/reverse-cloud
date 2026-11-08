@@ -91,12 +91,16 @@ async def save_lead(
     locale = ctx.deps.locale if ctx else "en"
     pool = ctx.deps.db_pool if ctx else None
 
-    if pool is None:
-        logger.info("Database pool not available; lead recorded in test/offline mode.")
+    if not ctx or not ctx.deps.sensitive_action_confirmed:
         return {
-            "status": "success",
-            "lead_id": "test-lead-id",
-            "message": "Lead received successfully (offline mode).",
+            "status": "confirmation_required",
+            "message": "Please ask the user to explicitly confirm before saving their contact details.",
+        }
+
+    if pool is None:
+        return {
+            "status": "error",
+            "message": "Unable to save your contact details right now. Please use the contact form.",
         }
 
     try:

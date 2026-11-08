@@ -17,7 +17,11 @@ class VectorStore:
 
 
 def test_split_content_respects_chunk_size():
-    assert split_content("alpha beta gamma", chunk_size=10) == ["alpha beta", "gamma"]
+    assert split_content("alpha beta gamma", chunk_size=10, overlap=0) == ["alpha beta", "gamma"]
+
+
+def test_split_content_preserves_overlap():
+    assert split_content("one two three four", chunk_size=13, overlap=5) == ["one two three", "three four"]
 
 
 @pytest.mark.asyncio

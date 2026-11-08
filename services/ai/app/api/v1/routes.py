@@ -1,10 +1,12 @@
 import json
+import logging
+import time
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-import uuid as _uuid
-from ...agents.chat_agent import CardEvent, TextChunk, run_agent_stream
+from ...agents.chat_agent import CardEvent, TextChunk, UsageEvent, run_agent_stream
 from ...config import get_settings, resolved_gemini_api_key
 from ...estimator.engine import EstimateInput, estimate_project
 from ...schemas.chat import ChatRequest
@@ -13,21 +15,91 @@ from ...security.guardrails import (
     GuardrailViolation,
     StreamTimeoutError,
     cap_message_history,
+    check_token_budget,
     detect_prompt_injection,
+    estimate_token_count,
+    GuardrailState,
+    redact_pii,
     stream_with_timeout,
 )
 from ...jobs.cost_report import generate_cost_report
 from ...security.signing import InvalidSignature, verify_request_signature
 
 router = APIRouter(prefix="/v1")
+logger = logging.getLogger(__name__)
 
 
 def _sse(event: str, payload: dict[str, str]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
-async def _chat_events(payload: ChatRequest, db_pool=None):
-    yield _sse("message_start", {"conversation_id": payload.conversation_id or ""})
+async def _daily_tokens(db_pool) -> int:
+    async with db_pool.acquire() as conn:
+        value = await conn.fetchval(
+            """
+            SELECT coalesce(sum(coalesce(tokens_in, 0) + coalesce(tokens_out, 0)), 0)
+            FROM public.chat_messages
+            WHERE created_at >= date_trunc('day', now());
+            """
+        )
+    return int(value or 0)
+
+
+async def _persist_message(
+    db_pool,
+    *,
+    session_id: UUID,
+    locale: str,
+    role: str,
+    content: str,
+    request_id: str,
+    client_id: str | None = None,
+    model: str | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    tool_name: str | None = None,
+) -> None:
+    client_uuid = UUID(client_id) if client_id else None
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO public.chat_sessions (id, client_id, locale, status)
+            VALUES ($1, $2, $3, 'active')
+            ON CONFLICT (id) DO UPDATE SET
+              client_id = coalesce(public.chat_sessions.client_id, excluded.client_id),
+              locale = excluded.locale,
+              last_active_at = now();
+            """,
+            session_id,
+            client_uuid,
+            locale,
+        )
+        await conn.execute(
+            """
+            INSERT INTO public.chat_messages
+              (session_id, role, content, tool_name, model, tokens_in, tokens_out, request_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+            """,
+            session_id,
+            role,
+            redact_pii(content),
+            tool_name,
+            model,
+            tokens_in,
+            tokens_out,
+            request_id,
+        )
+
+
+async def _chat_events(payload: ChatRequest, db_pool=None, request_id: str | None = None):
+    request_id = request_id or str(uuid4())
+    try:
+        session_id = UUID(payload.conversation_id) if payload.conversation_id else uuid4()
+    except ValueError:
+        yield _sse("error", {"code": "invalid_session", "message": "Invalid conversation session."})
+        return
+    payload.conversation_id = str(session_id)
+    yield _sse("message_start", {"conversation_id": payload.conversation_id})
     settings = get_settings()
 
     # 1. Kill switch check
@@ -58,18 +130,61 @@ async def _chat_events(payload: ChatRequest, db_pool=None):
         )
         return
 
+    token_limit: int | None = None
+    if db_pool is not None:
+        try:
+            used = await _daily_tokens(db_pool)
+            requested = sum(estimate_token_count(message.content) for message in payload.messages)
+            check_token_budget(
+                GuardrailState(
+                    ai_enabled=True,
+                    daily_token_budget=settings.ai_daily_token_budget,
+                    daily_tokens_used=used,
+                ),
+                requested_tokens=requested,
+            )
+            token_limit = settings.ai_daily_token_budget - used
+            await _persist_message(
+                db_pool,
+                session_id=session_id,
+                locale=payload.locale,
+                role="user",
+                content=latest_user_message,
+                request_id=request_id,
+                client_id=payload.client_id,
+            )
+        except GuardrailViolation as error:
+            yield _sse("error", {"code": error.code, "message": error.message, "request_id": request_id})
+            return
+        except Exception:
+            logger.error("Chat budget/persistence failed [request_id=%s]", request_id, exc_info=True)
+            yield _sse("error", {"code": "service_unavailable", "message": "AI chat is temporarily unavailable.", "request_id": request_id})
+            return
+
     # FX-08: stream yields TextChunk (text delta) and CardEvent (renderable tool result).
     # FX-25: raw exception text is never forwarded to the client; a request_id is
     #        included so the error can be correlated with server logs.
-    request_id = str(_uuid.uuid4())
+    assistant_text: list[str] = []
+    usage = UsageEvent(input_tokens=0, output_tokens=0, tool_names=[])
+    started_at = time.monotonic()
     try:
-        stream = run_agent_stream(payload, pool=db_pool, client_id=payload.client_id)
+        stream = run_agent_stream(
+            payload,
+            pool=db_pool,
+            client_id=payload.client_id,
+            token_limit=token_limit,
+        )
         timeout_seconds = getattr(settings, "ai_stream_timeout_seconds", 60.0)
         async for event in stream_with_timeout(stream, timeout_seconds=timeout_seconds):
             if isinstance(event, TextChunk):
-                yield _sse("text_delta", {"text": event.text})
+                # shortcut: redaction is per model delta; use a buffered redactor if providers split PII tokens.
+                safe_text = redact_pii(event.text)
+                assistant_text.append(safe_text)
+                yield _sse("text_delta", {"text": safe_text})
             elif isinstance(event, CardEvent):
                 yield _sse("card", {"type": event.card_type, "data": event.data})
+            elif isinstance(event, UsageEvent):
+                usage = event
     except StreamTimeoutError:
         yield _sse("error", {"code": "timeout", "message": "Response generation timed out.", "request_id": request_id})
     except GuardrailViolation as error:
@@ -82,6 +197,40 @@ async def _chat_events(payload: ChatRequest, db_pool=None):
         )
         yield _sse("error", {"code": "server_error", "message": "Something went wrong. Please try again.", "request_id": request_id})
     else:
+        if db_pool is not None:
+            try:
+                await _persist_message(
+                    db_pool,
+                    session_id=session_id,
+                    locale=payload.locale,
+                    role="assistant",
+                    content="".join(assistant_text),
+                    request_id=request_id,
+                    model=settings.ollama_model if settings.ollama_url else settings.llm_model,
+                    tokens_in=usage.input_tokens,
+                    tokens_out=usage.output_tokens,
+                )
+                for tool_name in usage.tool_names:
+                    await _persist_message(
+                        db_pool,
+                        session_id=session_id,
+                        locale=payload.locale,
+                        role="tool",
+                        content="Tool completed.",
+                        request_id=request_id,
+                        tool_name=tool_name,
+                    )
+            except Exception:
+                logger.error("Chat result persistence failed [request_id=%s]", request_id, exc_info=True)
+        logger.info(
+            "AI chat complete request_id=%s model=%s tokens_in=%s tokens_out=%s tools=%s duration_ms=%s",
+            request_id,
+            settings.ollama_model if settings.ollama_url else settings.llm_model,
+            usage.input_tokens,
+            usage.output_tokens,
+            ",".join(usage.tool_names),
+            round((time.monotonic() - started_at) * 1000),
+        )
         yield _sse("message_end", {"reason": "stop"})
 
 
@@ -111,7 +260,7 @@ async def create_chat(
         raise HTTPException(status_code=503, detail="chat service is not configured")
     db_pool = getattr(request.app.state, "db_pool", None)
     return StreamingResponse(
-        _chat_events(payload, db_pool=db_pool),
+        _chat_events(payload, db_pool=db_pool, request_id=request.state.request_id),
         media_type="text/event-stream",
         headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
     )
