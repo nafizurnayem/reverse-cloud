@@ -1,6 +1,7 @@
 """Unit tests for Reverse Cloud AI agent tools."""
 
 import pytest
+from decimal import Decimal
 from pydantic_ai import RunContext
 
 from app.agents.deps import AgentDeps
@@ -11,6 +12,8 @@ from app.tools.project_status import get_project_status
 from app.tools.save_lead import save_lead
 from app.tools.scheduling import create_booking_hold, get_available_slots
 from app.tools.services_list import get_services_catalog, list_services
+from app.ports.catalog import ServiceCatalogItem
+from app.ports.estimator import EstimatorConfig, EstimatorFactor
 
 
 def make_mock_context(
@@ -32,6 +35,47 @@ def make_mock_context(
             self.deps = d
 
     return SimpleCtx(deps)  # type: ignore[return-value]
+
+
+class FakeCatalogRepository:
+    async def list_published_services(self, locale: str):
+        return [
+            ServiceCatalogItem(
+                slug="live-service",
+                name="লাইভ সার্ভিস" if locale == "bn" else "Live Service",
+                pricing_model="custom",
+                starting_from_usd=999.0,
+                summary="Loaded from Supabase",
+            )
+        ]
+
+
+class FakeEstimatorRepository:
+    async def get_active_config(self, service_slug: str):
+        return EstimatorConfig(
+            version_id="11111111-1111-4111-8111-111111111111",
+            version=3,
+            service_id="22222222-2222-4222-8222-222222222222",
+            service_slug=service_slug,
+            base_min=Decimal("1000"),
+            base_max=Decimal("2000"),
+            weeks_min=2,
+            weeks_max=4,
+            usd_to_bdt=Decimal("120"),
+            bdt_multiplier=Decimal("1"),
+            rounding_step_usd=50,
+            factors=(
+                EstimatorFactor(
+                    kind="complexity",
+                    key="complex",
+                    multiplier=Decimal("1.5"),
+                    add_min=Decimal("0"),
+                    add_max=Decimal("0"),
+                    add_weeks_min=1,
+                    add_weeks_max=2,
+                ),
+            ),
+        )
 
 
 @pytest.mark.asyncio
@@ -65,8 +109,24 @@ async def test_list_services_tool() -> None:
 
 
 @pytest.mark.asyncio
+async def test_list_services_prefers_supabase_repository() -> None:
+    ctx = make_mock_context(locale="bn")
+    ctx.deps.catalog_repository = FakeCatalogRepository()
+    result = await list_services(ctx)
+    assert result == [{
+        "slug": "live-service",
+        "name": "লাইভ সার্ভিস",
+        "pricing_model": "custom",
+        "starting_from_usd": 999.0,
+        "summary": "Loaded from Supabase",
+    }]
+
+
+@pytest.mark.asyncio
 async def test_estimate_tool() -> None:
+    ctx = make_mock_context()
     res = await get_estimate(
+        ctx,
         project_type="web",
         complexity="standard",
         pages=5,
@@ -78,6 +138,17 @@ async def test_estimate_tool() -> None:
     assert res["min_usd"] > 0
     assert res["currency"] == "USD"
     assert res["timeline_weeks"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_estimate_tool_prefers_active_supabase_version() -> None:
+    ctx = make_mock_context()
+    ctx.deps.estimator_repository = FakeEstimatorRepository()
+    result = await get_estimate(ctx, project_type="web", complexity="complex")
+    assert result["source"] == "supabase"
+    assert result["estimator_version"] == 3
+    assert result["min_usd"] == 1500
+    assert result["max_usd"] == 3000
 
 
 @pytest.mark.asyncio
