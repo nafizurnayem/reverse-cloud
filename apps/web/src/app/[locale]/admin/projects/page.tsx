@@ -151,7 +151,7 @@ export default async function ProjectsPage({ params, searchParams }: {
             )}
             <Field label={t("fields.projectTitle")} name="title" defaultValue={selected?.title} maxLength={200} required />
             <TextareaField label={t("fields.description")} name="description" defaultValue={selected?.description} rows={4} />
-            <SelectField label={t("fields.status")} name="status" defaultValue={selected?.status ?? "on_hold"}>
+            <SelectField key={`status-${selected?.id ?? "new"}-${selected?.status ?? "on_hold"}`} label={t("fields.status")} name="status" defaultValue={selected?.status ?? "on_hold"}>
               {projectStatuses.map((status) => <option key={status} value={status} disabled={!selected && status !== "on_hold"}>{t(`statuses.${status}`)}</option>)}
             </SelectField>
             <Field label={t("fields.previewUrl")} name="preview_url" type="url" defaultValue={selected?.preview_url} maxLength={500} placeholder="https://" />

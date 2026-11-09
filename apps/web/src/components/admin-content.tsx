@@ -33,20 +33,23 @@ export function Field({ label, name, defaultValue, type = "text", required = fal
   label: string; name: string; defaultValue?: unknown; type?: string; required?: boolean;
   min?: string | number; step?: string | number; maxLength?: number; placeholder?: string; readOnly?: boolean;
 }) {
-  const valueProps = type === "file" ? {} : { defaultValue: inputValue(defaultValue) };
+  const val = inputValue(defaultValue);
+  const valueProps = type === "file" ? {} : { defaultValue: val, key: String(val) };
   return <label className="content-field"><span>{label}</span><input name={name} type={type} {...valueProps} required={required} min={min} step={step} maxLength={maxLength} placeholder={placeholder} readOnly={readOnly} /></label>;
 }
 
 export function TextareaField({ label, name, defaultValue, required = false, rows = 4, placeholder, maxLength }: {
   label: string; name: string; defaultValue?: unknown; required?: boolean; rows?: number; placeholder?: string; maxLength?: number;
 }) {
-  return <label className="content-field content-field-wide"><span>{label}</span><textarea name={name} defaultValue={inputValue(defaultValue)} required={required} rows={rows} placeholder={placeholder} maxLength={maxLength} /></label>;
+  const val = inputValue(defaultValue);
+  return <label className="content-field content-field-wide"><span>{label}</span><textarea key={String(val)} name={name} defaultValue={val} required={required} rows={rows} placeholder={placeholder} maxLength={maxLength} /></label>;
 }
 
 export function SelectField({ label, name, defaultValue, children }: {
   label: string; name: string; defaultValue?: unknown; children: ReactNode;
 }) {
-  return <label className="content-field"><span>{label}</span><select name={name} defaultValue={inputValue(defaultValue)}>{children}</select></label>;
+  const val = inputValue(defaultValue);
+  return <label className="content-field"><span>{label}</span><select key={String(val)} name={name} defaultValue={val}>{children}</select></label>;
 }
 
 export function CheckboxField({ label, name, defaultChecked = false, hint }: {
