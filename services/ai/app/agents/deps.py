@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import asyncpg
 
 from ..retrieval.ingest import Embedder
+
+if TYPE_CHECKING:
+    from ..ports.catalog import CatalogRepository
+    from ..ports.estimator import EstimatorRepository
 
 
 @dataclass
@@ -18,6 +22,8 @@ class AgentDeps:
     locale: str = "en"
     conversation_id: str | None = None
     embedder: Embedder | None = None
+    catalog_repository: CatalogRepository | None = None
+    estimator_repository: EstimatorRepository | None = None
     client_id: str | None = None
     calcom_api_key: str | None = None
     sensitive_action_confirmed: bool = False

@@ -15,9 +15,12 @@ import asyncio
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 import re
-from typing import Any
+from typing import Any, TypeVar
 
 from ..schemas.chat import ChatMessage
+
+
+StreamItem = TypeVar("StreamItem")
 
 
 class GuardrailViolation(Exception):
@@ -108,9 +111,9 @@ def check_token_budget(state: GuardrailState, requested_tokens: int = 0) -> None
 
 
 async def stream_with_timeout(
-    stream: AsyncIterator[str],
+    stream: AsyncIterator[StreamItem],
     timeout_seconds: float = STREAM_TIMEOUT_SECONDS,
-) -> AsyncIterator[str]:
+) -> AsyncIterator[StreamItem]:
     """Enforce a strict timeout per chunk and total stream duration (Fix 6)."""
     iterator = stream.__aiter__()
     while True:

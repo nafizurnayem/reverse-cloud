@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai.models.test import TestModel
 from types import SimpleNamespace
 
-from app.agents import chat_agent
+from app.agents import model_factory
 from app.agents.chat_agent import (
     CardEvent,
     TextChunk,
@@ -60,7 +60,7 @@ def test_create_chat_agent_registers_tools() -> None:
 
 def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
     monkeypatch.setattr(
-        chat_agent,
+        model_factory,
         "get_settings",
         lambda: SimpleNamespace(
             ollama_url="http://localhost:11434/",
@@ -68,9 +68,9 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
             llm_api_key=None,
         ),
     )
-    monkeypatch.setattr(chat_agent, "OllamaProvider", lambda **kwargs: kwargs)
+    monkeypatch.setattr(model_factory, "OllamaProvider", lambda **kwargs: kwargs)
     monkeypatch.setattr(
-        chat_agent,
+        model_factory,
         "OllamaModel",
         lambda model, provider: (model, provider),
     )
@@ -83,7 +83,7 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
 
 def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
     monkeypatch.setattr(
-        chat_agent,
+        model_factory,
         "get_settings",
         lambda: SimpleNamespace(
             ollama_url="http://localhost:11434",
@@ -93,12 +93,12 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
             gemini_api_key=None,
         ),
     )
-    monkeypatch.setattr(chat_agent, "OllamaProvider", lambda **kwargs: kwargs)
-    monkeypatch.setattr(chat_agent, "OllamaModel", lambda model, provider: ("ollama", model, provider))
-    monkeypatch.setattr(chat_agent, "GoogleProvider", lambda **kwargs: kwargs)
-    monkeypatch.setattr(chat_agent, "GoogleModel", lambda model, provider: ("gemini", model, provider))
+    monkeypatch.setattr(model_factory, "OllamaProvider", lambda **kwargs: kwargs)
+    monkeypatch.setattr(model_factory, "OllamaModel", lambda model, provider: ("ollama", model, provider))
+    monkeypatch.setattr(model_factory, "GoogleProvider", lambda **kwargs: kwargs)
+    monkeypatch.setattr(model_factory, "GoogleModel", lambda model, provider: ("gemini", model, provider))
     monkeypatch.setattr(
-        chat_agent,
+        model_factory,
         "FallbackModel",
         lambda *models, **kwargs: ("fallback", *models, kwargs),
     )
@@ -109,8 +109,8 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
         ("gemini", "gemini-3.5-flash", {"api_key": "gemini-key"}),
         {
             "fallback_on": (
-                chat_agent.ModelAPIError,
-                chat_agent.UnexpectedModelBehavior,
+                model_factory.ModelAPIError,
+                model_factory.UnexpectedModelBehavior,
             )
         },
     )
