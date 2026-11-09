@@ -134,8 +134,8 @@ export default async function ProjectsPage({ params, searchParams }: {
       </section>
 
       {canCreate || selected ? (
-        <EditorPanel title={selected ? `${t("editProject")}: ${selected.title}` : t("newProject")}>
-          <form action={saveProject} className="content-form">
+        <EditorPanel key={selected?.id ?? "new"} title={selected ? `${t("editProject")}: ${selected.title}` : t("newProject")}>
+          <form key={selected?.id ?? "new"} action={saveProject} className="content-form">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={selected?.id ?? ""} />
             {selected ? (
@@ -151,7 +151,7 @@ export default async function ProjectsPage({ params, searchParams }: {
             )}
             <Field label={t("fields.projectTitle")} name="title" defaultValue={selected?.title} maxLength={200} required />
             <TextareaField label={t("fields.description")} name="description" defaultValue={selected?.description} rows={4} />
-            <SelectField label={t("fields.status")} name="status" defaultValue={selected?.status ?? "on_hold"}>
+            <SelectField key={`status-${selected?.id ?? "new"}-${selected?.status ?? "on_hold"}`} label={t("fields.status")} name="status" defaultValue={selected?.status ?? "on_hold"}>
               {projectStatuses.map((status) => <option key={status} value={status} disabled={!selected && status !== "on_hold"}>{t(`statuses.${status}`)}</option>)}
             </SelectField>
             <Field label={t("fields.previewUrl")} name="preview_url" type="url" defaultValue={selected?.preview_url} maxLength={500} placeholder="https://" />
