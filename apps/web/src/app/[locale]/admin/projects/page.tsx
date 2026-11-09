@@ -127,7 +127,7 @@ export default async function ProjectsPage({ params, searchParams }: {
       </section>
 
       {canCreate || selected ? (
-        <EditorPanel title={selected ? t("editProject") : t("newProject")}>
+        <EditorPanel title={selected ? `${t("editProject")}: ${selected.title}` : t("newProject")}>
           <form action={saveProject} className="content-form">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={selected?.id ?? ""} />
@@ -188,7 +188,56 @@ export default async function ProjectsPage({ params, searchParams }: {
 
       <section className="content-list">
         <div className="content-list-heading"><h2>{t("allProjects")}</h2><span>{filteredProjects.length}</span></div>
-        <div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.projectTitle")}</th><th>{t("fields.client")}</th><th>{t("fields.status")}</th><th>{t("fields.progress")}</th><th>{t("fields.dueOn")}</th><th>{common("actions")}</th></tr></thead><tbody>{filteredProjects.map((project) => <tr key={project.id}><td><strong>{project.title}</strong><small>{project.description || "—"}</small></td><td>{clientNames.get(project.client_id) ?? t("unknownClient")}</td><td><StatusBadge active={project.status === "active" || project.status === "completed"} activeLabel={t(`statuses.${project.status}`)} inactiveLabel={t(`statuses.${project.status}`)} warning={project.status === "on_hold"} /></td><td>{project.progress_pct == null ? "—" : `${project.progress_pct}%`}</td><td>{project.due_on || "—"}</td><td><Link href={`/admin/projects?edit=${project.id}`}>{t("edit")}</Link></td></tr>)}</tbody></table></div>
+        <div className="content-table-wrap">
+          <table className="content-table">
+            <thead>
+              <tr>
+                <th>{t("fields.projectTitle")}</th>
+                <th>{t("fields.client")}</th>
+                <th>{t("fields.status")}</th>
+                <th>{t("fields.progress")}</th>
+                <th>{t("fields.dueOn")}</th>
+                <th>{common("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProjects.map((project) => {
+                const isSelected = project.id === selected?.id;
+                return (
+                  <tr
+                    key={project.id}
+                    className={isSelected ? "bg-muted/40 font-medium" : undefined}
+                  >
+                    <td>
+                      <strong>{project.title}</strong>
+                      <small>{project.description || "—"}</small>
+                    </td>
+                    <td>{clientNames.get(project.client_id) ?? t("unknownClient")}</td>
+                    <td>
+                      <StatusBadge
+                        active={project.status === "active" || project.status === "completed"}
+                        activeLabel={t(`statuses.${project.status}`)}
+                        inactiveLabel={t(`statuses.${project.status}`)}
+                        warning={project.status === "on_hold"}
+                      />
+                    </td>
+                    <td>{project.progress_pct == null ? "—" : `${project.progress_pct}%`}</td>
+                    <td>{project.due_on || "—"}</td>
+                    <td>
+                      {isSelected ? (
+                        <span className="font-semibold text-primary">
+                          {locale === "bn" ? "✓ সম্পাদনা চলছে" : "✓ Active"}
+                        </span>
+                      ) : (
+                        <Link href={`/admin/projects?edit=${project.id}`}>{t("edit")}</Link>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );
