@@ -61,7 +61,7 @@ export default async function ProjectsPage({ params, searchParams }: {
   const canUpdate = access.permissions.includes("projects.update");
   const [projectsResult, clientsResult] = await Promise.all([
     supabase.from("projects").select("*").order("updated_at", { ascending: false }).limit(200),
-    canCreate
+    canCreate || canUpdate
       ? supabase.from("clients").select("id,full_name,company,archived_at").is("archived_at", null).order("full_name").limit(500)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -69,7 +69,13 @@ export default async function ProjectsPage({ params, searchParams }: {
 
   const projects = (projectsResult.data ?? []) as Project[];
   const clients = (clientsResult.data ?? []) as Client[];
-  const selected = validProjectId(search.edit ?? "") ? projects.find((project) => project.id === search.edit) : undefined;
+  const editId = validProjectId(search.edit ?? "") ? search.edit! : null;
+  let selected = editId ? projects.find((project) => project.id === editId) : undefined;
+  if (editId && !selected) {
+    // Project not in the cached list (e.g. > 200 projects or stale cache); fetch directly.
+    const directResult = await supabase.from("projects").select("*").eq("id", editId).maybeSingle();
+    if (directResult.data) selected = directResult.data as Project;
+  }
   const selectedStatus = projectStatuses.includes(search.status as Project["status"]) ? search.status : "";
   const filteredProjects = selectedStatus ? projects.filter((project) => project.status === selectedStatus) : projects;
   const clientNames = new Map(clients.map((client) => [client.id, client.company || client.full_name]));
@@ -78,6 +84,7 @@ export default async function ProjectsPage({ params, searchParams }: {
   let members: Member[] = [];
   let staff: Staff[] = [];
   let updates: Update[] = [];
+  let selectedClientName = "";
   if (selected) {
     const [milestonesResult, membersResult, updatesResult, staffResult] = await Promise.all([
       supabase.from("milestones").select("*").eq("project_id", selected.id).order("sort_order"),
@@ -90,6 +97,18 @@ export default async function ProjectsPage({ params, searchParams }: {
     members = (membersResult.data ?? []) as Member[];
     updates = (updatesResult.data ?? []) as Update[];
     staff = (staffResult.data ?? []) as Staff[];
+
+    const matchedClient = clients.find((client) => client.id === selected.client_id);
+    if (matchedClient) {
+      selectedClientName = matchedClient.company ? `${matchedClient.company} — ${matchedClient.full_name}` : matchedClient.full_name;
+    } else {
+      const singleClient = await supabase.from("clients").select("id,full_name,company").eq("id", selected.client_id).maybeSingle();
+      if (singleClient.data) {
+        selectedClientName = singleClient.data.company ? `${singleClient.data.company} — ${singleClient.data.full_name}` : singleClient.data.full_name;
+      } else {
+        selectedClientName = clientNames.get(selected.client_id) ?? t("unknownClient");
+      }
+    }
   }
 
   const saved = typeof search.saved === "string" && savedKeys.has(search.saved) ? t(`saved.${search.saved}`) : null;
@@ -104,6 +123,7 @@ export default async function ProjectsPage({ params, searchParams }: {
 
       <section className="content-editor projects-filters">
         <form method="get">
+          {editId ? <input type="hidden" name="edit" value={editId} /> : null}
           <label className="content-field"><span>{t("fields.status")}</span><select name="status" defaultValue={selectedStatus}>
             <option value="">{t("filters.allStatuses")}</option>
             {projectStatuses.map((status) => <option key={status} value={status}>{t(`statuses.${status}`)}</option>)}
@@ -114,15 +134,21 @@ export default async function ProjectsPage({ params, searchParams }: {
       </section>
 
       {canCreate || selected ? (
-        <EditorPanel title={selected ? t("editProject") : t("newProject")}>
+        <EditorPanel title={selected ? `${t("editProject")}: ${selected.title}` : t("newProject")}>
           <form action={saveProject} className="content-form">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={selected?.id ?? ""} />
-            <SelectField label={t("fields.client")} name="client_id" defaultValue={selected?.client_id ?? ""}>
-              <option value="" disabled>{t("fields.selectClient")}</option>
-              {selected && !clients.some((client) => client.id === selected.client_id) ? <option value={selected.client_id}>{clientNames.get(selected.client_id) ?? t("unknownClient")}</option> : null}
-              {clients.map((client) => <option key={client.id} value={client.id}>{client.company ? `${client.company} — ${client.full_name}` : client.full_name}</option>)}
-            </SelectField>
+            {selected ? (
+              <>
+                <input type="hidden" name="client_id" value={selected.client_id} />
+                <Field label={t("fields.client")} name="client_name" defaultValue={selectedClientName} readOnly />
+              </>
+            ) : (
+              <SelectField label={t("fields.client")} name="client_id" defaultValue="">
+                <option value="" disabled>{t("fields.selectClient")}</option>
+                {clients.map((client) => <option key={client.id} value={client.id}>{client.company ? `${client.company} — ${client.full_name}` : client.full_name}</option>)}
+              </SelectField>
+            )}
             <Field label={t("fields.projectTitle")} name="title" defaultValue={selected?.title} maxLength={200} required />
             <TextareaField label={t("fields.description")} name="description" defaultValue={selected?.description} rows={4} />
             <SelectField label={t("fields.status")} name="status" defaultValue={selected?.status ?? "on_hold"}>
@@ -169,7 +195,56 @@ export default async function ProjectsPage({ params, searchParams }: {
 
       <section className="content-list">
         <div className="content-list-heading"><h2>{t("allProjects")}</h2><span>{filteredProjects.length}</span></div>
-        <div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.projectTitle")}</th><th>{t("fields.client")}</th><th>{t("fields.status")}</th><th>{t("fields.progress")}</th><th>{t("fields.dueOn")}</th><th>{common("actions")}</th></tr></thead><tbody>{filteredProjects.map((project) => <tr key={project.id}><td><strong>{project.title}</strong><small>{project.description || "—"}</small></td><td>{clientNames.get(project.client_id) ?? t("unknownClient")}</td><td><StatusBadge active={project.status === "active" || project.status === "completed"} activeLabel={t(`statuses.${project.status}`)} inactiveLabel={t(`statuses.${project.status}`)} warning={project.status === "on_hold"} /></td><td>{project.progress_pct == null ? "—" : `${project.progress_pct}%`}</td><td>{project.due_on || "—"}</td><td><Link href={`/admin/projects?edit=${project.id}`}>{t("edit")}</Link></td></tr>)}</tbody></table></div>
+        <div className="content-table-wrap">
+          <table className="content-table">
+            <thead>
+              <tr>
+                <th>{t("fields.projectTitle")}</th>
+                <th>{t("fields.client")}</th>
+                <th>{t("fields.status")}</th>
+                <th>{t("fields.progress")}</th>
+                <th>{t("fields.dueOn")}</th>
+                <th>{common("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProjects.map((project) => {
+                const isSelected = project.id === selected?.id;
+                return (
+                  <tr
+                    key={project.id}
+                    className={isSelected ? "bg-muted/40 font-medium" : undefined}
+                  >
+                    <td>
+                      <strong>{project.title}</strong>
+                      <small>{project.description || "—"}</small>
+                    </td>
+                    <td>{clientNames.get(project.client_id) ?? t("unknownClient")}</td>
+                    <td>
+                      <StatusBadge
+                        active={project.status === "active" || project.status === "completed"}
+                        activeLabel={t(`statuses.${project.status}`)}
+                        inactiveLabel={t(`statuses.${project.status}`)}
+                        warning={project.status === "on_hold"}
+                      />
+                    </td>
+                    <td>{project.progress_pct == null ? "—" : `${project.progress_pct}%`}</td>
+                    <td>{project.due_on || "—"}</td>
+                    <td>
+                      {isSelected ? (
+                        <span className="font-semibold text-primary">
+                          {locale === "bn" ? "✓ সম্পাদনা চলছে" : "✓ Active"}
+                        </span>
+                      ) : (
+                        <Link href={`/admin/projects?edit=${project.id}`}>{t("edit")}</Link>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );
