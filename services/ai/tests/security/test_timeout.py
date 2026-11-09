@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from services.ai.app.agents.chat_agent import TextChunk
+from services.ai.app.domain.events import TextChunk
 from services.ai.app.api.v1 import routes
 from services.ai.app.main import app
 from services.ai.app.security.guardrails import (

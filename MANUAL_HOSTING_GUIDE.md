@@ -28,7 +28,7 @@ The hosting stack has six Docker containers:
 | `reverse-cloud-ai` | Guarded FastAPI agent, tools, RAG, and chat persistence | `127.0.0.1:8000` only |
 | `reverse-cloud-knowledge-sync` | Refreshes public website knowledge every five minutes | Host network; no listening port |
 | `reverse-cloud-ai-monitor` | Records daily token usage and sends threshold alerts | Host network; no listening port |
-| `reverse-cloud-ollama` | Local `llama3.2:1b` model | `127.0.0.1:11434` only |
+| `reverse-cloud-ollama` | Local `llama3.2:3b` model | `127.0.0.1:11434` only |
 | `reverse-cloud-tunnel` | Cloudflare HTTPS tunnel to the web container | Outbound connection only |
 
 GitHub `Dev` is the only source of application code. Do not manually copy
@@ -277,7 +277,7 @@ The first run will:
 Download the configured local model:
 
 ```sh
-docker exec reverse-cloud-ollama ollama pull llama3.2:1b
+docker exec reverse-cloud-ollama ollama pull llama3.2:3b
 docker exec reverse-cloud-ollama ollama list
 ```
 
@@ -621,7 +621,7 @@ docker logs --tail 200 reverse-cloud-web
 If the model is missing:
 
 ```sh
-docker exec reverse-cloud-ollama ollama pull llama3.2:1b
+docker exec reverse-cloud-ollama ollama pull llama3.2:3b
 ```
 
 ### The live image and state SHA do not match

@@ -5,13 +5,13 @@ from decimal import Decimal
 from pydantic_ai import RunContext
 
 from app.agents.deps import AgentDeps
-from app.tools.estimate_tool import get_estimate
+from app.tools.estimate import get_estimate
 from app.tools.human_handoff import request_human_handoff
 from app.tools.knowledge_search import format_search_results, search_knowledge
 from app.tools.project_status import get_project_status
 from app.tools.save_lead import save_lead
 from app.tools.scheduling import create_booking_hold, get_available_slots
-from app.tools.services_list import get_services_catalog, list_services
+from app.tools.services import get_services_catalog, list_services
 from app.ports.catalog import ServiceCatalogItem
 from app.ports.estimator import EstimatorConfig, EstimatorFactor
 

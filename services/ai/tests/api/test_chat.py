@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from services.ai.app.agents.chat_agent import TextChunk
+from services.ai.app.domain.events import TextChunk
 from services.ai.app.api.v1 import routes
 from services.ai.app.main import app
 
@@ -32,7 +32,7 @@ def test_chat_requires_service_authentication():
 def test_chat_streams_contract_events(monkeypatch):
 	secret = "test-secret"
 	timestamp = str(int(time.time()))
-	body = {"messages": [{"role": "user", "content": "Hello"}], "locale": "en"}
+	body = {"messages": [{"role": "user", "content": "Tell me about your process"}], "locale": "en"}
 	body_text = json.dumps(body, separators=(",", ":"))
 
 	async def fake_stream(_payload, pool=None, **kwargs):

@@ -14,6 +14,7 @@ from ..adapters.postgres.conversations import PostgresConversationRepository
 from ..agents.sales_agent import run_agent_stream
 from ..config import get_settings
 from ..domain.events import AgentEvent, CardEvent, ChatEvent, TextChunk, UsageEvent
+from ..domain.response_policy import direct_reply, ensure_useful_reply
 from ..observability.chat_tracing import log_chat_completion
 from ..ports.conversations import ConversationRepository
 from ..schemas.chat import ChatRequest
@@ -71,6 +72,34 @@ class ChatService:
                 "code": "guardrail_blocked",
                 "message": "Your message cannot be processed by the AI system.",
             })
+            return
+
+        immediate_reply = direct_reply(latest_user_message, payload.locale)
+        if immediate_reply is not None:
+            if self._repository is not None:
+                try:
+                    await self._repository.append_message(
+                        session_id=session_id,
+                        locale=payload.locale,
+                        role="user",
+                        content=latest_user_message,
+                        request_id=request_id,
+                        client_id=payload.client_id,
+                    )
+                    await self._repository.append_message(
+                        session_id=session_id,
+                        locale=payload.locale,
+                        role="assistant",
+                        content=immediate_reply,
+                        request_id=request_id,
+                        model="deterministic-response-policy",
+                        tokens_in=0,
+                        tokens_out=0,
+                    )
+                except Exception:
+                    logger.warning("Direct chat reply persistence failed [request_id=%s]", request_id, exc_info=True)
+            yield ChatEvent("text_delta", {"text": immediate_reply})
+            yield ChatEvent("message_end", {"reason": "stop"})
             return
 
         token_limit: int | None = None
@@ -141,7 +170,8 @@ class ChatService:
             })
             return
 
-        safe_text = redact_pii("".join(assistant_text))
+        raw_text = redact_pii("".join(assistant_text))
+        safe_text = ensure_useful_reply(raw_text, payload.locale) if raw_text or not cards else ""
         if safe_text:
             yield ChatEvent("text_delta", {"text": safe_text})
         for card in cards:
