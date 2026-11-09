@@ -112,7 +112,10 @@ async def run_live_evaluation(base_url: str, *, smoke: bool = False) -> dict[str
 
     failures: list[dict[str, Any]] = []
     category_stats: dict[str, dict[str, int]] = {}
-    async with httpx.AsyncClient(timeout=90.0) as client:
+    # CPU-only Ollama hosts can take longer on the first request after a model
+    # pull. Keep the deployment gate strict, but allow each streamed response
+    # enough time to complete on the production host.
+    async with httpx.AsyncClient(timeout=180.0) as client:
         for question in questions:
             body = json.dumps(
                 {

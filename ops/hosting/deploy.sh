@@ -190,7 +190,7 @@ log "Building ${ai_image}"
 DOCKER_BUILDKIT=1 docker build "${ai_build_options[@]}" "$REPOSITORY_DIR"
 
 compose up --detach ollama
-docker exec reverse-cloud-ollama ollama pull llama3.2:3b
+docker exec reverse-cloud-ollama ollama pull llama3.2:1b
 docker exec reverse-cloud-ollama ollama pull qwen3-embedding:0.6b
 
 cleanup_candidate
@@ -202,7 +202,7 @@ docker run --detach \
   --network host \
   --mount "type=bind,src=${WEB_ENV},dst=/app/services/ai/.env.local,readonly" \
   --env OLLAMA_URL=http://127.0.0.1:11434 \
-  --env OLLAMA_MODEL=llama3.2:3b \
+  --env OLLAMA_MODEL=llama3.2:1b \
   --env OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b \
   "$ai_image" \
   python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --proxy-headers >/dev/null
