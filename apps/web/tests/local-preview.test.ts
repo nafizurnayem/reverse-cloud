@@ -52,7 +52,24 @@ describe("local Ollama preview", () => {
     expect(body.messages.at(-1).content).toContain("/en/services/website-development");
     expect(body.model).toBe("llama3.2:1b-instruct-q4_K_M");
     expect(body.keep_alive).toBe("24h");
-    expect(body.options).toEqual({ num_ctx: 1_024, num_predict: 64 });
+    expect(body.options).toEqual({ num_ctx: 1_024, num_predict: 48 });
+  });
+
+  it("answers broad service questions from the catalog without model latency", async () => {
+    const request = new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "What services does Reverse Cloud provide?" }],
+      }),
+    });
+    const response = await localPreviewChat(request);
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.reply).toContain("Website Development");
+    expect(payload.reply).toContain("AI Chatbots & Agents");
+    expect(payload.reply).toContain("/en/services");
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("limits transcript history before sending it to the model", async () => {
