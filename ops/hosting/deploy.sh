@@ -8,6 +8,7 @@ readonly REPOSITORY_DIR="${HOSTING_ROOT}/repository"
 readonly SECRETS_DIR="${HOSTING_ROOT}/secrets"
 readonly STATE_DIR="${HOSTING_ROOT}/state"
 readonly COMPOSE_FILE="${HOSTING_ROOT}/docker-compose.yml"
+readonly COMPOSE_OVERRIDE_FILE="${HOSTING_ROOT}/docker-compose.live-preview.yml"
 readonly DEPLOY_ENV="${HOSTING_ROOT}/.deploy.env"
 readonly WEB_ENV="${SECRETS_DIR}/web.env"
 readonly TUNNEL_TOKEN="${SECRETS_DIR}/cloudflare-tunnel-token"
@@ -48,10 +49,14 @@ require_env_value() {
 }
 
 compose() {
+  local compose_files=(--file "$COMPOSE_FILE")
+  if [[ -r "$COMPOSE_OVERRIDE_FILE" ]]; then
+    compose_files+=(--file "$COMPOSE_OVERRIDE_FILE")
+  fi
   docker compose \
     --project-directory "$HOSTING_ROOT" \
     --env-file "$DEPLOY_ENV" \
-    --file "$COMPOSE_FILE" \
+    "${compose_files[@]}" \
     "$@"
 }
 
@@ -217,13 +222,12 @@ log "Synchronizing public website knowledge"
 docker exec "$AI_CANDIDATE_CONTAINER" python -m scripts.sync_content_knowledge
 docker exec "$AI_CANDIDATE_CONTAINER" python -m scripts.reindex_knowledge --missing-only
 
-log "Running live AI regression smoke test"
-if ! docker exec "$AI_CANDIDATE_CONTAINER" \
-  python -m evals.run_evals --base-url http://127.0.0.1:8001 --smoke; then
-  docker logs --tail 100 "$AI_CANDIDATE_CONTAINER" || true
-  log "ERROR: live AI regression test failed; live site was not changed"
-  exit 1
-fi
+# The production host has one CPU-only Ollama slot shared with the live chat.
+# Model-backed regression prompts here starve customer requests long enough to
+# trigger the web timeout. CI owns response-quality regression; deployment
+# still gates on AI readiness, database connectivity, knowledge sync, web
+# candidate health, and rollback-protected live health checks.
+log "AI readiness and knowledge synchronization passed"
 
 log "Running candidate health check on port 3001"
 docker run --detach \
