@@ -69,7 +69,13 @@ export default async function ProjectsPage({ params, searchParams }: {
 
   const projects = (projectsResult.data ?? []) as Project[];
   const clients = (clientsResult.data ?? []) as Client[];
-  const selected = validProjectId(search.edit ?? "") ? projects.find((project) => project.id === search.edit) : undefined;
+  const editId = validProjectId(search.edit ?? "") ? search.edit! : null;
+  let selected = editId ? projects.find((project) => project.id === editId) : undefined;
+  if (editId && !selected) {
+    // Project not in the cached list (e.g. > 200 projects or stale cache); fetch directly.
+    const directResult = await supabase.from("projects").select("*").eq("id", editId).maybeSingle();
+    if (directResult.data) selected = directResult.data as Project;
+  }
   const selectedStatus = projectStatuses.includes(search.status as Project["status"]) ? search.status : "";
   const filteredProjects = selectedStatus ? projects.filter((project) => project.status === selectedStatus) : projects;
   const clientNames = new Map(clients.map((client) => [client.id, client.company || client.full_name]));
@@ -117,6 +123,7 @@ export default async function ProjectsPage({ params, searchParams }: {
 
       <section className="content-editor projects-filters">
         <form method="get">
+          {editId ? <input type="hidden" name="edit" value={editId} /> : null}
           <label className="content-field"><span>{t("fields.status")}</span><select name="status" defaultValue={selectedStatus}>
             <option value="">{t("filters.allStatuses")}</option>
             {projectStatuses.map((status) => <option key={status} value={status}>{t(`statuses.${status}`)}</option>)}
