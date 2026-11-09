@@ -110,4 +110,19 @@ describe("local Ollama preview", () => {
     expect(payload.reply).toContain("couldn’t verify");
     expect(payload.reply).toContain("connect you with the team");
   });
+
+  it("removes a model fragment left after the fast output cap", async () => {
+    mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({
+      message: { content: "Use Next.js with PostgreSQL. Another unfinished recommendation that" },
+    })));
+    const request = new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "Suggest an unusual technical approach" }],
+      }),
+    });
+    const response = await localPreviewChat(request);
+    expect(await response.json()).toEqual({ reply: "Use Next.js with PostgreSQL." });
+  });
 });
