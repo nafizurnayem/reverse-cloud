@@ -45,7 +45,7 @@ async def simulate_chat_user(
     client: httpx.AsyncClient,
 ) -> None:
     payload = {
-        "conversation_id": f"load-test-session-{session_id}",
+        "conversation_id": f"00000000-0000-4000-8000-{session_id:012d}",
         "messages": [
             {"role": "user", "content": "Tell me about Reverse Cloud development services and pricing."}
         ],
@@ -156,9 +156,10 @@ async def main() -> None:
         # In-process ASGI transport testing
         from app.main import app
         from app.api.v1 import routes
+        from app.domain.events import TextChunk
 
         # Simulated realistic streaming tokens with 15ms inter-token delay
-        async def mock_stream(_payload):
+        async def mock_stream(_payload, **_kwargs):
             tokens = [
                 "Hello! ", "Reverse Cloud ", "specializes in ", "high-availability ",
                 "SaaS platforms, ", "AI automation, ", "and full-stack cloud systems. ",
@@ -166,7 +167,7 @@ async def main() -> None:
             ]
             for tok in tokens:
                 await asyncio.sleep(0.015)
-                yield tok
+                yield TextChunk(text=tok)
 
         routes.get_settings = lambda: SimpleNamespace(
             ai_hmac_secret_current=args.secret,
@@ -174,7 +175,7 @@ async def main() -> None:
             ai_enabled=True,
             ai_stream_timeout_seconds=60.0,
         )
-        routes.stream_chat_completion = mock_stream
+        routes.run_agent_stream = mock_stream
         target_url = "http://testserver/v1/chat"
         transport = httpx.ASGITransport(app=app)
         print("Running in-process ASGI load test against FastAPI /v1/chat pipeline")

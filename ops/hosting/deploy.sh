@@ -33,6 +33,20 @@ log() {
   printf '%s %s\n' "$(date --iso-8601=seconds)" "$*"
 }
 
+require_env_value() {
+  local key="$1"
+  local file="$2"
+  if ! awk -v key="$key" '
+    index($0, key "=") == 1 {
+      value = substr($0, length(key) + 2)
+    }
+    END { exit length(value) > 0 ? 0 : 1 }
+  ' "$file"; then
+    log "ERROR: ${key} must have a non-empty value in ${file}"
+    exit 1
+  fi
+}
+
 compose() {
   docker compose \
     --project-directory "$HOSTING_ROOT" \
@@ -104,6 +118,9 @@ if [[ ! "$public_origin" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then
   log "ERROR: NEXT_PUBLIC_SITE_URL must be an exact HTTPS origin"
   exit 1
 fi
+require_env_value "DATABASE_URL_AI" "$WEB_ENV"
+require_env_value "AI_HMAC_SECRET_CURRENT" "$WEB_ENV"
+
 if [[ ! -r "$DEPLOY_ENV" ]]; then
   write_deploy_env \
     "${WEB_IMAGE_REPOSITORY}:unconfigured" \
@@ -147,6 +164,12 @@ fi
 log "Preparing ${DEPLOY_BRANCH} commit ${target_sha}"
 git -C "$REPOSITORY_DIR" checkout --force --detach "$target_sha"
 
+# Keep the host-level deployment definitions in sync with the checked-out
+# branch. This is required because Compose and the cron entry run outside the
+# repository, while new services may be introduced inside the repository.
+install -m 0644 "${REPOSITORY_DIR}/ops/hosting/docker-compose.yml" "$COMPOSE_FILE"
+install -m 0755 "${REPOSITORY_DIR}/ops/hosting/deploy.sh" "${HOSTING_ROOT}/deploy.sh"
+
 web_build_options=(
   --secret "id=web_env,src=${WEB_ENV}"
   --file "${REPOSITORY_DIR}/Dockerfile.preview"
@@ -167,7 +190,7 @@ log "Building ${ai_image}"
 DOCKER_BUILDKIT=1 docker build "${ai_build_options[@]}" "$REPOSITORY_DIR"
 
 compose up --detach ollama
-docker exec reverse-cloud-ollama ollama pull llama3.2:1b
+docker exec reverse-cloud-ollama ollama pull llama3.2:3b
 docker exec reverse-cloud-ollama ollama pull qwen3-embedding:0.6b
 
 cleanup_candidate
@@ -179,7 +202,7 @@ docker run --detach \
   --network host \
   --mount "type=bind,src=${WEB_ENV},dst=/app/services/ai/.env.local,readonly" \
   --env OLLAMA_URL=http://127.0.0.1:11434 \
-  --env OLLAMA_MODEL=llama3.2:1b \
+  --env OLLAMA_MODEL=llama3.2:3b \
   --env OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b \
   "$ai_image" \
   python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --proxy-headers >/dev/null

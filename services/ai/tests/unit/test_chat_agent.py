@@ -5,16 +5,14 @@ from pydantic_ai.models.test import TestModel
 from types import SimpleNamespace
 
 from app.agents import model_factory
-from app.agents.chat_agent import (
-    CardEvent,
-    TextChunk,
-    UsageEvent,
+from app.agents.sales_agent import (
     convert_chat_messages,
     create_chat_agent,
     load_system_prompt,
-    resolve_model,
     run_agent_stream,
 )
+from app.agents.model_factory import resolve_model
+from app.domain.events import CardEvent, TextChunk, UsageEvent
 from app.schemas.chat import ChatMessage, ChatRequest
 
 
@@ -64,7 +62,7 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
         "get_settings",
         lambda: SimpleNamespace(
             ollama_url="http://localhost:11434/",
-            ollama_model="llama3.2:1b",
+            ollama_model="llama3.2:3b",
             llm_api_key=None,
         ),
     )
@@ -76,7 +74,7 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
     )
 
     assert resolve_model() == (
-        "llama3.2:1b",
+        "llama3.2:3b",
         {"base_url": "http://localhost:11434/v1"},
     )
 
@@ -87,7 +85,7 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
         "get_settings",
         lambda: SimpleNamespace(
             ollama_url="http://localhost:11434",
-            ollama_model="llama3.2:1b",
+            ollama_model="llama3.2:3b",
             llm_api_key="gemini-key",
             llm_model="gemini-3.5-flash",
             gemini_api_key=None,
@@ -105,7 +103,7 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
 
     assert resolve_model() == (
         "fallback",
-        ("ollama", "llama3.2:1b", {"base_url": "http://localhost:11434/v1"}),
+        ("ollama", "llama3.2:3b", {"base_url": "http://localhost:11434/v1"}),
         ("gemini", "gemini-3.5-flash", {"api_key": "gemini-key"}),
         {
             "fallback_on": (

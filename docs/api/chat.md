@@ -111,7 +111,7 @@ schema introduced in migration `0035_ollama_rag_embeddings.sql`:
 
 ```dotenv
 OLLAMA_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.2:1b
+OLLAMA_MODEL=llama3.2:3b
 OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.5-flash

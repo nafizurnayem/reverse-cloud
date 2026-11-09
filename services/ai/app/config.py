@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 	llm_api_key: str | None = None
 	llm_model: str = "gpt-4o-mini"
 	ollama_url: str | None = None
-	ollama_model: str = "llama3.2:1b"
+	ollama_model: str = "llama3.2:3b"
 	ollama_embedding_model: str = "qwen3-embedding:0.6b"
 	gemini_api_key: str | None = Field(
 		default=None,
