@@ -50,6 +50,33 @@ describe("local Ollama preview", () => {
     const body = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
     expect(body.messages.at(-1).content).toContain("Starting price: USD 1200");
     expect(body.messages.at(-1).content).toContain("/en/services/website-development");
+    expect(body.model).toBe("llama3.2:1b-instruct-q4_K_M");
+    expect(body.keep_alive).toBe("24h");
+    expect(body.options).toEqual({ num_ctx: 1_024, num_predict: 64 });
+  });
+
+  it("limits transcript history before sending it to the model", async () => {
+    const request = new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [
+          { role: "user", content: "First question" },
+          { role: "assistant", content: "First answer" },
+          { role: "user", content: "Second question" },
+          { role: "assistant", content: "Second answer" },
+          { role: "user", content: "Third question" },
+          { role: "assistant", content: "Third answer" },
+          { role: "user", content: "Tell me more about that unusual requirement" },
+        ],
+      }),
+    });
+    const response = await localPreviewChat(request);
+    expect(response.status).toBe(200);
+    const body = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
+    expect(body.messages).toHaveLength(5);
+    expect(body.messages[1].content).toBe("Second answer");
+    expect(body.messages.some((message: { content: string }) => message.content === "First question")).toBe(false);
   });
 
   it("replaces an unhelpful model answer with a useful next step", async () => {
