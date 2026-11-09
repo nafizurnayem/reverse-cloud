@@ -10,7 +10,7 @@ runbook, see [`MANUAL_HOSTING_GUIDE.md`](MANUAL_HOSTING_GUIDE.md).
 Permanent public link:
 https://reverse-cloud.dev/
 
-The site uses the local `llama3.2:3b` Ollama model and public-catalog keyword
+The site uses the local `llama3.2:1b` Ollama model and public-catalog keyword
 retrieval. It does not use the separate AI service, vector database, or private
 knowledge documents. The origin remains the self-hosted Ubuntu laptop.
 

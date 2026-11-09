@@ -62,7 +62,7 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
         "get_settings",
         lambda: SimpleNamespace(
             ollama_url="http://localhost:11434/",
-            ollama_model="llama3.2:3b",
+            ollama_model="llama3.2:1b",
             llm_api_key=None,
         ),
     )
@@ -74,7 +74,7 @@ def test_resolve_model_uses_ollama_when_configured(monkeypatch) -> None:
     )
 
     assert resolve_model() == (
-        "llama3.2:3b",
+        "llama3.2:1b",
         {"base_url": "http://localhost:11434/v1"},
     )
 
@@ -85,7 +85,7 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
         "get_settings",
         lambda: SimpleNamespace(
             ollama_url="http://localhost:11434",
-            ollama_model="llama3.2:3b",
+            ollama_model="llama3.2:1b",
             llm_api_key="gemini-key",
             llm_model="gemini-3.5-flash",
             gemini_api_key=None,
@@ -103,7 +103,7 @@ def test_resolve_model_falls_back_from_ollama_to_gemini(monkeypatch) -> None:
 
     assert resolve_model() == (
         "fallback",
-        ("ollama", "llama3.2:3b", {"base_url": "http://localhost:11434/v1"}),
+        ("ollama", "llama3.2:1b", {"base_url": "http://localhost:11434/v1"}),
         ("gemini", "gemini-3.5-flash", {"api_key": "gemini-key"}),
         {
             "fallback_on": (
