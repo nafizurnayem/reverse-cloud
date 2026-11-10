@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { limitPreviewChatRequests, requestIp } from "@/lib/ratelimit";
 import { validateChatPayload } from "@/lib/chat/values";
 import { directPublicKnowledgeReply, retrievePublicKnowledge } from "@/lib/chat/public-knowledge";
-import { directChatReply, ensureUsefulChatReply } from "@/lib/chat/response-policy";
+import { directChatReply, ensureUsefulChatReply, isBookingRequest } from "@/lib/chat/response-policy";
 
 const maxBodyBytes = 16_000;
 let busy = false;
@@ -57,6 +57,17 @@ export async function localPreviewChat(request: NextRequest) {
   busy = true;
   try {
     const latest = messages.at(-1)!;
+    if (isBookingRequest(latest.content)) {
+      return NextResponse.json({
+        reply: validated.data.locale === "bn"
+          ? "নিচে লাইভ উপলভ্য সময় দেখুন। একটি সময় বেছে নিয়ে বুকিং নিশ্চিত করুন।"
+          : "Here are the live available times. Choose a slot below and confirm your booking.",
+        cards: [{
+          type: "booking_scheduler",
+          data: { requestedText: latest.content, meetingTypeKey: "discovery_call" },
+        }],
+      }, { headers: { "cache-control": "no-store" } });
+    }
     const directReply = directChatReply(latest.content, validated.data.locale);
     if (directReply) {
       return NextResponse.json({ reply: directReply }, { headers: { "cache-control": "no-store" } });

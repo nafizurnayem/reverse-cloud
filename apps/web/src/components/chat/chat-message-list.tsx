@@ -5,6 +5,7 @@ import { Bot, User } from "lucide-react";
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
 import {
   ConfirmationCard,
+  BookingSchedulerCard,
   EstimateCard,
   HumanHandoffCard,
   LeadSavedCard,
@@ -100,6 +101,15 @@ export function ChatMessageList({
                     if (card.type === "booking_proposal") {
                       return (
                         <ConfirmationCard
+                          key={idx}
+                          data={card.data}
+                          locale={locale}
+                        />
+                      );
+                    }
+                    if (card.type === "booking_scheduler") {
+                      return (
+                        <BookingSchedulerCard
                           key={idx}
                           data={card.data}
                           locale={locale}

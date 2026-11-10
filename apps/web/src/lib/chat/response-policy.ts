@@ -43,6 +43,12 @@ export function directChatReply(value: string, locale: ChatLocale): string | nul
   return null;
 }
 
+export function isBookingRequest(value: string) {
+  const text = normalize(value);
+  return /\b(?:book|booking|schedule|appointment|consultation|meeting|call)\b/u.test(text)
+    || /(?:বুক|বুকিং|সময়|সময়|মিটিং|পরামর্শ|কল)/u.test(text);
+}
+
 export function safeChatFallback(locale: ChatLocale) {
   return locale === "bn"
     ? "আমি এই প্রশ্নের নির্ভরযোগ্য উত্তর এখনই যাচাই করতে পারিনি। তবে আমাদের সেবা, প্রজেক্টের আনুমানিক বাজেট বা মিটিং বুকিংয়ে সাহায্য করতে পারি। চাইলে আমি টিমের কারও সঙ্গেও যুক্ত করে দেব।"
