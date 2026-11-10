@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   activeBooking: vi.fn(),
   adminFrom: vi.fn(),
   adminRpc: vi.fn(),
+  getUser: vi.fn(),
   fetch: vi.fn(),
 }));
 
@@ -24,7 +25,7 @@ vi.mock("@/lib/supabase/server", () => ({
     };
     query.select.mockReturnValue(query);
     query.eq.mockReturnValue(query);
-    return { from: vi.fn(() => query) };
+    return { auth: { getUser: mocks.getUser }, from: vi.fn(() => query) };
   },
 }));
 vi.mock("@/lib/supabase/admin", () => ({
@@ -102,6 +103,7 @@ beforeEach(() => {
   vi.stubEnv("CALCOM_API_KEY", "cal_test_key");
   vi.stubEnv("CALCOM_API_BASE_URL", "https://api.cal.com/v2");
   mocks.verify.mockResolvedValue({ success: true, errors: [] });
+  mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
   mocks.activeBooking.mockResolvedValue({ data: null, error: null });
   mocks.meeting.mockResolvedValue({
     data: {
@@ -161,6 +163,60 @@ describe("POST /api/schedule/book", () => {
         p_attendee_email: "client@example.com",
       }),
     );
+  });
+
+  it("lets a signed-in user confirm directly with verified account details", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          email: "SIGNED-IN@EXAMPLE.COM",
+          user_metadata: { full_name: "Signed In Person" },
+        },
+      },
+      error: null,
+    });
+
+    const response = await POST(request({
+      ...input,
+      name: "Ignored Name",
+      email: "ignored@example.com",
+      source: "chat",
+      phone: null,
+      turnstileToken: "",
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mocks.verify).not.toHaveBeenCalled();
+    const bookingBody = JSON.parse(String(mocks.fetch.mock.calls[1][1].body));
+    expect(bookingBody.attendee).toMatchObject({
+      name: "Signed In Person",
+      email: "signed-in@example.com",
+    });
+    expect(bookingBody.metadata.source).toBe("reverse_cloud_chat");
+  });
+
+  it("requires and records a guest phone number for chat bookings", async () => {
+    const response = await POST(request({
+      ...input,
+      source: "chat",
+      phone: "+880 1700 000000",
+    }));
+
+    expect(response.status).toBe(201);
+    const bookingBody = JSON.parse(String(mocks.fetch.mock.calls[1][1].body));
+    expect(bookingBody.metadata).toMatchObject({
+      phone: "+880 1700 000000",
+      source: "reverse_cloud_chat",
+    });
+  });
+
+  it("rejects a guest chat booking without a phone number", async () => {
+    const response = await POST(request({ ...input, source: "chat", phone: null }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "phone_required" });
+    expect(mocks.verify).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("rejects invalid input before protection or external work", async () => {

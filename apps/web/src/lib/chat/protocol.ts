@@ -44,11 +44,17 @@ export interface BookingProposalCardData {
   expiresAt?: string;
 }
 
+export interface BookingSchedulerCardData {
+  requestedText?: string;
+  meetingTypeKey?: "discovery_call" | "technical_consult";
+}
+
 export type ChatCard =
   | { type: "estimate"; data: EstimateCardData }
   | { type: "lead_saved"; data: LeadSavedCardData }
   | { type: "human_handoff"; data: HumanHandoffCardData }
-  | { type: "booking_proposal"; data: BookingProposalCardData };
+  | { type: "booking_proposal"; data: BookingProposalCardData }
+  | { type: "booking_scheduler"; data: BookingSchedulerCardData };
 
 export interface ChatMessageItem {
   id: string;

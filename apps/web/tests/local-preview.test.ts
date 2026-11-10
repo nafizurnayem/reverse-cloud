@@ -72,6 +72,28 @@ describe("local Ollama preview", () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
+  it("returns the live scheduler card for booking requests without model latency", async () => {
+    const request = new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "Book a meeting at 10 am on 12th Nov" }],
+      }),
+    });
+    const response = await localPreviewChat(request);
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.reply).toContain("live available times");
+    expect(payload.cards).toEqual([{
+      type: "booking_scheduler",
+      data: {
+        requestedText: "Book a meeting at 10 am on 12th Nov",
+        meetingTypeKey: "discovery_call",
+      },
+    }]);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it("limits transcript history before sending it to the model", async () => {
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",

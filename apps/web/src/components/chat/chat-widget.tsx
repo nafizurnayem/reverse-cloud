@@ -208,13 +208,14 @@ export function ChatWidget({
       }
 
       if (response.headers.get("content-type")?.includes("application/json")) {
-        const payload = await response.json() as { reply?: unknown };
+        const payload = await response.json() as { reply?: unknown; cards?: unknown };
         if (typeof payload.reply !== "string" || !payload.reply.trim()) {
           throw new Error("Chatbot returned an invalid reply");
         }
+        const cards = Array.isArray(payload.cards) ? payload.cards as ChatCard[] : [];
         setMessages((prev) =>
           prev.map((m) => m.id === assistantMsgId
-            ? { ...m, content: payload.reply as string, isStreaming: false }
+            ? { ...m, content: payload.reply as string, cards, isStreaming: false }
             : m),
         );
         return;

@@ -23,6 +23,8 @@ type BookingInput = {
   timeZone: string;
   name: string;
   email: string;
+  phone: string | null;
+  source: "schedule" | "chat";
   company: string | null;
   notes: string | null;
   locale: "en" | "bn";
@@ -50,14 +52,16 @@ function bookingInput(value: unknown): BookingInput | null {
   const timeZone = boundedText(input.timeZone, 100, true);
   const name = boundedText(input.name, 200, true);
   const email = boundedText(input.email, 320, true)?.toLowerCase() ?? null;
+  const phone = boundedText(input.phone, 40);
   const company = boundedText(input.company, 200);
   const notes = boundedText(input.notes, 2_000);
-  const turnstileToken = boundedText(input.turnstileToken, 2_048, true);
+  const turnstileToken = boundedText(input.turnstileToken, 2_048);
+  const source = input.source === "chat" ? "chat" : "schedule";
   const locale = input.locale === "bn" ? "bn" : input.locale === "en" ? "en" : null;
   if (
     !meetingType || !start || !end || !timeZone || !name || name.length < 2 ||
-    !email || !emailPattern.test(email) || company === null || notes === null ||
-    !turnstileToken || !locale
+    !email || !emailPattern.test(email) || phone === null || company === null || notes === null ||
+    turnstileToken === null || !locale
   ) {
     return null;
   }
@@ -67,6 +71,8 @@ function bookingInput(value: unknown): BookingInput | null {
     ...schedule.value,
     name,
     email,
+    phone: phone || null,
+    source,
     company: company || null,
     notes: notes || null,
     locale,
@@ -100,17 +106,39 @@ export async function POST(request: NextRequest) {
 
   const ip = requestIp(request.headers);
 
-  const challenge = await verifyTurnstile(input.turnstileToken, ip, {
-    expectedAction: "schedule_booking",
-  });
-  if (!challenge.success) {
-    const unavailable = challenge.errors.some(
-      (code) => code === "missing-secret" || code === "siteverify-unavailable",
-    );
-    return json({
-      ok: false,
-      code: unavailable ? "protection_unavailable" : "turnstile_failed",
-    }, unavailable ? 503 : 403);
+  const supabase = await createClient();
+  const authResult = await supabase.auth.getUser();
+  const user = authResult.data.user;
+  let attendeeName = input.name;
+  let attendeeEmail = input.email;
+  if (user) {
+    const accountEmail = user.email?.trim().toLowerCase() ?? "";
+    if (!emailPattern.test(accountEmail)) return json({ ok: false, code: "account_email_required" }, 409);
+    const metadata = user.user_metadata && typeof user.user_metadata === "object"
+      ? user.user_metadata as Record<string, unknown>
+      : {};
+    const accountName = [metadata.full_name, metadata.name, metadata.display_name]
+      .find((value) => typeof value === "string" && value.trim().length >= 2);
+    attendeeEmail = accountEmail;
+    attendeeName = typeof accountName === "string"
+      ? accountName.trim()
+      : accountEmail.split("@")[0] || "Reverse Cloud Client";
+  } else {
+    if (input.source === "chat" && (!input.phone || input.phone.replace(/\D/g, "").length < 7)) {
+      return json({ ok: false, code: "phone_required" }, 400);
+    }
+    const challenge = await verifyTurnstile(input.turnstileToken, ip, {
+      expectedAction: "schedule_booking",
+    });
+    if (!challenge.success) {
+      const unavailable = challenge.errors.some(
+        (code) => code === "missing-secret" || code === "siteverify-unavailable",
+      );
+      return json({
+        ok: false,
+        code: unavailable ? "protection_unavailable" : "turnstile_failed",
+      }, unavailable ? 503 : 403);
+    }
   }
 
   const apiKey = process.env.CALCOM_API_KEY?.trim();
@@ -121,7 +149,7 @@ export async function POST(request: NextRequest) {
     const activeBooking = await admin
       .from("meetings")
       .select("ends_at")
-      .eq("attendee_email", input.email)
+      .eq("attendee_email", attendeeEmail)
       .in("status", ["confirmed", "rescheduled"])
       .gt("ends_at", new Date().toISOString())
       .order("ends_at", { ascending: true })
@@ -138,7 +166,6 @@ export async function POST(request: NextRequest) {
       }, 409);
     }
 
-    const supabase = await createClient();
     const meeting = await supabase
       .from("meeting_types")
       .select("id,key,duration_min,calcom_event_type_id")
@@ -174,15 +201,16 @@ export async function POST(request: NextRequest) {
       eventTypeId: meeting.data.calcom_event_type_id,
       start: input.start,
       attendee: {
-        name: input.name,
-        email: input.email,
+        name: attendeeName,
+        email: attendeeEmail,
         timeZone: input.timeZone,
         language: input.locale,
       },
-      source: "reverse_cloud_schedule",
+      source: input.source === "chat" ? "reverse_cloud_chat" : "reverse_cloud_schedule",
       metadata: {
         ...(input.company ? { company: input.company } : {}),
         ...(input.notes ? { notes: input.notes } : {}),
+        ...(input.phone ? { phone: input.phone } : {}),
       },
       signal: request.signal,
     });
@@ -191,7 +219,7 @@ export async function POST(request: NextRequest) {
       uid: booking.uid,
       start: booking.start,
       end: booking.end,
-      email: input.email,
+      email: attendeeEmail,
     });
     const stored = await admin.rpc("process_calcom_webhook_delivery", {
       p_delivery_key: sha256(`schedule-route:${normalized}`),
@@ -202,8 +230,8 @@ export async function POST(request: NextRequest) {
       p_event_type_id: meeting.data.calcom_event_type_id,
       p_meeting_type_key: meeting.data.key,
       p_proposal_id: null,
-      p_attendee_name: input.name,
-      p_attendee_email: input.email,
+      p_attendee_name: attendeeName,
+      p_attendee_email: attendeeEmail,
       p_attendee_timezone: input.timeZone,
       p_starts_at: booking.start,
       p_ends_at: booking.end,
