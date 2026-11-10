@@ -1033,6 +1033,11 @@ html:lang(bn) .admin-kicker {
   background: #fff0d7;
 }
 
+.content-status-danger {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
 .content-media-list {
   display: grid;
   margin-top: 1.5rem;

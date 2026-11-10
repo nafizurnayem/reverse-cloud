@@ -62,8 +62,15 @@ export function FormActions({ saveLabel, cancelLabel, cancelHref }: { saveLabel:
   return <div className="content-form-actions"><button className="content-primary-button" type="submit">{saveLabel}</button><Link className="content-secondary-button" href={cancelHref}>{cancelLabel}</Link></div>;
 }
 
-export function StatusBadge({ active, activeLabel, inactiveLabel, warning = false }: {
-  active: boolean; activeLabel: string; inactiveLabel: string; warning?: boolean;
+export function StatusBadge({ active, activeLabel, inactiveLabel, warning = false, danger = false }: {
+  active: boolean; activeLabel: string; inactiveLabel: string; warning?: boolean; danger?: boolean;
 }) {
-  return <span className={`content-status ${active ? (warning ? "content-status-warning" : "content-status-active") : ""}`}>{active ? activeLabel : inactiveLabel}</span>;
+  const variant = danger
+    ? "content-status-danger"
+    : warning
+      ? "content-status-warning"
+      : active
+        ? "content-status-active"
+        : "";
+  return <span className={`content-status ${variant}`.trim()}>{active ? activeLabel : inactiveLabel}</span>;
 }
