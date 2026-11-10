@@ -50,7 +50,16 @@ export function safeChatFallback(locale: ChatLocale) {
 }
 
 export function ensureUsefulChatReply(value: string, locale: ChatLocale) {
-  const reply = value.replace(/\s+/g, " ").trim();
+  let reply = value.replace(/\s+/g, " ").trim();
+  if (reply && !/[.!?।]$/u.test(reply)) {
+    const lastCompleteSentence = Math.max(
+      reply.lastIndexOf("."),
+      reply.lastIndexOf("!"),
+      reply.lastIndexOf("?"),
+      reply.lastIndexOf("।"),
+    );
+    if (lastCompleteSentence >= 20) reply = reply.slice(0, lastCompleteSentence + 1);
+  }
   if (!reply || /(.)\1{7,}/u.test(reply)) return safeChatFallback(locale);
   if (/^(?:i\s+)?(?:do\s+not|don['’]?t)\s+know|^no\s+idea|^not\s+sure/i.test(reply)) {
     return safeChatFallback(locale);

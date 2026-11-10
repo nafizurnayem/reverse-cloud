@@ -23,7 +23,7 @@ function documents(locale: Locale): Document[] {
               ? "Price: custom quote"
               : `Starting price: USD ${service.starting_from_usd}`,
             isBn ? service.body_bn : service.body_en,
-          ].join("\n").slice(0, 500),
+          ].join("\n").slice(0, 320),
         },
         ...faqs.map((faq) => ({ title: faq.question, content: faq.answer, path })),
       ];
@@ -35,7 +35,7 @@ function documents(locale: Locale): Document[] {
     })),
     ...BLOG_CATALOG.filter((post) => post.status === "published").map((post) => ({
       title: isBn ? post.title_bn : post.title_en,
-      content: [isBn ? post.excerpt_bn : post.excerpt_en, isBn ? post.body_bn : post.body_en].join("\n").slice(0, 500),
+      content: [isBn ? post.excerpt_bn : post.excerpt_en, isBn ? post.body_bn : post.body_en].join("\n").slice(0, 320),
       path: `/${locale}/blog/${post.slug}`,
     })),
   ];
@@ -43,6 +43,22 @@ function documents(locale: Locale): Document[] {
 
 function terms(value: string) {
   return [...new Set((value.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((term) => term.length > 2 && !stopwords.has(term)))];
+}
+
+export function directPublicKnowledgeReply(query: string, locale: Locale): string | null {
+  const normalized = query.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  const asksForServices = locale === "bn"
+    ? /(?:কী|কি|কোন|তালিকা|সম্পর্কে).{0,28}(?:সেবা|সার্ভিস)|(?:সেবা|সার্ভিস).{0,28}(?:কী|কি|কোন)/u.test(normalized)
+    : /\b(?:what|which|list|show|tell).{0,36}\bservices?\b|\bservices?\b.{0,24}\b(?:offer|provide|available)\b|\bwhat do you do\b/u.test(normalized);
+  if (!asksForServices) return null;
+
+  const names = SERVICES_CATALOG
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((service) => locale === "bn" ? service.name_bn : service.name_en);
+  return locale === "bn"
+    ? `আমাদের সেবাগুলো হলো: ${names.join("、")}। বিস্তারিত জানতে /bn/services দেখুন, অথবা আপনার প্রজেক্ট সম্পর্কে বললে আমি উপযুক্ত সেবা বেছে দিতে পারি।`
+    : `Our services are: ${names.join(", ")}. See /en/services for details, or tell me about your project and I can suggest the best fit.`;
 }
 
 export function retrievePublicKnowledge(query: string, locale: Locale): string {
