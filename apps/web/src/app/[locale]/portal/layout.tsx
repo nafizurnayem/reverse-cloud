@@ -56,7 +56,7 @@ export default async function PortalLayout({
         {children}
       </main>
       <Footer accountHref={accountHref} />
-      <ChatWidget />
+      <ChatWidget turnstileSiteKey={process.env.TURNSTILE_SITE_KEY?.trim() ?? ""} />
     </div>
   );
 }

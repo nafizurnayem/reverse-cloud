@@ -7,6 +7,7 @@ import {
   sha256,
 } from "@/lib/calcom";
 import { requestIp } from "@/lib/ratelimit";
+import { normalizePhoneNumber } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -58,10 +59,11 @@ function bookingInput(value: unknown): BookingInput | null {
   const turnstileToken = boundedText(input.turnstileToken, 2_048);
   const source = input.source === "chat" ? "chat" : "schedule";
   const locale = input.locale === "bn" ? "bn" : input.locale === "en" ? "en" : null;
+  const normalizedPhone = phone ? normalizePhoneNumber("", phone) : null;
   if (
     !meetingType || !start || !end || !timeZone || !name || name.length < 2 ||
     !email || !emailPattern.test(email) || phone === null || company === null || notes === null ||
-    turnstileToken === null || !locale
+    (phone.length > 0 && !normalizedPhone) || turnstileToken === null || !locale
   ) {
     return null;
   }
@@ -71,7 +73,7 @@ function bookingInput(value: unknown): BookingInput | null {
     ...schedule.value,
     name,
     email,
-    phone: phone || null,
+    phone: normalizedPhone,
     source,
     company: company || null,
     notes: notes || null,
@@ -194,6 +196,24 @@ export async function POST(request: NextRequest) {
     });
     if (!isSelectedSlotAvailable(slots, input.start, input.end)) {
       return json({ ok: false, code: "slot_unavailable" }, 409);
+    }
+
+    if (!user) {
+      const guestClient = await admin.from("clients").upsert({
+        full_name: attendeeName,
+        email: attendeeEmail,
+        phone: input.phone,
+        timezone: input.timeZone,
+        preferred_locale: input.locale,
+        stage: "prospect",
+        source: "website",
+      }, {
+        onConflict: "email",
+        ignoreDuplicates: true,
+      });
+      if (guestClient.error) {
+        return json({ ok: false, code: "scheduling_unavailable" }, 503);
+      }
     }
 
     const booking = await createCalcomBooking({

@@ -4,12 +4,14 @@ import Script from "next/script";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Calendar, CheckCircle2, Clock, Loader2, Mail, Phone, ShieldCheck, User } from "lucide-react";
 import type { BookingSchedulerCardData } from "@/lib/chat/protocol";
+import { bookingCountryCodes, normalizePhoneNumber } from "@/lib/phone";
 import { scheduleDayRange, upcomingScheduleDays } from "@/lib/schedule-time";
 import { createClient } from "@/lib/supabase/browser";
 
 interface BookingSchedulerCardProps {
   data: BookingSchedulerCardData;
   locale?: "en" | "bn";
+  turnstileSiteKey?: string;
 }
 
 interface SlotItem {
@@ -42,7 +44,11 @@ function slotLocalTime(iso: string, timeZone: string) {
   return { hour: Number(values.hour), minute: Number(values.minute) };
 }
 
-export function BookingSchedulerCard({ data, locale = "en" }: BookingSchedulerCardProps) {
+export function BookingSchedulerCard({
+  data,
+  locale = "en",
+  turnstileSiteKey = "",
+}: BookingSchedulerCardProps) {
   const isBn = locale === "bn";
   const [timeZone] = useState(() => {
     try {
@@ -76,11 +82,12 @@ export function BookingSchedulerCard({ data, locale = "en" }: BookingSchedulerCa
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [countryCode, setCountryCode] = useState("+880");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<BookingInfo | null>(null);
   const [isPending, startTransition] = useTransition();
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const siteKey = turnstileSiteKey;
   const meetingType = data.meetingTypeKey ?? "discovery_call";
 
   useEffect(() => {
@@ -175,13 +182,14 @@ export function BookingSchedulerCard({ data, locale = "en" }: BookingSchedulerCa
         setError(isBn ? "সঠিক ইমেইল লিখুন।" : "Enter a valid email address.");
         return;
       }
-      if (phone.replace(/\D/g, "").length < 7) {
+      if (!normalizePhoneNumber(countryCode, phone)) {
         setError(isBn ? "সঠিক ফোন নম্বর লিখুন।" : "Enter a valid phone number.");
         return;
       }
     }
     const formData = new FormData(event.currentTarget);
     const turnstileToken = String(formData.get("cf-turnstile-response") ?? "");
+    const normalizedPhone = isAuthenticated ? null : normalizePhoneNumber(countryCode, phone);
     startTransition(async () => {
       try {
         const response = await fetch("/api/schedule/book", {
@@ -194,7 +202,7 @@ export function BookingSchedulerCard({ data, locale = "en" }: BookingSchedulerCa
             timeZone,
             name: name.trim(),
             email: email.trim(),
-            phone: phone.trim() || null,
+            phone: normalizedPhone,
             source: "chat",
             company: null,
             notes: "Booked through the website chatbot",
@@ -212,6 +220,10 @@ export function BookingSchedulerCard({ data, locale = "en" }: BookingSchedulerCa
             setError(isBn ? "এই ইমেইলে ইতিমধ্যে একটি আসন্ন বুকিং রয়েছে।" : "This email already has an upcoming booking.");
           } else if (payload.code === "turnstile_failed") {
             setError(isBn ? "সিকিউরিটি যাচাই ব্যর্থ হয়েছে। আবার চেষ্টা করুন।" : "Security verification failed. Please try again.");
+          } else if (payload.code === "protection_unavailable") {
+            setError(isBn ? "সিকিউরিটি সেবা সাময়িকভাবে অনুপলব্ধ।" : "Security verification is temporarily unavailable.");
+          } else if (payload.code === "invalid_phone") {
+            setError(isBn ? "দেশের কোডসহ সঠিক ফোন নম্বর লিখুন।" : "Enter a valid phone number with its country code.");
           } else {
             setError(isBn ? "বুকিং সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।" : "Booking could not be completed. Please try again.");
           }
@@ -282,7 +294,29 @@ export function BookingSchedulerCard({ data, locale = "en" }: BookingSchedulerCa
           <p className="font-semibold">{isBn ? "বুকিংয়ের জন্য আপনার তথ্য দিন" : "Enter your details to book"}</p>
           <label className="flex items-center gap-2 rounded-lg border bg-background px-2"><User className="h-3.5 w-3.5 text-muted-foreground" /><input required minLength={2} value={name} onChange={(event) => setName(event.target.value)} placeholder={isBn ? "পূর্ণ নাম" : "Full name"} className="min-w-0 flex-1 bg-transparent py-2 outline-none" /></label>
           <label className="flex items-center gap-2 rounded-lg border bg-background px-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" /><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder={isBn ? "ইমেইল" : "Email address"} className="min-w-0 flex-1 bg-transparent py-2 outline-none" /></label>
-          <label className="flex items-center gap-2 rounded-lg border bg-background px-2"><Phone className="h-3.5 w-3.5 text-muted-foreground" /><input required type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={isBn ? "ফোন নম্বর" : "Phone number"} className="min-w-0 flex-1 bg-transparent py-2 outline-none" /></label>
+          <label className="flex items-center gap-2 rounded-lg border bg-background px-2">
+            <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <select
+              aria-label={isBn ? "দেশের ফোন কোড" : "Country calling code"}
+              value={countryCode}
+              onChange={(event) => setCountryCode(event.target.value)}
+              className="max-w-[7.5rem] bg-transparent py-2 text-[11px] outline-none"
+            >
+              {bookingCountryCodes.map((item) => (
+                <option key={item.country} value={item.code}>{item.country} {item.code}</option>
+              ))}
+            </select>
+            <input
+              required
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder={isBn ? "যেমন 017XXXXXXXX" : "e.g. 017XXXXXXXX"}
+              className="min-w-0 flex-1 bg-transparent py-2 outline-none"
+            />
+          </label>
           <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
           {siteKey ? <div className="contact-turnstile"><div className="cf-turnstile" data-sitekey={siteKey} data-action="schedule_booking" data-language={locale} data-size="compact" /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
         </div>
