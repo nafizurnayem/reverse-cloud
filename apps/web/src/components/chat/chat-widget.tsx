@@ -29,28 +29,30 @@ function audioContextConstructor() {
   ).webkitAudioContext;
 }
 
-function primeChatAudio() {
+async function primeChatAudio() {
   try {
     const AudioContextConstructor = audioContextConstructor();
-    if (!AudioContextConstructor) return;
+    if (!AudioContextConstructor) return false;
     preparedAudioContext ??= new AudioContextConstructor();
     if (preparedAudioContext.state === "suspended") {
-      void preparedAudioContext.resume().catch(() => {
-        preparedAudioContext = null;
-      });
+      await preparedAudioContext.resume();
     }
+    return preparedAudioContext.state === "running";
   } catch {
     preparedAudioContext = null;
+    return false;
   }
 }
 
 function playChatChime() {
   try {
     const AudioContextConstructor = audioContextConstructor();
-    if (!AudioContextConstructor) return;
+    if (!AudioContextConstructor) return false;
 
     const context = preparedAudioContext ?? new AudioContextConstructor();
     preparedAudioContext = context;
+    if (context.state !== "running") return false;
+
     const play = () => {
       const now = context.currentTime;
       const notes = [
@@ -82,16 +84,11 @@ function playChatChime() {
       });
     };
 
-    if (context.state === "suspended") {
-      void context.resume().then(play).catch(() => {
-        preparedAudioContext = null;
-        void context.close();
-      });
-    } else {
-      play();
-    }
+    play();
+    return true;
   } catch {
     // Browsers may block sound until the visitor has interacted with the page.
+    return false;
   }
 }
 
@@ -113,6 +110,7 @@ export function ChatWidget({
   const isBn = effectiveLocale === "bn";
   const [isOpen, setIsOpen] = useState(initialOpen);
   const wasOpen = useRef(false);
+  const pendingWelcomeSound = useRef(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
   const [useMock, setUseMock] = useState(() => {
@@ -124,6 +122,29 @@ export function ChatWidget({
   const [selectedMockScenario, setSelectedMockScenario] = useState<MockStreamScenario>("greeting");
 
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+
+  // Browsers require a visitor gesture before allowing audible playback.
+  // Prime audio on the first ordinary interaction and play a queued welcome
+  // sound if the popup appeared before that interaction.
+  useEffect(() => {
+    const unlockAudio = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-chat-open]")) return;
+
+      void primeChatAudio().then((ready) => {
+        if (ready && pendingWelcomeSound.current && playChatChime()) {
+          pendingWelcomeSound.current = false;
+        }
+      });
+    };
+
+    document.addEventListener("pointerdown", unlockAudio);
+    document.addEventListener("keydown", unlockAudio);
+    return () => {
+      document.removeEventListener("pointerdown", unlockAudio);
+      document.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
 
   // Restore chat messages from sessionStorage and check openChat/confirmProposal URL query params
   useEffect(() => {
@@ -171,7 +192,7 @@ export function ChatWidget({
 
     const timer = window.setTimeout(() => {
       setShowWelcomeNotification(true);
-      playChatChime();
+      pendingWelcomeSound.current = !playChatChime();
       try {
         sessionStorage.setItem(welcomeNotificationKey, "1");
       } catch {
@@ -191,7 +212,11 @@ export function ChatWidget({
     if (wasOpen.current) return;
     wasOpen.current = true;
 
-    const timer = window.setTimeout(playChatChime, 180);
+    const timer = window.setTimeout(() => {
+      void primeChatAudio().then((ready) => {
+        if (ready) playChatChime();
+      });
+    }, 180);
     return () => window.clearTimeout(timer);
   }, [isOpen]);
 
@@ -218,7 +243,8 @@ export function ChatWidget({
   const activeMessages = messages.length > 0 ? messages : [greetingMessage];
 
   function handleOpenChat() {
-    primeChatAudio();
+    pendingWelcomeSound.current = false;
+    void primeChatAudio();
     setShowWelcomeNotification(false);
     setIsMinimized(false);
     setIsOpen(true);
@@ -426,6 +452,7 @@ export function ChatWidget({
           {showWelcomeNotification && (
             <button
               type="button"
+              data-chat-open
               onClick={handleOpenChat}
               className="max-w-[min(18rem,calc(100vw-2rem))] rounded-2xl rounded-br-sm border bg-card px-4 py-3 text-left text-sm text-card-foreground shadow-xl transition hover:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/20"
               aria-label={isBn ? "স্বাগত বার্তা খুলুন" : "Open welcome message"}
@@ -440,6 +467,7 @@ export function ChatWidget({
           )}
           <button
             type="button"
+            data-chat-open
             onClick={handleOpenChat}
             className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-primary/95 focus:outline-none focus:ring-4 focus:ring-primary/30"
             aria-label={isBn ? "চ্যাট উইজেট খুলুন" : "Open chat widget"}
