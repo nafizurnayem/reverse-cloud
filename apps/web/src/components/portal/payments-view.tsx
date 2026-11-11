@@ -136,7 +136,7 @@ export function PaymentsView({
       {/* Header */}
       <div className="border-b pb-6 space-y-3">
         <Link
-          href={`/${locale}/portal`}
+          href="/portal"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

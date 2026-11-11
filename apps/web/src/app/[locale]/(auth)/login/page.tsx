@@ -55,7 +55,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
     const result = await supabase.auth.getUser();
     if (!result.error) {
       user = result.data.user;
-      if (user && next === `/${locale}`) {
+      if (user && next === "/") {
         next = await accountDestination(supabase, user.id, locale);
       }
     }
@@ -119,7 +119,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
           </>
         )}
         <div className="auth-actions">
-          <Link className="auth-button auth-button-secondary" href={`/${locale}`}>
+          <Link className="auth-button auth-button-secondary" href="/">
             {t("backHome")}
           </Link>
         </div>

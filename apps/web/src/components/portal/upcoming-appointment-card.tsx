@@ -104,7 +104,7 @@ export function UpcomingAppointmentCard({
                 : "Your appointment was cancelled successfully. You can now book another available time."}
             </p>
             <Link
-              href={`/${locale}/schedule`}
+              href="/schedule"
               className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
               {isBn ? "আরেকটি অ্যাপয়েন্টমেন্ট নির্ধারণ করুন" : "Schedule another appointment"}

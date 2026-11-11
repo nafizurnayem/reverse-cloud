@@ -24,7 +24,7 @@ export async function signInWithGoogle(localeValue: string, nextValue: string) {
 
   let providerUrl: string | null = null;
   try {
-    const callback = new URL(`/${locale}/auth/callback`, requireSiteUrl());
+    const callback = new URL("/auth/callback", requireSiteUrl());
     callback.searchParams.set("next", next);
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -40,7 +40,7 @@ export async function signInWithGoogle(localeValue: string, nextValue: string) {
   }
 
   if (!providerUrl) {
-    redirect(`/${locale}/login?error=oauth_start_failed&next=${encodeURIComponent(next)}`);
+    redirect(`/login?error=oauth_start_failed&next=${encodeURIComponent(next)}`);
   }
   redirect(providerUrl);
 }
@@ -54,11 +54,11 @@ export async function signInWithMagicLink(
   const next = safePostLoginPath(nextValue, locale);
   const email = checkedEmail(formData.get("email"));
   if (!email) {
-    redirect(`/${locale}/login?error=invalid_email&next=${encodeURIComponent(next)}`);
+    redirect(`/login?error=invalid_email&next=${encodeURIComponent(next)}`);
   }
 
   try {
-    const callback = new URL(`/${locale}/auth/callback`, requireSiteUrl());
+    const callback = new URL("/auth/callback", requireSiteUrl());
     callback.searchParams.set("method", "magic_link");
     callback.searchParams.set("next", next);
     const supabase = await createClient();
@@ -71,10 +71,10 @@ export async function signInWithMagicLink(
     });
     if (error) throw error;
   } catch {
-    redirect(`/${locale}/login?error=magic_link_start_failed&next=${encodeURIComponent(next)}`);
+    redirect(`/login?error=magic_link_start_failed&next=${encodeURIComponent(next)}`);
   }
 
-  redirect(`/${locale}/login?magic_link_sent=1&next=${encodeURIComponent(next)}`);
+  redirect(`/login?magic_link_sent=1&next=${encodeURIComponent(next)}`);
 }
 
 export async function continueWithClientAccount(localeValue: string, nextValue: string) {
@@ -98,19 +98,19 @@ export async function continueWithClientAccount(localeValue: string, nextValue: 
 
   if (!signedIn) redirect(loginPath(locale, next));
   if (!linked) {
-    redirect(`/${locale}/login?error=account_link_failed&next=${encodeURIComponent(next)}`);
+    redirect(`/login?error=account_link_failed&next=${encodeURIComponent(next)}`);
   }
   redirect(next);
 }
 
 export async function signOut(localeValue: string) {
-  const locale = checkedLocale(localeValue);
+  checkedLocale(localeValue);
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) throw error;
   } catch {
-    redirect(`/${locale}/login?error=sign_out_failed`);
+    redirect("/login?error=sign_out_failed");
   }
-  redirect(`/${locale}`);
+  redirect("/");
 }

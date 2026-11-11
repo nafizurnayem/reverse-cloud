@@ -51,10 +51,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical,
-      languages: {
-        en: getPathname({ href: "/", locale: "en" }),
-        bn: getPathname({ href: "/", locale: "bn" }),
-      },
     },
     openGraph: {
       type: "website",

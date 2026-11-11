@@ -12,17 +12,17 @@ describe("post-login destination validation", () => {
     ["/en/admin", "en", "/admin"],
     ["/bn/project_manager/projects?tab=active", "en", "/project_manager/projects?tab=active"],
     ["/developer", "bn", "/developer"],
-    ["/bn/portal/projects/1?tab=files#invoice", "bn", "/bn/portal/projects/1?tab=files#invoice"],
-    [undefined, "en", "/en"],
-    ["https://evil.example/en/admin", "en", "/en"],
-    ["//evil.example/en/admin", "en", "/en"],
-    ["/\\evil.example/en/admin", "en", "/en"],
-    ["/en/%5cevil.example", "en", "/en"],
+    ["/bn/portal/projects/1?tab=files#invoice", "bn", "/portal/projects/1?tab=files#invoice"],
+    [undefined, "en", "/"],
+    ["https://evil.example/en/admin", "en", "/"],
+    ["//evil.example/en/admin", "en", "/"],
+    ["/\\evil.example/en/admin", "en", "/"],
+    ["/en/%5cevil.example", "en", "/"],
     ["/bn/admin", "en", "/admin"],
-    ["/en.evil/admin", "en", "/en"],
-    ["/en/../bn/admin", "en", "/en"],
-    ["/en/login", "en", "/en"],
-    [["/en/admin"], "en", "/en"],
+    ["/en.evil/admin", "en", "/en.evil/admin"],
+    ["/en/../bn/admin", "en", "/"],
+    ["/en/login", "en", "/"],
+    [["/en/admin"], "en", "/"],
   ] as const)("maps %j for %s to %s", (value, locale, expected) => {
     expect(safePostLoginPath(value, locale)).toBe(expected);
   });
@@ -43,14 +43,14 @@ describe("staff dashboard routes", () => {
 describe("postLoginPathFromQuery", () => {
   it("uses returnTo only as a legacy fallback when next is absent", () => {
     expect(postLoginPathFromQuery(undefined, "/en/schedule?slot=1", "en"))
-      .toBe("/en/schedule?slot=1");
+      .toBe("/schedule?slot=1");
     expect(postLoginPathFromQuery("/en/portal", "/en/schedule", "en"))
-      .toBe("/en/portal");
+      .toBe("/portal");
   });
 
   it("applies the same open-redirect protection to returnTo", () => {
     expect(postLoginPathFromQuery(undefined, "https://evil.example", "en"))
-      .toBe("/en");
+      .toBe("/");
   });
 });
 
@@ -60,6 +60,6 @@ describe("client account linking destinations", () => {
     expect(needsClientAccountLink("/bn/portal/projects/1?tab=files", "bn")).toBe(true);
     expect(needsClientAccountLink("/en/admin", "en")).toBe(false);
     expect(needsClientAccountLink("/en/accept-invite?token=secret", "en")).toBe(false);
-    expect(needsClientAccountLink("/bn/portal", "en")).toBe(false);
+    expect(needsClientAccountLink("/bn/portal", "en")).toBe(true);
   });
 });

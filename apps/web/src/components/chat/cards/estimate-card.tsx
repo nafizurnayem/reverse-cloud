@@ -89,7 +89,7 @@ export function EstimateCard({ data, locale = "en", onActionClick }: EstimateCar
       <div className="flex items-center gap-2 pt-2 border-t">
         {data.serviceSlug && (
           <Link
-            href={`/${locale}/services/${data.serviceSlug}`}
+            href={`/services/${data.serviceSlug}`}
             className="text-xs font-medium text-primary hover:underline"
           >
             {isBn ? "বিস্তারিত সার্ভিস দেখুন →" : "View Service →"}

@@ -108,7 +108,7 @@ export async function createClientInvite(
 
   let inviteUrl: string;
   try {
-    const url = new URL(`/${locale}/accept-invite`, requireSiteUrl());
+    const url = new URL("/accept-invite", requireSiteUrl());
     url.searchParams.set("token", token);
     inviteUrl = url.toString();
   } catch {

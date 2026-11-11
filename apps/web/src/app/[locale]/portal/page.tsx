@@ -63,7 +63,7 @@ export default async function PortalProjectsPage({
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Link href={`/${locale}/wizard`} className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
+          <Link href="/wizard" className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
             <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
             <h3 className="mt-3 font-bold text-foreground">{isBn ? "সার্ভিস ফাইন্ডার" : "Service Finder"}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -73,7 +73,7 @@ export default async function PortalProjectsPage({
               {isBn ? "সেবা খুঁজুন" : "Find a service"} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
             </span>
           </Link>
-          <Link href={`/${locale}/services`} className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
+          <Link href="/services" className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
             <Layers className="h-6 w-6 text-primary" aria-hidden="true" />
             <h3 className="mt-3 font-bold text-foreground">{isBn ? "সব সেবা দেখুন" : "Browse services"}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -84,7 +84,7 @@ export default async function PortalProjectsPage({
             </span>
           </Link>
         </div>
-        <Link href={`/${locale}/contact?proposal=1`} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+        <Link href="/contact?proposal=1" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
           {isBn ? "প্রস্তাবনার অনুরোধ করুন" : "Request a proposal"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </section>
@@ -102,7 +102,7 @@ export default async function PortalProjectsPage({
               : "No projects are assigned yet. Use the Service Finder or browse services above, then request a proposal to get started."}
           </p>
           <Link
-            href={`/${locale}/wizard`}
+            href="/wizard"
             className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
           >
             <span>{isBn ? "সেবা খুঁজুন" : "Find a service"}</span>
@@ -189,7 +189,7 @@ export default async function PortalProjectsPage({
                 </div>
 
                 <Link
-                  href={`/${locale}/portal/projects/${project.id}`}
+                  href={`/portal/projects/${project.id}`}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                 >
                   <span>{isBn ? "বিস্তারিত দেখুন" : "View Project"}</span>

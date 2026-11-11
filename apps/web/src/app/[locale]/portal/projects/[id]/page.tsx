@@ -36,7 +36,7 @@ export default async function ProjectDetailPage({
       {/* Breadcrumb & Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4">
         <Link
-          href={`/${locale}/portal`}
+          href="/portal"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

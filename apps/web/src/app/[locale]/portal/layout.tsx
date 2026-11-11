@@ -24,7 +24,7 @@ export default async function PortalLayout({
   if (!staffRoleKeys) throw new Error("Unable to verify portal access");
   if (staffRoleKeys.length) redirect(`/${staffDashboardSegmentForRoles(staffRoleKeys)}`);
   const isBn = locale === "bn";
-  const accountHref = `/${locale}/portal`;
+  const accountHref = "/portal";
   const meta = user.user_metadata as Record<string, unknown> | undefined;
   const rawName =
     (typeof meta?.full_name === "string" && meta.full_name) ||
@@ -47,7 +47,7 @@ export default async function PortalLayout({
           <Link href={accountHref} className="font-semibold text-foreground hover:text-primary">
             {isBn ? "আমার প্রজেক্ট" : "My projects"}
           </Link>
-          <Link href={`/${locale}/portal/payments`} className="font-semibold text-foreground hover:text-primary">
+          <Link href="/portal/payments" className="font-semibold text-foreground hover:text-primary">
             {isBn ? "পেমেন্ট" : "Payments"}
           </Link>
         </div>

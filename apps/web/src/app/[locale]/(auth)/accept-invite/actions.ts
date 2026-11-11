@@ -12,7 +12,8 @@ function checkedLocale(value: string): Locale {
 }
 
 function inviteErrorPath(locale: Locale) {
-  return `/${locale}/accept-invite?error=invalid_or_expired_invite`;
+  void locale;
+  return "/accept-invite?error=invalid_or_expired_invite";
 }
 
 export async function acceptClientInvite(localeValue: string, tokenValue: string) {
@@ -36,5 +37,5 @@ export async function acceptClientInvite(localeValue: string, tokenValue: string
 
   if (!signedIn) redirect(loginPath(locale, acceptInvitePath(locale, token)));
   if (!accepted) redirect(inviteErrorPath(locale));
-  redirect(`/${locale}/portal?invite=accepted`);
+  redirect("/portal?invite=accepted");
 }

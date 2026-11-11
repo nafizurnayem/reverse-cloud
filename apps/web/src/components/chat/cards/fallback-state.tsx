@@ -166,7 +166,7 @@ export function FallbackState({
               ? "আমার অনুরোধের উত্তর দিতে আমার তথ্য ব্যবহারে সম্মতি দিচ্ছি। "
               : "I consent to the use of my details to answer this enquiry. "}
             <Link
-              href={`/${locale}/privacy`}
+              href="/privacy"
               className="font-semibold text-primary hover:underline"
             >
               {isBn ? "গোপনীয়তা নীতি" : "Privacy Policy"}
@@ -192,7 +192,7 @@ export function FallbackState({
 
         <div className="flex items-center justify-between pt-1">
           <Link
-            href={`/${locale}/contact`}
+            href="/contact"
             className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
           >
             <span>{isBn ? "পূর্ণাঙ্গ যোগাযোগ পৃষ্ঠা" : "Full Contact Page"}</span>

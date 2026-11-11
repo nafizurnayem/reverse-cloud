@@ -11,7 +11,8 @@ import { createClient } from "@/lib/supabase/server";
 type Context = { params: Promise<{ locale: string }> };
 
 function loginError(origin: URL, locale: string, code: string, next?: string) {
-  const url = new URL(`/${locale}/login`, origin);
+  void locale;
+  const url = new URL("/login", origin);
   url.searchParams.set("error", code);
   if (next) url.searchParams.set("next", next);
   return NextResponse.redirect(url);
@@ -59,16 +60,16 @@ export async function GET(request: NextRequest, { params }: Context) {
     try {
       const { data, error } = await supabase.rpc("accept_client_invite", { p_token: inviteToken });
       if (error || typeof data !== "string") {
-        const rejected = new URL(`/${locale}/accept-invite`, publicSiteUrl);
+        const rejected = new URL("/accept-invite", publicSiteUrl);
         rejected.searchParams.set("error", "invalid_or_expired_invite");
         return privateRedirect(rejected);
       }
     } catch {
-      const rejected = new URL(`/${locale}/accept-invite`, publicSiteUrl);
+      const rejected = new URL("/accept-invite", publicSiteUrl);
       rejected.searchParams.set("error", "invalid_or_expired_invite");
       return privateRedirect(rejected);
     }
-    return privateRedirect(new URL(`/${locale}/portal?invite=accepted`, publicSiteUrl));
+    return privateRedirect(new URL("/portal?invite=accepted", publicSiteUrl));
   }
 
   try {
@@ -101,8 +102,8 @@ export async function GET(request: NextRequest, { params }: Context) {
 
     // The first sign-in always opens the portal. Returning clients keep safe
     // deep links, but an admin URL is never a client destination.
-    const destination = !existingClient || next === `/${locale}` || protectedArea(next) === "admin"
-      ? `/${locale}/portal`
+    const destination = !existingClient || next === "/" || protectedArea(next) === "admin"
+      ? "/portal"
       : next;
     return privateRedirect(new URL(destination, publicSiteUrl));
   } catch {

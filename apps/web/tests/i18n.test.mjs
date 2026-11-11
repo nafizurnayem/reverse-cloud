@@ -25,9 +25,9 @@ test("English and Bangla have matching translation keys", () => {
   assert.deepEqual(keys(messages.en), keys(messages.bn));
 });
 
-for (const [locale, pathname] of Object.entries({ en: "/", bn: "/bn" })) {
+for (const locale of ["en", "bn"]) {
   test(`${locale} renders translated content and language links`, async () => {
-    const response = await fetch(`${baseURL}${pathname}`, {
+    const response = await fetch(baseURL, {
       headers: { "Accept-Language": locale },
       redirect: "manual",
     });
@@ -59,14 +59,16 @@ test("root renders English without a locale prefix", async () => {
   assert.ok(html.includes('<html lang="en">'));
 });
 
-test("root respects Bangla browser preference and the saved locale", async () => {
+test("root renders Bangla at the same clean URL for browser and saved preferences", async () => {
   for (const headers of [
     { "Accept-Language": "bn-BD,bn;q=0.9,en;q=0.8" },
     { "Accept-Language": "en", Cookie: "NEXT_LOCALE=bn" },
   ]) {
     const response = await fetch(baseURL, { headers, redirect: "manual" });
-    assert.equal(response.status, 307);
-    assert.equal(new URL(response.headers.get("location"), baseURL).pathname, "/bn");
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("location"), null);
+    const html = await response.text();
+    assert.ok(html.includes('<html lang="bn">'));
   }
 });
 

@@ -64,12 +64,12 @@ describe("magic-link start", () => {
     formData.set("email", "  Person@Example.COM ");
 
     await expect(signInWithMagicLink("bn", "/bn/portal/projects?tab=active", formData)).rejects.toThrow(
-      "redirect:/bn/login?magic_link_sent=1&next=%2Fbn%2Fportal%2Fprojects%3Ftab%3Dactive",
+      "redirect:/login?magic_link_sent=1&next=%2Fportal%2Fprojects%3Ftab%3Dactive",
     );
     expect(mocks.signInWithOtp).toHaveBeenCalledWith({
       email: "person@example.com",
       options: {
-        emailRedirectTo: "https://reverse-cloud.example/bn/auth/callback?method=magic_link&next=%2Fbn%2Fportal%2Fprojects%3Ftab%3Dactive",
+        emailRedirectTo: "https://reverse-cloud.example/auth/callback?method=magic_link&next=%2Fportal%2Fprojects%3Ftab%3Dactive",
         shouldCreateUser: true,
       },
     });
@@ -80,7 +80,7 @@ describe("magic-link start", () => {
     formData.set("email", "not-an-email");
 
     await expect(signInWithMagicLink("en", "/en/admin", formData)).rejects.toThrow(
-      "redirect:/en/login?error=invalid_email&next=%2Fadmin",
+      "redirect:/login?error=invalid_email&next=%2Fadmin",
     );
     expect(mocks.signInWithOtp).not.toHaveBeenCalled();
   });
@@ -91,7 +91,7 @@ describe("magic-link start", () => {
     formData.set("email", "person@example.com");
 
     await expect(signInWithMagicLink("en", "https://evil.example", formData)).rejects.toThrow(
-      "redirect:/en/login?error=magic_link_start_failed&next=%2Fen",
+      "redirect:/login?error=magic_link_start_failed&next=%2F",
     );
   });
 });
@@ -104,7 +104,7 @@ describe("Google OAuth start", () => {
     expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "https://reverse-cloud.example/bn/auth/callback?next=%2Fadmin%3Ftab%3Dstaff",
+        redirectTo: "https://reverse-cloud.example/auth/callback?next=%2Fadmin%3Ftab%3Dstaff",
         skipBrowserRedirect: true,
       },
     });
@@ -115,13 +115,13 @@ describe("Google OAuth start", () => {
       "redirect:https://project.supabase.co/auth/v1/authorize",
     );
     const call = mocks.signInWithOAuth.mock.calls[0][0];
-    expect(new URL(call.options.redirectTo).searchParams.get("next")).toBe("/en");
+    expect(new URL(call.options.redirectTo).searchParams.get("next")).toBe("/");
   });
 
   it("returns a localized stable error when OAuth cannot start", async () => {
     mocks.signInWithOAuth.mockResolvedValue({ data: { url: null }, error: new Error("provider disabled") });
     await expect(signInWithGoogle("bn", "/bn/portal")).rejects.toThrow(
-      "redirect:/bn/login?error=oauth_start_failed&next=%2Fbn%2Fportal",
+      "redirect:/login?error=oauth_start_failed&next=%2Fportal",
     );
   });
 });
@@ -136,7 +136,7 @@ describe("OAuth callback", () => {
     );
     expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("once");
     expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/bn/portal");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/portal");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
@@ -146,7 +146,7 @@ describe("OAuth callback", () => {
       context("en"),
     );
 
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/portal");
   });
 
   it("uses an allow-listed forwarded origin and ignores a spoofed one", async () => {
@@ -161,7 +161,7 @@ describe("OAuth callback", () => {
       }),
       context("en"),
     );
-    expect(response.headers.get("location")).toBe("https://public-tunnel.example/en/portal");
+    expect(response.headers.get("location")).toBe("https://public-tunnel.example/portal");
 
     response = await GET(
       new NextRequest("http://0.0.0.0:3000/en/auth/callback?code=twice&next=%2Fen%2Fportal", {
@@ -172,7 +172,7 @@ describe("OAuth callback", () => {
       }),
       context("en"),
     );
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/portal");
   });
 
   it("does not exchange a provider error and preserves the locale", async () => {
@@ -182,11 +182,11 @@ describe("OAuth callback", () => {
     );
     expect(mocks.exchangeCodeForSession).not.toHaveBeenCalled();
     expect(mocks.rpc).not.toHaveBeenCalled();
-    expect(new URL(response.headers.get("location")!).pathname).toBe("/en/login");
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
     expect(new URL(response.headers.get("location")!).searchParams.get("error")).toBe("oauth_denied");
   });
 
-  it("rejects missing codes, failed exchanges, and cross-locale destinations", async () => {
+  it("rejects missing codes and failed exchanges while cleaning legacy destinations", async () => {
     let response = await GET(
       new NextRequest("https://reverse-cloud.example/bn/auth/callback?next=https://evil.example"),
       context("bn"),
@@ -199,8 +199,8 @@ describe("OAuth callback", () => {
       context("bn"),
     );
     const destination = new URL(response.headers.get("location")!);
-    expect(destination.pathname).toBe("/bn/login");
-    expect(destination.searchParams.get("next")).toBe("/bn");
+    expect(destination.pathname).toBe("/login");
+    expect(destination.searchParams.get("next")).toBe("/portal");
   });
 
   it("returns a magic-link-specific error for an expired email link", async () => {
@@ -212,9 +212,9 @@ describe("OAuth callback", () => {
       context("bn"),
     );
     const destination = new URL(response.headers.get("location")!);
-    expect(destination.pathname).toBe("/bn/login");
+    expect(destination.pathname).toBe("/login");
     expect(destination.searchParams.get("error")).toBe("magic_link_invalid");
-    expect(destination.searchParams.get("next")).toBe("/bn/portal");
+    expect(destination.searchParams.get("next")).toBe("/portal");
   });
 
   it("reports account-linking failures without exposing database details", async () => {
@@ -226,9 +226,9 @@ describe("OAuth callback", () => {
       context("en"),
     );
     const destination = new URL(response.headers.get("location")!);
-    expect(destination.pathname).toBe("/en/login");
+    expect(destination.pathname).toBe("/login");
     expect(destination.searchParams.get("error")).toBe("account_link_failed");
-    expect(destination.searchParams.get("next")).toBe("/en/portal");
+    expect(destination.searchParams.get("next")).toBe("/portal");
   });
 
   it("accepts the preserved invitation after login and skips client records for admin", async () => {
@@ -239,7 +239,7 @@ describe("OAuth callback", () => {
       context("en"),
     );
     expect(response.headers.get("location")).toBe(
-      "https://reverse-cloud.example/en/portal?invite=accepted",
+      "https://reverse-cloud.example/portal?invite=accepted",
     );
     expect(mocks.rpc).toHaveBeenCalledWith("accept_client_invite", { p_token: "a".repeat(43) });
 
@@ -273,7 +273,7 @@ describe("OAuth callback", () => {
     );
     expect(mocks.rpc).toHaveBeenCalledWith("claim_my_staff_invites");
     expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/portal");
   });
 
   it("preserves a returning client's safe deep link but not an admin destination", async () => {
@@ -282,13 +282,13 @@ describe("OAuth callback", () => {
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=once&next=%2Fen%2Fservices"),
       context("en"),
     );
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/services");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/services");
 
     response = await GET(
       new NextRequest("https://reverse-cloud.example/en/auth/callback?code=twice&next=%2Fen%2Fadmin"),
       context("en"),
     );
-    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/en/portal");
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/portal");
   });
 
   it("does not provision a client when staff-role resolution fails", async () => {
@@ -311,7 +311,7 @@ describe("OAuth callback", () => {
     );
 
     const destination = new URL(response.headers.get("location")!);
-    expect(destination.pathname).toBe("/bn/accept-invite");
+    expect(destination.pathname).toBe("/accept-invite");
     expect(destination.searchParams.get("error")).toBe("invalid_or_expired_invite");
     expect(destination.searchParams.has("token")).toBe(false);
     expect(response.headers.get("cache-control")).toContain("no-store");
@@ -319,28 +319,28 @@ describe("OAuth callback", () => {
 });
 
 describe("logout", () => {
-  it("clears only the current session and preserves the locale", async () => {
-    await expect(signOut("bn")).rejects.toThrow("redirect:/bn");
+  it("clears only the current session and returns to the clean home URL", async () => {
+    await expect(signOut("bn")).rejects.toThrow("redirect:/");
     expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("shows a stable error when sign-out fails", async () => {
     mocks.signOut.mockResolvedValue({ error: new Error("network") });
-    await expect(signOut("en")).rejects.toThrow("redirect:/en/login?error=sign_out_failed");
+    await expect(signOut("en")).rejects.toThrow("redirect:/login?error=sign_out_failed");
   });
 });
 
 describe("account-link retry", () => {
   it("links a signed-in user before continuing to a safe portal destination", async () => {
     await expect(continueWithClientAccount("bn", "/bn/portal?tab=projects")).rejects.toThrow(
-      "redirect:/bn/portal?tab=projects",
+      "redirect:/portal?tab=projects",
     );
     expect(mocks.rpc).toHaveBeenCalledWith("link_my_client_account");
   });
 
   it("does not create a client account for an unsafe destination", async () => {
     await expect(continueWithClientAccount("en", "https://evil.example")).rejects.toThrow(
-      "redirect:/en",
+      "redirect:/",
     );
     expect(mocks.rpc).not.toHaveBeenCalled();
   });

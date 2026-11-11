@@ -122,9 +122,9 @@ export function ConfirmationCard({
   }
 
   // Construct login-then-return URL with ?next=...
-  const currentPath = typeof window !== "undefined" ? window.location.pathname : `/${locale}`;
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
   const nextPath = `${currentPath}?confirmProposal=${data.proposalId}&openChat=true`;
-  const loginUrl = `/${locale}/login?next=${encodeURIComponent(nextPath)}`;
+  const loginUrl = `/login?next=${encodeURIComponent(nextPath)}`;
 
   const isConfirmed = status === "confirmed";
 

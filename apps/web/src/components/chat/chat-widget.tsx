@@ -110,7 +110,7 @@ export function ChatWidget({
   const isBn = effectiveLocale === "bn";
   const [isOpen, setIsOpen] = useState(initialOpen);
   const wasOpen = useRef(false);
-  const pendingWelcomeSound = useRef(false);
+  const pendingWelcomePopup = useRef(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
   const [useMock, setUseMock] = useState(() => {
@@ -125,15 +125,22 @@ export function ChatWidget({
 
   // Browsers require a visitor gesture before allowing audible playback.
   // Prime audio on the first ordinary interaction and play a queued welcome
-  // sound if the popup appeared before that interaction.
+  // popup if the three-second timer elapsed before that interaction. This
+  // guarantees that a visible popup is always accompanied by its sound.
   useEffect(() => {
     const unlockAudio = (event: Event) => {
       const target = event.target;
       if (target instanceof Element && target.closest("[data-chat-open]")) return;
 
       void primeChatAudio().then((ready) => {
-        if (ready && pendingWelcomeSound.current && playChatChime()) {
-          pendingWelcomeSound.current = false;
+        if (ready && pendingWelcomePopup.current && playChatChime()) {
+          pendingWelcomePopup.current = false;
+          setShowWelcomeNotification(true);
+          try {
+            sessionStorage.setItem(welcomeNotificationKey, "1");
+          } catch {
+            // storage errors ignored
+          }
         }
       });
     };
@@ -176,6 +183,7 @@ export function ChatWidget({
   // Prompt a first-time visitor once, provided they have not opened the chat.
   useEffect(() => {
     if (isOpen) {
+      pendingWelcomePopup.current = false;
       try {
         sessionStorage.setItem(welcomeNotificationKey, "1");
       } catch {
@@ -191,12 +199,15 @@ export function ChatWidget({
     }
 
     const timer = window.setTimeout(() => {
-      setShowWelcomeNotification(true);
-      pendingWelcomeSound.current = !playChatChime();
-      try {
-        sessionStorage.setItem(welcomeNotificationKey, "1");
-      } catch {
-        // storage errors ignored
+      if (playChatChime()) {
+        setShowWelcomeNotification(true);
+        try {
+          sessionStorage.setItem(welcomeNotificationKey, "1");
+        } catch {
+          // storage errors ignored
+        }
+      } else {
+        pendingWelcomePopup.current = true;
       }
     }, 3_000);
 
@@ -243,7 +254,7 @@ export function ChatWidget({
   const activeMessages = messages.length > 0 ? messages : [greetingMessage];
 
   function handleOpenChat() {
-    pendingWelcomeSound.current = false;
+    pendingWelcomePopup.current = false;
     void primeChatAudio();
     setShowWelcomeNotification(false);
     setIsMinimized(false);
