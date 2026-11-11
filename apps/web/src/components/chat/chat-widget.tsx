@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   Bot,
@@ -20,22 +20,101 @@ import { ChatMessageList } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
 import { FallbackState } from "./cards";
 
+const welcomeNotificationKey = "rc_chat_welcome_notified_v1";
+let preparedAudioContext: AudioContext | null = null;
+
+function audioContextConstructor() {
+  return window.AudioContext ?? (
+    window as typeof window & { webkitAudioContext?: typeof AudioContext }
+  ).webkitAudioContext;
+}
+
+function primeChatAudio() {
+  try {
+    const AudioContextConstructor = audioContextConstructor();
+    if (!AudioContextConstructor) return;
+    preparedAudioContext ??= new AudioContextConstructor();
+    if (preparedAudioContext.state === "suspended") {
+      void preparedAudioContext.resume().catch(() => {
+        preparedAudioContext = null;
+      });
+    }
+  } catch {
+    preparedAudioContext = null;
+  }
+}
+
+function playChatChime() {
+  try {
+    const AudioContextConstructor = audioContextConstructor();
+    if (!AudioContextConstructor) return;
+
+    const context = preparedAudioContext ?? new AudioContextConstructor();
+    preparedAudioContext = context;
+    const play = () => {
+      const now = context.currentTime;
+      const notes = [
+        { frequency: 523.25, startsAt: 0, duration: 0.18, volume: 0.09 },
+        { frequency: 783.99, startsAt: 0.13, duration: 0.28, volume: 0.075 },
+      ];
+
+      notes.forEach((note, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = now + note.startsAt;
+        const end = start + note.duration;
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(note.frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(note.volume, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(end);
+        if (index === notes.length - 1) {
+          oscillator.addEventListener("ended", () => {
+            preparedAudioContext = null;
+            void context.close();
+          }, { once: true });
+        }
+      });
+    };
+
+    if (context.state === "suspended") {
+      void context.resume().then(play).catch(() => {
+        preparedAudioContext = null;
+        void context.close();
+      });
+    } else {
+      play();
+    }
+  } catch {
+    // Browsers may block sound until the visitor has interacted with the page.
+  }
+}
+
 interface ChatWidgetProps {
   locale?: "en" | "bn";
   initialOpen?: boolean;
   useMockStreamDefault?: boolean;
+  turnstileSiteKey?: string;
 }
 
 export function ChatWidget({
   locale,
   initialOpen = false,
   useMockStreamDefault = false,
+  turnstileSiteKey = "",
 }: ChatWidgetProps) {
   const activeLocale = useLocale() === "bn" ? "bn" : "en";
   const effectiveLocale = locale ?? activeLocale;
   const isBn = effectiveLocale === "bn";
   const [isOpen, setIsOpen] = useState(initialOpen);
+  const wasOpen = useRef(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
   const [useMock, setUseMock] = useState(() => {
     if (useMockStreamDefault) return true;
     return process.env.NEXT_PUBLIC_ENABLE_MOCK_CHAT === "true";
@@ -57,6 +136,7 @@ export function ChatWidget({
         if (shouldOpen || proposalId) {
           setIsOpen(true);
           setIsMinimized(false);
+          localStorage.setItem(welcomeNotificationKey, "1");
         }
 
         const saved = sessionStorage.getItem("rc_chat_history");
@@ -71,6 +151,49 @@ export function ChatWidget({
       }
     });
   }, []);
+
+  // Prompt a first-time visitor once, provided they have not opened the chat.
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        localStorage.setItem(welcomeNotificationKey, "1");
+      } catch {
+        // storage errors ignored
+      }
+      return;
+    }
+
+    try {
+      if (localStorage.getItem(welcomeNotificationKey) === "1") return;
+    } catch {
+      // Continue with an in-memory notification when storage is unavailable.
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowWelcomeNotification(true);
+      playChatChime();
+      try {
+        localStorage.setItem(welcomeNotificationKey, "1");
+      } catch {
+        // storage errors ignored
+      }
+    }, 3_000);
+
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+
+  // Play only after the panel and its first assistant message have appeared.
+  useEffect(() => {
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+    if (wasOpen.current) return;
+    wasOpen.current = true;
+
+    const timer = window.setTimeout(playChatChime, 180);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
 
   // Persist chat messages to sessionStorage across navigations / login return
   useEffect(() => {
@@ -93,6 +216,18 @@ export function ChatWidget({
   };
 
   const activeMessages = messages.length > 0 ? messages : [greetingMessage];
+
+  function handleOpenChat() {
+    primeChatAudio();
+    setShowWelcomeNotification(false);
+    setIsMinimized(false);
+    setIsOpen(true);
+    try {
+      localStorage.setItem(welcomeNotificationKey, "1");
+    } catch {
+      // storage errors ignored
+    }
+  }
 
   function handleReset() {
     setMessages([]);
@@ -287,18 +422,35 @@ export function ChatWidget({
     <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] flex-col items-end">
       {/* Floating Launcher Button */}
       {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-primary/95 focus:outline-none focus:ring-4 focus:ring-primary/30"
-          aria-label={isBn ? "চ্যাট উইজেট খুলুন" : "Open chat widget"}
-        >
-          <MessageSquare className="h-6 w-6 transition-transform group-hover:scale-110" />
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-500" />
-          </span>
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          {showWelcomeNotification && (
+            <button
+              type="button"
+              onClick={handleOpenChat}
+              className="max-w-[min(18rem,calc(100vw-2rem))] rounded-2xl rounded-br-sm border bg-card px-4 py-3 text-left text-sm text-card-foreground shadow-xl transition hover:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/20"
+              aria-label={isBn ? "স্বাগত বার্তা খুলুন" : "Open welcome message"}
+            >
+              <span className="block font-semibold text-foreground">
+                {isBn ? "হ্যালো! 👋" : "Hello! 👋"}
+              </span>
+              <span className="text-muted-foreground">
+                {isBn ? "আমি কীভাবে আপনাকে সহায়তা করতে পারি?" : "How can I assist you?"}
+              </span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleOpenChat}
+            className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-primary/95 focus:outline-none focus:ring-4 focus:ring-primary/30"
+            aria-label={isBn ? "চ্যাট উইজেট খুলুন" : "Open chat widget"}
+          >
+            <MessageSquare className="h-6 w-6 transition-transform group-hover:scale-110" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-500" />
+            </span>
+          </button>
+        </div>
       )}
 
       {/* Main Chat Panel */}
@@ -405,6 +557,7 @@ export function ChatWidget({
               <ChatMessageList
                 messages={activeMessages}
                 locale={effectiveLocale}
+                turnstileSiteKey={turnstileSiteKey}
                 onTriggerFallback={() => setFallbackMode(true)}
                 onCardAction={handleCardAction}
               />

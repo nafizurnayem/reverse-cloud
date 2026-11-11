@@ -14,6 +14,7 @@ import {
 interface ChatMessageListProps {
   messages: ChatMessageItem[];
   locale?: "en" | "bn";
+  turnstileSiteKey?: string;
   onTriggerFallback?: () => void;
   onCardAction?: (action: string) => void;
 }
@@ -21,6 +22,7 @@ interface ChatMessageListProps {
 export function ChatMessageList({
   messages,
   locale = "en",
+  turnstileSiteKey = "",
   onTriggerFallback,
   onCardAction,
 }: ChatMessageListProps) {
@@ -113,6 +115,7 @@ export function ChatMessageList({
                           key={idx}
                           data={card.data}
                           locale={locale}
+                          turnstileSiteKey={turnstileSiteKey}
                         />
                       );
                     }
