@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   verify: vi.fn(),
   meeting: vi.fn(),
   activeBooking: vi.fn(),
+  clientUpsert: vi.fn(),
   adminFrom: vi.fn(),
   adminRpc: vi.fn(),
   getUser: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     return {
       from: (table: string) => {
         mocks.adminFrom(table);
+        if (table === "clients") return { upsert: mocks.clientUpsert };
         return query;
       },
       rpc: mocks.adminRpc,
@@ -105,6 +107,7 @@ beforeEach(() => {
   mocks.verify.mockResolvedValue({ success: true, errors: [] });
   mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
   mocks.activeBooking.mockResolvedValue({ data: null, error: null });
+  mocks.clientUpsert.mockResolvedValue({ data: null, error: null });
   mocks.meeting.mockResolvedValue({
     data: {
       id: "00000000-0000-4000-8000-000000000018",
@@ -163,6 +166,15 @@ describe("POST /api/schedule/book", () => {
         p_attendee_email: "client@example.com",
       }),
     );
+    expect(mocks.clientUpsert).toHaveBeenCalledWith({
+      full_name: "Client Person",
+      email: "client@example.com",
+      phone: null,
+      timezone: "Asia/Dhaka",
+      preferred_locale: "en",
+      stage: "prospect",
+      source: "website",
+    }, { onConflict: "email", ignoreDuplicates: true });
   });
 
   it("lets a signed-in user confirm directly with verified account details", async () => {
@@ -193,6 +205,7 @@ describe("POST /api/schedule/book", () => {
       email: "signed-in@example.com",
     });
     expect(bookingBody.metadata.source).toBe("reverse_cloud_chat");
+    expect(mocks.clientUpsert).not.toHaveBeenCalled();
   });
 
   it("requires and records a guest phone number for chat bookings", async () => {
@@ -205,9 +218,13 @@ describe("POST /api/schedule/book", () => {
     expect(response.status).toBe(201);
     const bookingBody = JSON.parse(String(mocks.fetch.mock.calls[1][1].body));
     expect(bookingBody.metadata).toMatchObject({
-      phone: "+880 1700 000000",
+      phone: "+8801700000000",
       source: "reverse_cloud_chat",
     });
+    expect(mocks.clientUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "client@example.com", phone: "+8801700000000" }),
+      { onConflict: "email", ignoreDuplicates: true },
+    );
   });
 
   it("rejects a guest chat booking without a phone number", async () => {
@@ -217,6 +234,30 @@ describe("POST /api/schedule/book", () => {
     await expect(response.json()).resolves.toMatchObject({ code: "phone_required" });
     expect(mocks.verify).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed international guest phone number", async () => {
+    const response = await POST(request({ ...input, source: "chat", phone: "+8801200000000" }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "invalid_input" });
+    expect(mocks.verify).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("fails before creating the external booking when the portal client cannot be linked", async () => {
+    mocks.clientUpsert.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
+
+    const response = await POST(request({
+      ...input,
+      source: "chat",
+      phone: "+8801700000000",
+    }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "scheduling_unavailable" });
+    expect(mocks.fetch).toHaveBeenCalledOnce();
+    expect(mocks.adminRpc).not.toHaveBeenCalled();
   });
 
   it("rejects invalid input before protection or external work", async () => {

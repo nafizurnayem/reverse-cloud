@@ -24,12 +24,14 @@ interface ChatWidgetProps {
   locale?: "en" | "bn";
   initialOpen?: boolean;
   useMockStreamDefault?: boolean;
+  turnstileSiteKey?: string;
 }
 
 export function ChatWidget({
   locale,
   initialOpen = false,
   useMockStreamDefault = false,
+  turnstileSiteKey = "",
 }: ChatWidgetProps) {
   const activeLocale = useLocale() === "bn" ? "bn" : "en";
   const effectiveLocale = locale ?? activeLocale;
@@ -405,6 +407,7 @@ export function ChatWidget({
               <ChatMessageList
                 messages={activeMessages}
                 locale={effectiveLocale}
+                turnstileSiteKey={turnstileSiteKey}
                 onTriggerFallback={() => setFallbackMode(true)}
                 onCardAction={handleCardAction}
               />
