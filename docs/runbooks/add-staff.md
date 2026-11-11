@@ -18,7 +18,7 @@ on conflict (user_id, role_id) do nothing;
 commit;
 ```
 
-After a fresh login, verify `/en/admin` and each permission granted by the role.
+After a fresh login, verify `/admin` and each permission granted by the role.
 Never give a human the `service_role` claim or seed a shared production
 password.
 

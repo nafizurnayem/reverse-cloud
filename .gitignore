@@ -39,6 +39,11 @@ Thumbs.db
 # Local member work-tracking (never committed)
 .member-progress.md
 
+# Local code-analysis output
+graphify-out/
+.agents/rules/graphify.md
+.agents/workflows/graphify.md
+
 # Database backup and drill dumps
 supabase/backup_*.sql
 

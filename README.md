@@ -1,103 +1,78 @@
 # Reverse Cloud
 
-Services agency platform for web development, agentic AI, automation, Python
-and web scraping services.
+Reverse Cloud is a bilingual services platform with a Next.js website, secure
+client and staff portals, a FastAPI agentic assistant, Supabase, and Docker
+hosting through a named Cloudflare Tunnel.
 
-## Repository layout
+## Repository structure
 
-- `apps/web` — Next.js web application
-- `services/ai` — FastAPI and PydanticAI service
-- `supabase` — database configuration, migrations and RLS tests
-- `docs` — architecture, API and operational documentation
+| Path | Responsibility |
+| --- | --- |
+| `apps/web` | Public website, authentication, admin/client portals, API routes, and browser chat UI |
+| `services/ai` | FastAPI chat service, agent tools, retrieval, background jobs, and AI tests |
+| `supabase` | Database migrations, seed data, Row Level Security, and database tests |
+| `ops/hosting` | Docker Compose deployment, health checks, rollback, tunnel, and activity logs |
+| `docs` | Architecture, API contracts, operational runbooks, and research |
+| `scripts` | Repository-level diagnostic and load-test utilities |
 
-## Development
+See [docs/architecture.md](docs/architecture.md) for the full file-placement
+guide and runtime flow.
 
-Use Node.js 22 (see `.nvmrc`) and pnpm 10.34.6. From the repository root:
+## Local development
 
-Keep the checkout on a drive with several GB of free space for dependencies and
-build output. The original 477 MB FAT volume is too small for a full install;
-copy or clone this repository onto a larger drive before installing there.
+Requirements:
+
+- Node.js 22 and pnpm 10.34.6
+- Python 3.12 for the AI service
+- Supabase credentials for database-backed features
 
 ```bash
-# With nvm installed:
 nvm use
-
-# Install pnpm in your user directory if it is not already available:
-npm install --global --prefix "$HOME/.local" pnpm@10.34.6
-export PATH="$HOME/.local/bin:$PATH"
-
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open http://localhost:3000. Add the PATH export to your shell profile to make
-the user-local pnpm command available in future terminals. Alternatively, use
-`corepack pnpm` in place of `pnpm` if you already use Corepack.
+The web app opens at `http://localhost:3000`. Put web settings in
+`apps/web/.env.local`, using `apps/web/.env.example` as the template. AI
+settings belong in `services/ai/.env.local`.
 
-The root scripts target `apps/web`:
+Useful commands:
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm dev` | Start the development server |
-| `pnpm build` | Create the production build |
-| `pnpm start` | Serve the production build |
-| `pnpm lint` | Run ESLint with no warnings allowed |
-| `pnpm typecheck` | Generate Next.js route types and check TypeScript |
+| `pnpm dev` | Start the Next.js development server |
+| `pnpm build` | Create the production web build |
+| `pnpm lint` | Run ESLint with zero warnings |
+| `pnpm typecheck` | Generate route types and check TypeScript |
+| `pnpm test` | Run web unit and integration tests |
+| `pnpm test:i18n` | Test both languages against a running web server |
+| `pytest services/ai` | Run the AI service test suite |
 
-Run `pnpm lint`, `pnpm typecheck`, and `pnpm build` before opening a PR.
-Next.js 16 does not run ESLint as part of the build.
+## URLs and language
 
-The workspace uses a hoisted pnpm layout and copies package files so installs
-also work on FAT filesystems without symlink support. Commit `pnpm-lock.yaml`
-alongside dependency changes; use `pnpm install --frozen-lockfile` in CI.
+All browser-facing URLs are clean and language-neutral, such as `/services`,
+`/portal`, and `/admin`. English or Bangla is stored in the `NEXT_LOCALE`
+cookie. Legacy `/en/...` and `/bn/...` links redirect to the clean equivalent.
 
-### Current scaffold
+Public pages live under `apps/web/src/app/[locale]/(public)`. Use navigation
+helpers from `@/i18n/navigation`; do not manually add locale prefixes.
 
-The home page runs without external services or environment variables. The six
-unfinished API endpoints return JSON with HTTP 501 for their intended methods
-(GET for schedule slots; POST for the others).
+## Authentication and authorization
 
-### English and Bangla
+Supabase Auth provides Google OAuth and email sign-in links. The proxy refreshes
+sessions and protects `/portal`, `/admin`, `/developer`, and `/project_manager`.
+Staff authorization comes only from active database roles, never user metadata.
+Protected layouts repeat the authorization check on the server.
 
-- `/en` and `/bn` render translated home pages, metadata, and HTML language tags.
-- `/` redirects to the saved locale or browser language, with English as the
-  fallback. Explicit locale URLs always take precedence.
-- The language links switch the current pathname between English and Bangla.
-- Add matching translation keys to `apps/web/messages/en.json` and `bn.json`.
-- Put new public pages under `src/app/[locale]/(public)` and use the `Link`,
-  `redirect`, and router helpers from `@/i18n/navigation` for localized navigation.
-- `src/proxy.ts` handles locale routing; API endpoints and static files are excluded.
+Never expose the Supabase service-role key through a `NEXT_PUBLIC_` variable.
 
-The original auth draft remains in `apps/web/src/proxy.ts.example` for reference.
-The active proxy now combines locale routing with Supabase session refresh and
-guards the admin and portal route segments.
+## Production hosting
 
-With a development or production server running, run `pnpm test:i18n` to check
-translations, redirects, language links, invalid routes, and API/asset exclusions.
-Set `I18N_TEST_BASE_URL` if the server is not at `http://127.0.0.1:3000`.
+The Ubuntu host runs commit-tagged Docker images for the web and AI services,
+Ollama, background workers, and two Cloudflare Tunnel connectors. Deployment
+tests candidate containers before replacing the live containers and rolls back
+failed health checks.
 
-### Supabase and Google login
-
-Put web configuration in `apps/web/.env.local`, using `apps/web/.env.example`.
-Next.js does not load the repository-root `.env.local` for this app. Set
-`NEXT_PUBLIC_SITE_URL` to the exact app origin (for example,
-`http://localhost:3000`) and configure the project URL plus publishable key. The
-legacy anon key is accepted as a fallback. Never expose the service-role key
-through a `NEXT_PUBLIC_` variable.
-
-- `/en/login` and `/bn/login` start Google OAuth through Supabase PKCE.
-- `/{locale}/auth/callback` exchanges the one-time code for cookie-based session
-  tokens and returns the user to a validated same-locale path.
-- A signed-in user can revisit the localized login page to continue or sign out.
-- The proxy refreshes session cookies and preserves them on locale/auth redirects.
-- Admin access requires an active database `admin` role. User metadata is never
-  accepted as authorization, and protected layouts check again on the server.
-- The service-role client is server-only, does not persist sessions, and has an
-  ESLint import allowlist for the future validated leads, webhook, and invitation
-  paths. OAuth and route guards use the user's RLS-scoped session client.
-
-Run `pnpm test` for auth, redirect-validation, proxy, and session regressions.
-See `docs/runbooks/google-oauth.md` for the Google and Supabase dashboard setup
-that Member D must complete before a real sign-in can work.
-
-The application skeleton follows the project plan in `docs/00-plan.md`.
+- [Manual hosting guide](MANUAL_HOSTING_GUIDE.md)
+- [Hosting operations](HOSTING_PREVIEW.md)
+- [Docker hosting control plane](ops/hosting/README.md)

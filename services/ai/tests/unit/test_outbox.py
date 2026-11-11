@@ -75,8 +75,8 @@ def test_invite_email_renders_english() -> None:
     )
     assert subject == "Invitation: Access your Reverse Cloud Client Portal"
     assert "Rahim Chowdhury" in text
-    assert "https://app.reversecloud.io/en/accept-invite?token=secret-invite-token-123" in text
-    assert "https://app.reversecloud.io/en/accept-invite?token=secret-invite-token-123" in html_content
+    assert "https://app.reversecloud.io/accept-invite?token=secret-invite-token-123" in text
+    assert "https://app.reversecloud.io/accept-invite?token=secret-invite-token-123" in html_content
     assert "336 hours" in text
 
 
@@ -92,7 +92,7 @@ def test_invite_email_renders_bangla() -> None:
     )
     assert "রিভার্স ক্লাউড ক্লায়েন্ট পোর্টালে আপনার আমন্ত্রণ" in subject
     assert "রহিম চৌধুরী" in text
-    assert "https://app.reversecloud.io/bn/accept-invite?token=token-bn-456" in text
+    assert "https://app.reversecloud.io/accept-invite?token=token-bn-456" in text
     assert "৩৩৬ ঘণ্টা" in text
 
 
@@ -136,4 +136,4 @@ async def test_alert_outbox_failure_posts_to_telegram() -> None:
     payload = call_args[1]["json"]
     assert payload["chat_id"] == "chat-id"
     assert "Outbox Delivery Failure" in payload["text"]
-    assert "outbox-1" in payload["text"]
+    assert "outbox-1" in payload["text"]
