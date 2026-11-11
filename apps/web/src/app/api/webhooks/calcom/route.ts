@@ -37,6 +37,45 @@ export async function POST(request: NextRequest) {
   }
   const payloadHash = sha256(rawBody);
   const deliveryKey = sha256([event.triggerEvent, event.bookingUid, event.createdAt].join("."));
+
+  // Ensure attendee phone from webhook is synced into leads table
+  if (event.attendeeEmail && event.attendeePhone) {
+    try {
+      const admin = createAdminClient();
+      const existing = await admin
+        .from("leads")
+        .select("id,phone")
+        .eq("email", event.attendeeEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing.data?.id) {
+        if (!existing.data.phone) {
+          await admin
+            .from("leads")
+            .update({ phone: event.attendeePhone, updated_at: new Date().toISOString() })
+            .eq("id", existing.data.id);
+        }
+      } else {
+        await admin
+          .from("leads")
+          .insert({
+            name: event.attendeeName || "Cal.com Attendee",
+            email: event.attendeeEmail,
+            phone: event.attendeePhone,
+            source: "chat",
+            status: "new",
+            preferred_locale: "en",
+            message: `Booked via Cal.com [UID: ${event.bookingUid}]`,
+            consent_at: new Date().toISOString(),
+          });
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
   try {
     const result = await createAdminClient().rpc("process_calcom_webhook_delivery", {
       p_delivery_key: deliveryKey, p_trigger_event: event.triggerEvent, p_occurred_at: event.createdAt,
