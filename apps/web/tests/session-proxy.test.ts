@@ -42,13 +42,14 @@ function request(path: string, headers: Record<string, string> = {}) {
 }
 
 describe("session proxy", () => {
-  it("canonicalizes duplicate locale prefixes", async () => {
-    const response = await proxy(request("/en/en/portal?tab=active"));
+  it("canonicalizes all legacy locale prefixes and preserves the selected language", async () => {
+    const response = await proxy(request("/en/bn/portal?tab=active"));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "https://reverse-cloud.example/en/portal?tab=active",
+      "https://reverse-cloud.example/portal?tab=active",
     );
+    expect(response.cookies.get("NEXT_LOCALE")?.value).toBe("en");
   });
 
   it("matches protected dotted paths while excluding APIs and assets", () => {
@@ -66,10 +67,10 @@ describe("session proxy", () => {
     }
   });
 
-  it("redirects an unprefixed protected route to localized login", async () => {
+  it("redirects an unprefixed protected route to the clean login URL", async () => {
     const response = await proxy(request("/admin?tab=staff", { "accept-language": "bn" }));
     const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/bn/login");
+    expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("next")).toBe("/admin?tab=staff");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
@@ -77,20 +78,20 @@ describe("session proxy", () => {
   it("uses only allow-listed forwarded origins for protected redirects", async () => {
     vi.stubEnv("TRUSTED_PUBLIC_ORIGINS", "https://public-tunnel.example");
 
-    let response = await proxy(request("/en/portal", {
+    let response = await proxy(request("/portal", {
       "x-forwarded-host": "public-tunnel.example",
       "x-forwarded-proto": "https",
     }));
     expect(response.headers.get("location")).toBe(
-      "https://public-tunnel.example/en/login?next=%2Fen%2Fportal",
+      "https://public-tunnel.example/login?next=%2Fportal",
     );
 
-    response = await proxy(request("/en/portal", {
+    response = await proxy(request("/portal", {
       "x-forwarded-host": "attacker.example",
       "x-forwarded-proto": "https",
     }));
     expect(response.headers.get("location")).toBe(
-      "https://reverse-cloud.example/en/login?next=%2Fen%2Fportal",
+      "https://reverse-cloud.example/login?next=%2Fportal",
     );
   });
 
@@ -103,7 +104,7 @@ describe("session proxy", () => {
       return { data: { claims: null }, error: null };
     });
 
-    const response = await proxy(request("/en/admin"));
+    const response = await proxy(request("/admin"));
     expect(response.cookies.get("sb-session.0")?.value).toBe("fresh");
     expect(response.cookies.get("sb-session.0")?.secure).toBe(true);
     expect(response.cookies.get("sb-session.1")?.maxAge).toBe(0);
@@ -115,7 +116,7 @@ describe("session proxy", () => {
       data: { claims: { sub: "user-1", user_metadata: { role: "admin" } } },
       error: null,
     });
-    const response = await proxy(request("/en/admin"));
+    const response = await proxy(request("/admin"));
     expect(response.status).toBe(403);
     expect(mocks.eq).toHaveBeenCalledWith("user_id", "user-1");
     expect(mocks.eq).toHaveBeenCalledWith("is_active", true);
@@ -161,14 +162,16 @@ describe("session proxy", () => {
     expect(response.headers.get("x-middleware-request-cookie")).toBe("sb-session.0=fresh");
   });
 
-  it("removes locale prefixes and corrects the dashboard for the signed-in role", async () => {
+  it("corrects the clean dashboard URL for the signed-in role", async () => {
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "manager-1" } }, error: null });
     mocks.limit.mockResolvedValue({
       data: [{ roles: { key: "project_manager" } }],
       error: null,
     });
 
-    const response = await proxy(request("/bn/developer/projects?tab=active"));
+    const response = await proxy(request("/developer/projects?tab=active", {
+      Cookie: "NEXT_LOCALE=bn",
+    }));
 
     expect(response.headers.get("location")).toBe(
       "https://reverse-cloud.example/project_manager/projects?tab=active",
@@ -177,6 +180,6 @@ describe("session proxy", () => {
 
   it("fails closed when auth is unavailable", async () => {
     mocks.getClaims.mockRejectedValue(new Error("network unavailable"));
-    expect((await proxy(request("/bn/portal"))).status).toBe(503);
+    expect((await proxy(request("/portal"))).status).toBe(503);
   });
 });

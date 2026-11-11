@@ -162,7 +162,7 @@ describe("Clients admin actions", () => {
     });
     expect(state).toEqual({
       status: "success",
-      inviteUrl: `https://reverse-cloud.example/bn/accept-invite?token=${token}`,
+      inviteUrl: `https://reverse-cloud.example/accept-invite?token=${token}`,
       expiresAt: "2026-10-28T00:00:00.000Z",
     });
   });

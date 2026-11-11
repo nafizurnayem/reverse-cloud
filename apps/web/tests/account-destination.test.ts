@@ -39,12 +39,12 @@ describe("post-login account destination", () => {
 
   it("sends only linked clients to the portal", async () => {
     const { supabase, query } = clientWith("client-1");
-    expect(await accountDestination(supabase as never, "user-1", "bn")).toBe("/bn/portal");
+    expect(await accountDestination(supabase as never, "user-1", "bn")).toBe("/portal");
     expect(query.eq).toHaveBeenCalledWith("user_id", "user-1");
   });
 
   it("leaves unassigned users on the public site", async () => {
     const { supabase } = clientWith(null);
-    expect(await accountDestination(supabase as never, "user-1", "en")).toBe("/en");
+    expect(await accountDestination(supabase as never, "user-1", "en")).toBe("/");
   });
 });

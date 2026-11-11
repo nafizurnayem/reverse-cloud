@@ -24,34 +24,26 @@ describe("Phase 5 Wave 1: SEO, Robots & Sitemap Verification", () => {
     expect(config.sitemap).toContain("/sitemap.xml");
   });
 
-  it("generates dynamic sitemap for both English and Bangla locales", async () => {
+  it("generates one clean public URL for each indexable page", async () => {
     const entries = await sitemap();
     expect(entries.length).toBeGreaterThan(0);
 
     const urls = entries.map((e) => e.url);
 
-    // Verify static routes in both languages
+    // Locale selection is cookie-based, so the public URL is unique and unprefixed.
     expect(urls).toContain("https://revcloud.dev/");
-    expect(urls.some((u) => u.endsWith("/bn"))).toBe(true);
     expect(urls).toContain("https://revcloud.dev/services");
-    expect(urls.some((u) => u.endsWith("/bn/services"))).toBe(true);
     expect(urls).toContain("https://revcloud.dev/schedule");
-    expect(urls.some((u) => u.endsWith("/bn/schedule"))).toBe(true);
     expect(urls).toContain("https://revcloud.dev/pricing");
-    expect(urls.some((u) => u.endsWith("/bn/pricing"))).toBe(true);
     expect(urls).toContain("https://revcloud.dev/about");
-    expect(urls.some((u) => u.endsWith("/bn/about"))).toBe(true);
     expect(urls).toContain("https://revcloud.dev/contact");
-    expect(urls.some((u) => u.endsWith("/bn/contact"))).toBe(true);
     expect(urls).toContain("https://revcloud.dev/terms");
-    expect(urls.some((u) => u.endsWith("/bn/privacy"))).toBe(true);
+    expect(urls).toContain("https://revcloud.dev/privacy");
+    expect(urls.some((url) => /\/(?:en|bn)(?:\/|$)/.test(url))).toBe(false);
 
-    // Verify alternate language tags exist
     const rootEntry = entries.find((e) => e.url === "https://revcloud.dev/");
     expect(rootEntry).toBeDefined();
-    expect(rootEntry?.alternates?.languages).toBeDefined();
-    expect(rootEntry?.alternates?.languages?.en).toBe("https://revcloud.dev/");
-    expect(rootEntry?.alternates?.languages?.bn).toContain("/bn");
+    expect(rootEntry?.alternates?.languages).toBeUndefined();
 
     // Verify priority weighting
     expect(rootEntry?.priority).toBe(1.0);

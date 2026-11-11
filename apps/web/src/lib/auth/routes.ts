@@ -9,7 +9,7 @@ export type Locale = (typeof routing.locales)[number];
 
 function pathSegments(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);
-  if (hasLocale(routing.locales, segments[0])) segments.shift();
+  while (hasLocale(routing.locales, segments[0])) segments.shift();
   return segments;
 }
 
@@ -48,22 +48,24 @@ export function protectedArea(pathname: string) {
 }
 
 export function localizedPath(pathname: string, locale: Locale) {
+  void locale;
   const staffPath = unlocalizedStaffPath(pathname);
   if (staffPath) return staffPath;
-  const firstSegment = pathname.split("/")[1];
-  return hasLocale(routing.locales, firstSegment)
-    ? pathname
-    : `/${locale}${pathname}`;
+  const parsed = new URL(pathname, "https://internal.invalid");
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  while (hasLocale(routing.locales, segments[0])) segments.shift();
+  return `/${segments.join("/")}${parsed.search}${parsed.hash}`;
 }
 
 export function loginPath(locale: Locale, returnTo: string) {
-  return `/${locale}/login?${new URLSearchParams({ next: returnTo })}`;
+  void locale;
+  return `/login?${new URLSearchParams({ next: localizedPath(returnTo, routing.defaultLocale) })}`;
 }
 
 export function needsClientAccountLink(destination: string, locale: Locale) {
   try {
-    const pathname = new URL(destination, "https://internal.invalid").pathname.replace(/\/$/, "");
-    return pathname === `/${locale}/portal` || pathname.startsWith(`/${locale}/portal/`);
+    const pathname = localizedPath(destination, locale).split(/[?#]/, 1)[0].replace(/\/$/, "");
+    return pathname === "/portal" || pathname.startsWith("/portal/");
   } catch {
     return false;
   }
@@ -72,7 +74,7 @@ export function needsClientAccountLink(destination: string, locale: Locale) {
 export function safePostLoginPath(
   value: string | readonly string[] | null | undefined,
   locale: Locale,
-  fallback = `/${locale}`,
+  fallback = "/",
 ) {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
     return fallback;
@@ -96,16 +98,13 @@ export function safePostLoginPath(
     if (parsed.origin === base.origin && staffPath) {
       return `${staffPath}${parsed.search}${parsed.hash}`;
     }
-    const hasSelectedLocale =
-      parsed.pathname === `/${locale}` || parsed.pathname.startsWith(`/${locale}/`);
-    if (parsed.origin !== base.origin || !hasSelectedLocale) {
+    if (parsed.origin !== base.origin) return fallback;
+    const clean = localizedPath(`${parsed.pathname}${parsed.search}${parsed.hash}`, locale);
+    const authPath = clean.split(/[?#]/, 1)[0].replace(/\/$/, "");
+    if (authPath === "/login" || authPath === "/auth/callback") {
       return fallback;
     }
-    const authPath = parsed.pathname.replace(/\/$/, "");
-    if (authPath === `/${locale}/login` || authPath === `/${locale}/auth/callback`) {
-      return fallback;
-    }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    return clean;
   } catch {
     return fallback;
   }

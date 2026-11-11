@@ -41,7 +41,7 @@ export default async function PortalPaymentsPage({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   const [{ supabase }, t] = await Promise.all([
-    requireUser(locale, `/${locale}/portal/payments`),
+    requireUser(locale, "/portal/payments"),
     getTranslations({ locale, namespace: "PortalPayments" }),
   ]);
 

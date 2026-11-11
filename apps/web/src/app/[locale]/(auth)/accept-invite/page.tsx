@@ -39,7 +39,7 @@ export default async function AcceptInvitePage({ params, searchParams }: Props) 
     // A missing session is handled as signed out below.
   }
 
-  const next = token ? acceptInvitePath(locale, token) : `/${locale}/accept-invite`;
+  const next = token ? acceptInvitePath(locale, token) : "/accept-invite";
   if (!failed && !user) redirect(loginPath(locale, next));
 
   return (
@@ -52,7 +52,7 @@ export default async function AcceptInvitePage({ params, searchParams }: Props) 
           <>
             <p className="auth-message auth-error" role="alert">{t("invalidDescription")}</p>
             <div className="auth-actions">
-              <Link className="auth-button auth-button-secondary" href={`/${locale}`}>
+              <Link className="auth-button auth-button-secondary" href="/">
                 {t("returnHome")}
               </Link>
             </div>
@@ -65,7 +65,7 @@ export default async function AcceptInvitePage({ params, searchParams }: Props) 
               <form action={acceptClientInvite.bind(null, locale, token ?? "")}>
                 <button className="auth-button" type="submit">{t("accept")}</button>
               </form>
-              <Link className="auth-button auth-button-secondary" href={`/${locale}`}>
+              <Link className="auth-button auth-button-secondary" href="/">
                 {t("cancel")}
               </Link>
             </div>

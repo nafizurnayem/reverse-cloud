@@ -52,36 +52,34 @@ function applyTrustedRedirectOrigin(response: NextResponse, request: NextRequest
 
 export async function proxy(request: NextRequest) {
   const segments = request.nextUrl.pathname.split("/").filter(Boolean);
-  if (
-    segments.length > 1 &&
-    hasLocale(routing.locales, segments[0]) &&
-    segments[0] === segments[1]
-  ) {
-    const canonical = new URL(
-      `/${segments[0]}/${segments.slice(2).join("/")}${request.nextUrl.search}`,
-      trustedPublicOrigin(request.headers),
+  const session = await refreshSession(request);
+  const area = protectedArea(request.nextUrl.pathname);
+
+  if (area && session.unavailable) {
+    return session.applyTo(
+      NextResponse.json({ error: "Authentication unavailable" }, { status: 503 }),
+      true,
     );
-    return NextResponse.redirect(canonical);
   }
 
-  const session = await refreshSession(request);
+  if (hasLocale(routing.locales, segments[0])) {
+    const locale = segments[0];
+    const canonicalSegments = [...segments];
+    while (hasLocale(routing.locales, canonicalSegments[0])) canonicalSegments.shift();
+    const canonical = new URL(
+      `/${canonicalSegments.join("/")}${request.nextUrl.search}`,
+      trustedPublicOrigin(request.headers),
+    );
+    const response = NextResponse.redirect(canonical);
+    response.cookies.set("NEXT_LOCALE", locale, { path: "/", sameSite: "lax" });
+    return session.applyTo(response, Boolean(area));
+  }
+
   const localeResponse = handleLocale(request);
-  const area = protectedArea(request.nextUrl.pathname);
   const staffRoute = staffDashboardRoute(request.nextUrl.pathname);
 
   if (area) {
-    if (session.unavailable) {
-      return session.applyTo(
-        NextResponse.json({ error: "Authentication unavailable" }, { status: 503 }),
-        true,
-      );
-    }
-
-    const destination = localeResponse.headers.get("location") ?? request.url;
-    const candidate = new URL(destination, request.url).pathname.split("/")[1];
-    const locale = hasLocale(routing.locales, candidate)
-      ? candidate
-      : routing.defaultLocale;
+    const locale = selectedLocale(request, localeResponse);
 
     if (!session.userId) {
       const returnTo = localizedPath(request.nextUrl.pathname, locale) + request.nextUrl.search;

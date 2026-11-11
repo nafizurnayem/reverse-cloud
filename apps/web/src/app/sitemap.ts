@@ -1,6 +1,4 @@
 import type { MetadataRoute } from "next";
-import { getPathname } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
 import { SERVICES_CATALOG } from "@/lib/services-catalog";
 import { getPortfolioItems } from "@/lib/portfolio-catalog";
 import { getBlogPosts } from "@/lib/blog-catalog";
@@ -24,71 +22,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const entries: MetadataRoute.Sitemap = [];
-  const localizedUrl = (locale: (typeof routing.locales)[number], path: string) =>
-    `${baseUrl}${getPathname({ href: path || "/", locale })}`;
+  const publicUrl = (path: string) => `${baseUrl}${path || "/"}`;
 
-  // Static Pages with alternate language links
+  // Locale is stored in a cookie, so each page has one canonical public URL.
   for (const route of staticRoutes) {
-    for (const locale of routing.locales) {
-      entries.push({
-        url: localizedUrl(locale, route),
-        lastModified: now,
-        changeFrequency: route === "" ? "daily" : "weekly",
-        priority:
-          route === ""
-            ? 1.0
-            : route === "/services" || route === "/schedule"
-            ? 0.9
-            : 0.8,
-        alternates: {
-          languages: Object.fromEntries(
-            routing.locales.map((loc) => [loc, localizedUrl(loc, route)]),
-          ),
-        },
-      });
-    }
+    entries.push({
+      url: publicUrl(route),
+      lastModified: now,
+      changeFrequency: route === "" ? "daily" : "weekly",
+      priority:
+        route === ""
+          ? 1.0
+          : route === "/services" || route === "/schedule"
+          ? 0.9
+          : 0.8,
+    });
   }
 
   // Dynamic Service Detail Pages
   for (const service of SERVICES_CATALOG) {
-    for (const locale of routing.locales) {
-      entries.push({
-        url: localizedUrl(locale, `/services/${service.slug}`),
-        lastModified: now,
-        changeFrequency: "weekly",
-        priority: 0.85,
-        alternates: {
-          languages: Object.fromEntries(
-            routing.locales.map((loc) => [
-              loc,
-              localizedUrl(loc, `/services/${service.slug}`),
-            ]),
-          ),
-        },
-      });
-    }
+    entries.push({
+      url: publicUrl(`/services/${service.slug}`),
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    });
   }
 
   // Dynamic Portfolio Project Pages
   try {
     const portfolioItems = await getPortfolioItems();
     for (const item of portfolioItems) {
-      for (const locale of routing.locales) {
-        entries.push({
-          url: localizedUrl(locale, `/portfolio/${item.slug}`),
-          lastModified: now,
-          changeFrequency: "monthly",
-          priority: 0.75,
-          alternates: {
-            languages: Object.fromEntries(
-              routing.locales.map((loc) => [
-                loc,
-                localizedUrl(loc, `/portfolio/${item.slug}`),
-              ]),
-            ),
-          },
-        });
-      }
+      entries.push({
+        url: publicUrl(`/portfolio/${item.slug}`),
+        lastModified: now,
+        changeFrequency: "monthly",
+        priority: 0.75,
+      });
     }
   } catch {
     // If database unavailable, catalog fallback was already handled
@@ -98,22 +68,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const blogPosts = await getBlogPosts();
     for (const post of blogPosts) {
-      for (const locale of routing.locales) {
-        entries.push({
-          url: localizedUrl(locale, `/blog/${post.slug}`),
-          lastModified: post.published_at ? new Date(post.published_at) : now,
-          changeFrequency: "monthly",
-          priority: 0.7,
-          alternates: {
-            languages: Object.fromEntries(
-              routing.locales.map((loc) => [
-                loc,
-                localizedUrl(loc, `/blog/${post.slug}`),
-              ]),
-            ),
-          },
-        });
-      }
+      entries.push({
+        url: publicUrl(`/blog/${post.slug}`),
+        lastModified: post.published_at ? new Date(post.published_at) : now,
+        changeFrequency: "monthly",
+        priority: 0.7,
+      });
     }
   } catch {
     // If database unavailable, catalog fallback was already handled

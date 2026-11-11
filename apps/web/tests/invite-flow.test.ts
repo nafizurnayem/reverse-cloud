@@ -40,15 +40,15 @@ describe("client invitation flow", () => {
     expect(validInviteToken("short")).toBeNull();
     expect(validInviteToken(`${"a".repeat(42)}+`)).toBeNull();
     expect(validInviteToken([token])).toBeNull();
-    expect(acceptInvitePath("bn", token)).toBe(`/bn/accept-invite?token=${token}`);
-    expect(inviteTokenFromDestination(`/bn/accept-invite?token=${token}`, "bn")).toBe(token);
+    expect(acceptInvitePath("bn", token)).toBe(`/accept-invite?token=${token}`);
+    expect(inviteTokenFromDestination(`/accept-invite?token=${token}`, "bn")).toBe(token);
     expect(inviteTokenFromDestination(`/en/accept-invite?token=${token}`, "bn")).toBeNull();
     expect(inviteTokenFromDestination("https://evil.example/bn/accept-invite", "bn")).toBeNull();
   });
 
-  it("calls the acceptance RPC and redirects to the localized portal", async () => {
+  it("calls the acceptance RPC and redirects to the clean portal URL", async () => {
     await expect(acceptClientInvite("bn", token)).rejects.toThrow(
-      "redirect:/bn/portal?invite=accepted",
+      "redirect:/portal?invite=accepted",
     );
     expect(mocks.rpc).toHaveBeenCalledWith("accept_client_invite", { p_token: token });
   });
@@ -56,30 +56,30 @@ describe("client invitation flow", () => {
   it("preserves the invitation through login for signed-out users", async () => {
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
     await expect(acceptClientInvite("en", token)).rejects.toThrow(
-      `redirect:/en/login?next=%2Fen%2Faccept-invite%3Ftoken%3D${token}`,
+      `redirect:/login?next=%2Faccept-invite%3Ftoken%3D${token}`,
     );
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it("sends a signed-out invite visitor to localized login", async () => {
+  it("sends a signed-out invite visitor to the clean login URL", async () => {
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
     await expect(AcceptInvitePage({
       params: Promise.resolve({ locale: "bn" }),
       searchParams: Promise.resolve({ token }),
     })).rejects.toThrow(
-      `redirect:/bn/login?next=%2Fbn%2Faccept-invite%3Ftoken%3D${token}`,
+      `redirect:/login?next=%2Faccept-invite%3Ftoken%3D${token}`,
     );
   });
 
   it("uses the same public error for malformed and rejected invitations", async () => {
     await expect(acceptClientInvite("en", "bad token")).rejects.toThrow(
-      "redirect:/en/accept-invite?error=invalid_or_expired_invite",
+      "redirect:/accept-invite?error=invalid_or_expired_invite",
     );
     expect(mocks.rpc).not.toHaveBeenCalled();
 
     mocks.rpc.mockResolvedValue({ data: null, error: new Error("private database detail") });
     await expect(acceptClientInvite("en", token)).rejects.toThrow(
-      "redirect:/en/accept-invite?error=invalid_or_expired_invite",
+      "redirect:/accept-invite?error=invalid_or_expired_invite",
     );
   });
 });

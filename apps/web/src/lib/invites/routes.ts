@@ -7,15 +7,17 @@ export function validInviteToken(value: string | readonly string[] | null | unde
 }
 
 export function acceptInvitePath(locale: Locale, token: string) {
-  return `/${locale}/accept-invite?${new URLSearchParams({ token })}`;
+  void locale;
+  return `/accept-invite?${new URLSearchParams({ token })}`;
 }
 
-export function inviteTokenFromDestination(destination: string, locale: Locale) {
+export function inviteTokenFromDestination(destination: string, _locale: Locale) {
+  void _locale;
   try {
     const parsed = new URL(destination, "https://internal.invalid");
     if (
       parsed.origin !== "https://internal.invalid"
-      || parsed.pathname.replace(/\/$/, "") !== `/${locale}/accept-invite`
+      || parsed.pathname.replace(/\/$/, "") !== "/accept-invite"
     ) {
       return null;
     }

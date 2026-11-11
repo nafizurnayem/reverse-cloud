@@ -17,6 +17,7 @@ import {
 import type { ScheduleMeetingType, SchedulePrefill } from "@/lib/schedule-server";
 import { scheduleDayRange, upcomingScheduleDays } from "@/lib/schedule-time";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "@/i18n/navigation";
 
 interface ScheduleViewProps {
   meetingTypes: ScheduleMeetingType[];
@@ -281,12 +282,12 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                 : "Existing client or portal user? Sign in for instant prefill."}
             </span>
           </div>
-          <a
-            href={`/${locale}/login?next=/${locale}/schedule`}
+          <Link
+            href="/login?next=%2Fschedule"
             className="inline-flex items-center gap-1 font-semibold text-primary hover:underline text-xs"
           >
             <span>{isBn ? "সাইন ইন করুন →" : "Sign In →"}</span>
-          </a>
+          </Link>
         </div>
       )}
 

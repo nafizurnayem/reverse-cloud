@@ -25,7 +25,7 @@ export function PortalHeader({
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-wrap items-center gap-4">
           <Link
-            href={`/${locale}/portal`}
+            href="/portal"
             className="flex items-center gap-2.5 font-bold tracking-tight text-foreground"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -43,7 +43,7 @@ export function PortalHeader({
 
           {showBackToProjects && (
             <Link
-              href={`/${locale}/portal`}
+              href="/portal"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors ml-4"
             >
               <ArrowLeft className="h-3 w-3" />
@@ -54,7 +54,7 @@ export function PortalHeader({
 
         <div className="flex max-w-full flex-wrap items-center gap-2 sm:gap-3">
           <Link
-            href={`/${locale}/portal/payments`}
+            href="/portal/payments"
             aria-label={isBn ? "পেমেন্ট" : "Payments"}
             className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >

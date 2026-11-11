@@ -10,7 +10,7 @@ function documents(locale: Locale): Document[] {
   const isBn = locale === "bn";
   return [
     ...SERVICES_CATALOG.flatMap((service) => {
-      const path = `/${locale}/services/${service.slug}`;
+      const path = `/services/${service.slug}`;
       const title = isBn ? service.name_bn : service.name_en;
       const faqs = isBn ? service.faqs_bn : service.faqs_en;
       return [
@@ -31,12 +31,12 @@ function documents(locale: Locale): Document[] {
     ...PORTFOLIO_CATALOG.filter((item) => item.is_published).map((item) => ({
       title: isBn ? item.title_bn : item.title_en,
       content: [isBn ? item.summary_bn : item.summary_en, isBn ? item.result_bn : item.result_en].join("\n"),
-      path: `/${locale}/portfolio/${item.slug}`,
+      path: `/portfolio/${item.slug}`,
     })),
     ...BLOG_CATALOG.filter((post) => post.status === "published").map((post) => ({
       title: isBn ? post.title_bn : post.title_en,
       content: [isBn ? post.excerpt_bn : post.excerpt_en, isBn ? post.body_bn : post.body_en].join("\n").slice(0, 320),
-      path: `/${locale}/blog/${post.slug}`,
+      path: `/blog/${post.slug}`,
     })),
   ];
 }
@@ -57,8 +57,8 @@ export function directPublicKnowledgeReply(query: string, locale: Locale): strin
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((service) => locale === "bn" ? service.name_bn : service.name_en);
   return locale === "bn"
-    ? `আমাদের সেবাগুলো হলো: ${names.join("、")}। বিস্তারিত জানতে /bn/services দেখুন, অথবা আপনার প্রজেক্ট সম্পর্কে বললে আমি উপযুক্ত সেবা বেছে দিতে পারি।`
-    : `Our services are: ${names.join(", ")}. See /en/services for details, or tell me about your project and I can suggest the best fit.`;
+    ? `আমাদের সেবাগুলো হলো: ${names.join("、")}। বিস্তারিত জানতে /services দেখুন, অথবা আপনার প্রজেক্ট সম্পর্কে বললে আমি উপযুক্ত সেবা বেছে দিতে পারি।`
+    : `Our services are: ${names.join(", ")}. See /services for details, or tell me about your project and I can suggest the best fit.`;
 }
 
 export function retrievePublicKnowledge(query: string, locale: Locale): string {

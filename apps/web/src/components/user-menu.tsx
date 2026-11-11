@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useLocale } from "next-intl";
 import { LogOut, User } from "lucide-react";
 import { signOut } from "@/app/[locale]/(auth)/actions";
+import { Link } from "@/i18n/navigation";
 
 type Props = {
   name: string;
@@ -118,15 +119,15 @@ export function UserMenu({ name, email, avatarUrl }: Props) {
 
           {/* Profile link */}
           <div className="px-2 py-1.5">
-            <a
-              href={`/${locale}/portal`}
+            <Link
+              href="/portal"
               role="menuitem"
               className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
               onClick={() => setOpen(false)}
             >
               <User className="h-3.5 w-3.5 text-muted-foreground" />
               <span>{isBn ? "আমার পোর্টাল" : "My Portal"}</span>
-            </a>
+            </Link>
           </div>
 
           {/* Sign out */}

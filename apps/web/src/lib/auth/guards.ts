@@ -7,7 +7,7 @@ import { getStaffAccess } from "@/lib/supabase/roles";
 import { hasAnyPermission, type Permission } from "./permissions";
 import { loginPath, type Locale } from "./routes";
 
-export async function requireUser(locale: Locale, returnTo = `/${locale}/portal`) {
+export async function requireUser(locale: Locale, returnTo = "/portal") {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) redirect(loginPath(locale, returnTo));
@@ -15,7 +15,7 @@ export async function requireUser(locale: Locale, returnTo = `/${locale}/portal`
 }
 
 export const requireStaff = cache(async (locale: Locale) => {
-  const session = await requireUser(locale, `/${locale}/admin`);
+  const session = await requireUser(locale, "/admin");
   const access = await getStaffAccess(session.supabase, session.user.id);
   if (!access.isStaff) notFound();
   return { ...session, access };

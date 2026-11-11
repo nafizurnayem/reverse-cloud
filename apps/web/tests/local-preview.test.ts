@@ -49,7 +49,7 @@ describe("local Ollama preview", () => {
     expect(await response.json()).toEqual({ reply: "Starts at USD 1200." });
     const body = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
     expect(body.messages.at(-1).content).toContain("Starting price: USD 1200");
-    expect(body.messages.at(-1).content).toContain("/en/services/website-development");
+    expect(body.messages.at(-1).content).toContain("/services/website-development");
     expect(body.model).toBe("llama3.2:1b-instruct-q4_K_M");
     expect(body.keep_alive).toBe("24h");
     expect(body.options).toEqual({ num_ctx: 1_024, num_predict: 48 });
@@ -68,7 +68,7 @@ describe("local Ollama preview", () => {
     const payload = await response.json();
     expect(payload.reply).toContain("Website Development");
     expect(payload.reply).toContain("AI Chatbots & Agents");
-    expect(payload.reply).toContain("/en/services");
+    expect(payload.reply).toContain("/services");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
