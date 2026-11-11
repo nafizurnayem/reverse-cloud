@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   Bot,
@@ -21,35 +21,72 @@ import { ChatInput } from "./chat-input";
 import { FallbackState } from "./cards";
 
 const welcomeNotificationKey = "rc_chat_welcome_notified_v1";
+let preparedAudioContext: AudioContext | null = null;
+
+function audioContextConstructor() {
+  return window.AudioContext ?? (
+    window as typeof window & { webkitAudioContext?: typeof AudioContext }
+  ).webkitAudioContext;
+}
+
+function primeChatAudio() {
+  try {
+    const AudioContextConstructor = audioContextConstructor();
+    if (!AudioContextConstructor) return;
+    preparedAudioContext ??= new AudioContextConstructor();
+    if (preparedAudioContext.state === "suspended") {
+      void preparedAudioContext.resume().catch(() => {
+        preparedAudioContext = null;
+      });
+    }
+  } catch {
+    preparedAudioContext = null;
+  }
+}
 
 function playChatChime() {
   try {
-    const AudioContextConstructor = window.AudioContext ?? (
-      window as typeof window & { webkitAudioContext?: typeof AudioContext }
-    ).webkitAudioContext;
+    const AudioContextConstructor = audioContextConstructor();
     if (!AudioContextConstructor) return;
 
-    const context = new AudioContextConstructor();
+    const context = preparedAudioContext ?? new AudioContextConstructor();
+    preparedAudioContext = context;
     const play = () => {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
       const now = context.currentTime;
+      const notes = [
+        { frequency: 523.25, startsAt: 0, duration: 0.18, volume: 0.09 },
+        { frequency: 783.99, startsAt: 0.13, duration: 0.28, volume: 0.075 },
+      ];
 
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(659.25, now);
-      oscillator.frequency.exponentialRampToValueAtTime(880, now + 0.12);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start(now);
-      oscillator.stop(now + 0.23);
-      oscillator.addEventListener("ended", () => void context.close(), { once: true });
+      notes.forEach((note, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = now + note.startsAt;
+        const end = start + note.duration;
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(note.frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(note.volume, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(end);
+        if (index === notes.length - 1) {
+          oscillator.addEventListener("ended", () => {
+            preparedAudioContext = null;
+            void context.close();
+          }, { once: true });
+        }
+      });
     };
 
     if (context.state === "suspended") {
-      void context.resume().then(play).catch(() => void context.close());
+      void context.resume().then(play).catch(() => {
+        preparedAudioContext = null;
+        void context.close();
+      });
     } else {
       play();
     }
@@ -75,6 +112,7 @@ export function ChatWidget({
   const effectiveLocale = locale ?? activeLocale;
   const isBn = effectiveLocale === "bn";
   const [isOpen, setIsOpen] = useState(initialOpen);
+  const wasOpen = useRef(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
   const [useMock, setUseMock] = useState(() => {
@@ -144,6 +182,19 @@ export function ChatWidget({
     return () => window.clearTimeout(timer);
   }, [isOpen]);
 
+  // Play only after the panel and its first assistant message have appeared.
+  useEffect(() => {
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+    if (wasOpen.current) return;
+    wasOpen.current = true;
+
+    const timer = window.setTimeout(playChatChime, 180);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+
   // Persist chat messages to sessionStorage across navigations / login return
   useEffect(() => {
     try {
@@ -167,7 +218,7 @@ export function ChatWidget({
   const activeMessages = messages.length > 0 ? messages : [greetingMessage];
 
   function handleOpenChat() {
-    playChatChime();
+    primeChatAudio();
     setShowWelcomeNotification(false);
     setIsMinimized(false);
     setIsOpen(true);
