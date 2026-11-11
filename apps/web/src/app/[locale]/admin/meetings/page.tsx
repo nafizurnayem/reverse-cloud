@@ -17,6 +17,8 @@ type Meeting = {
   ends_at: string;
   status: "confirmed" | "rescheduled";
   meeting_types: { name_en: string; name_bn: string | null; duration_min: number } | null;
+  leads: { phone: string | null } | null;
+  clients: { phone: string | null } | null;
 };
 
 const errorKeys = new Set(["invalidInput", "loadFailed", "notFound", "alreadyStarted", "notConfigured", "calcomFailed"]);
@@ -43,7 +45,7 @@ export default async function MeetingsPage({ params, searchParams }: {
   ]);
   const { data, error } = await supabase
     .from("meetings")
-    .select("id,attendee_name,attendee_email,attendee_timezone,starts_at,ends_at,status,meeting_types:meeting_type_id(name_en,name_bn,duration_min)")
+    .select("id,attendee_name,attendee_email,attendee_timezone,starts_at,ends_at,status,meeting_types:meeting_type_id(name_en,name_bn,duration_min),leads:lead_id(phone),clients:client_id(phone)")
     .in("status", ["confirmed", "rescheduled"])
     .gt("ends_at", new Date().toISOString())
     .order("starts_at", { ascending: true })
@@ -56,6 +58,19 @@ export default async function MeetingsPage({ params, searchParams }: {
   const actionError = typeof search.error === "string" && errorKeys.has(search.error) ? t(`errors.${search.error}`) : null;
   const warning = search.warning === "cleanupPending" ? t("cleanupPending") : null;
   const saved = search.saved === "cancelled" && !warning ? t("saved") : null;
+
+  let attendeePhone = selected?.leads?.phone ?? selected?.clients?.phone ?? null;
+  if (selected && !attendeePhone && selected.attendee_email) {
+    const { data: leadData } = await supabase
+      .from("leads")
+      .select("phone")
+      .eq("email", selected.attendee_email)
+      .not("phone", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    attendeePhone = leadData?.phone ?? null;
+  }
 
   return (
     <main className="admin-page content-page meetings-page">
@@ -71,6 +86,7 @@ export default async function MeetingsPage({ params, searchParams }: {
           </div>
           <dl>
             <div><dt>{t("fields.email")}</dt><dd>{selected.attendee_email}</dd></div>
+            <div><dt>{t("fields.phone")}</dt><dd>{attendeePhone || "—"}</dd></div>
             <div><dt>{t("fields.type")}</dt><dd>{locale === "bn" ? selected.meeting_types?.name_bn || selected.meeting_types?.name_en : selected.meeting_types?.name_en || "—"}</dd></div>
             <div><dt>{t("fields.starts")}</dt><dd>{dateTime(selected.starts_at, locale, selected.attendee_timezone)}</dd></div>
             <div><dt>{t("fields.ends")}</dt><dd>{dateTime(selected.ends_at, locale, selected.attendee_timezone)}</dd></div>
@@ -101,7 +117,7 @@ export default async function MeetingsPage({ params, searchParams }: {
           <div className="content-table-wrap"><table className="content-table">
             <thead><tr><th>{t("fields.client")}</th><th>{t("fields.type")}</th><th>{t("fields.starts")}</th><th>{t("fields.status")}</th><th>{common("actions")}</th></tr></thead>
             <tbody>{meetings.map((meeting) => <tr key={meeting.id}>
-              <td><strong>{meeting.attendee_name}</strong><small>{meeting.attendee_email}</small></td>
+              <td><strong>{meeting.attendee_name}</strong><small>{meeting.attendee_email}{meeting.leads?.phone ? ` · ${meeting.leads.phone}` : meeting.clients?.phone ? ` · ${meeting.clients.phone}` : ""}</small></td>
               <td>{locale === "bn" ? meeting.meeting_types?.name_bn || meeting.meeting_types?.name_en : meeting.meeting_types?.name_en || "—"}</td>
               <td>{dateTime(meeting.starts_at, locale, meeting.attendee_timezone)}<small>{meeting.attendee_timezone}</small></td>
               <td><StatusBadge active activeLabel={t(`statuses.${meeting.status}`)} inactiveLabel={t(`statuses.${meeting.status}`)} /></td>
