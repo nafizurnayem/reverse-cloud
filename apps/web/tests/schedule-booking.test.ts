@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   adminRpc: vi.fn(),
   getUser: vi.fn(),
   fetch: vi.fn(),
+  leadLookup: vi.fn(),
+  leadInsert: vi.fn(),
+  leadUpdate: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -30,6 +33,20 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => {
+    const leadsQuery: Record<string, unknown> = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      order: vi.fn(),
+      limit: vi.fn(),
+      update: mocks.leadUpdate,
+      insert: mocks.leadInsert,
+      maybeSingle: mocks.leadLookup,
+    };
+    (leadsQuery.select as ReturnType<typeof vi.fn>).mockReturnValue(leadsQuery);
+    (leadsQuery.eq as ReturnType<typeof vi.fn>).mockReturnValue(leadsQuery);
+    (leadsQuery.order as ReturnType<typeof vi.fn>).mockReturnValue(leadsQuery);
+    (leadsQuery.limit as ReturnType<typeof vi.fn>).mockReturnValue(leadsQuery);
+
     const query = {
       select: vi.fn(),
       eq: vi.fn(),
@@ -48,6 +65,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     return {
       from: (table: string) => {
         mocks.adminFrom(table);
+        if (table === "leads") return leadsQuery;
         return query;
       },
       rpc: mocks.adminRpc,
@@ -115,6 +133,9 @@ beforeEach(() => {
     error: null,
   });
   mocks.adminRpc.mockResolvedValue({ data: true, error: null });
+  mocks.leadLookup.mockResolvedValue({ data: null, error: null });
+  mocks.leadInsert.mockResolvedValue({ data: null, error: null });
+  mocks.leadUpdate.mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) });
   mocks.fetch.mockResolvedValueOnce(slotsResponse()).mockResolvedValueOnce(bookingResponse());
   vi.stubGlobal("fetch", mocks.fetch);
 });
@@ -195,7 +216,7 @@ describe("POST /api/schedule/book", () => {
     expect(bookingBody.metadata.source).toBe("reverse_cloud_chat");
   });
 
-  it("requires and records a guest phone number for chat bookings", async () => {
+  it("requires and records a guest phone number for chat bookings and persists lead", async () => {
     const response = await POST(request({
       ...input,
       source: "chat",
@@ -208,6 +229,36 @@ describe("POST /api/schedule/book", () => {
       phone: "+880 1700 000000",
       source: "reverse_cloud_chat",
     });
+    expect(mocks.leadInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Client Person",
+        email: "client@example.com",
+        phone: "+880 1700 000000",
+        source: "chat",
+      }),
+    );
+  });
+
+  it("updates existing lead with phone number if lead already exists", async () => {
+    mocks.leadLookup.mockResolvedValueOnce({
+      data: { id: "existing-lead-uuid", phone: null },
+      error: null,
+    });
+
+    const response = await POST(request({
+      ...input,
+      source: "chat",
+      phone: "+880 1700 000000",
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mocks.leadUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: "+880 1700 000000",
+        name: "Client Person",
+      }),
+    );
+    expect(mocks.leadInsert).not.toHaveBeenCalled();
   });
 
   it("rejects a guest chat booking without a phone number", async () => {

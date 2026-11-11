@@ -221,6 +221,50 @@ export async function POST(request: NextRequest) {
       end: booking.end,
       email: attendeeEmail,
     });
+
+    // Ensure attendee contact information (particularly phone number) is saved to the leads table
+    try {
+      const existingLead = await admin
+        .from("leads")
+        .select("id,phone")
+        .eq("email", attendeeEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingLead.data?.id) {
+        if (input.phone) {
+          await admin
+            .from("leads")
+            .update({
+              phone: input.phone,
+              name: attendeeName,
+              ...(input.company ? { company: input.company } : {}),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingLead.data.id);
+        }
+      } else {
+        await admin
+          .from("leads")
+          .insert({
+            name: attendeeName,
+            email: attendeeEmail,
+            phone: input.phone || null,
+            company: input.company || null,
+            source: input.source === "chat" ? "chat" : "contact_form",
+            status: "new",
+            preferred_locale: input.locale || "en",
+            message: input.notes
+              ? `${input.notes} [Booked: ${meeting.data.key}]`
+              : `Booked consultation: ${meeting.data.key}`,
+            consent_at: new Date().toISOString(),
+          });
+      }
+    } catch (leadError) {
+      console.error("Failed to sync lead on booking", leadError);
+    }
+
     const stored = await admin.rpc("process_calcom_webhook_delivery", {
       p_delivery_key: sha256(`schedule-route:${normalized}`),
       p_trigger_event: "BOOKING_CREATED",
