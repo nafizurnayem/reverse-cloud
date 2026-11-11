@@ -82,13 +82,14 @@ export function BookingSchedulerCard({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [countryCode, setCountryCode] = useState("+880");
+  const [selectedCountry, setSelectedCountry] = useState("BD");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<BookingInfo | null>(null);
   const [isPending, startTransition] = useTransition();
   const siteKey = turnstileSiteKey;
   const meetingType = data.meetingTypeKey ?? "discovery_call";
+  const countryCode = bookingCountryCodes.find((item) => item.country === selectedCountry)?.code ?? "+880";
 
   useEffect(() => {
     let active = true;
@@ -298,12 +299,14 @@ export function BookingSchedulerCard({
             <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <select
               aria-label={isBn ? "দেশের ফোন কোড" : "Country calling code"}
-              value={countryCode}
-              onChange={(event) => setCountryCode(event.target.value)}
+              value={selectedCountry}
+              onChange={(event) => setSelectedCountry(event.target.value)}
               className="max-w-[7.5rem] bg-transparent py-2 text-[11px] outline-none"
             >
               {bookingCountryCodes.map((item) => (
-                <option key={item.country} value={item.code}>{item.country} {item.code}</option>
+                <option key={item.country} value={item.country}>
+                  {item.country} {item.code} — {item.label}
+                </option>
               ))}
             </select>
             <input
