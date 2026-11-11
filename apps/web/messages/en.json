@@ -1058,6 +1058,7 @@
     "fields": {
       "client": "Client",
       "email": "Email",
+      "phone": "Phone",
       "type": "Meeting type",
       "starts": "Starts",
       "ends": "Ends",
