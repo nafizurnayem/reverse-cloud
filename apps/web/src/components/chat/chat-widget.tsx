@@ -20,7 +20,7 @@ import { ChatMessageList } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
 import { FallbackState } from "./cards";
 
-const welcomeNotificationKey = "rc_chat_welcome_notified_v1";
+const welcomeNotificationKey = "rc_chat_welcome_notified_v2";
 let preparedAudioContext: AudioContext | null = null;
 
 function audioContextConstructor() {
@@ -136,7 +136,7 @@ export function ChatWidget({
         if (shouldOpen || proposalId) {
           setIsOpen(true);
           setIsMinimized(false);
-          localStorage.setItem(welcomeNotificationKey, "1");
+          sessionStorage.setItem(welcomeNotificationKey, "1");
         }
 
         const saved = sessionStorage.getItem("rc_chat_history");
@@ -156,7 +156,7 @@ export function ChatWidget({
   useEffect(() => {
     if (isOpen) {
       try {
-        localStorage.setItem(welcomeNotificationKey, "1");
+        sessionStorage.setItem(welcomeNotificationKey, "1");
       } catch {
         // storage errors ignored
       }
@@ -164,7 +164,7 @@ export function ChatWidget({
     }
 
     try {
-      if (localStorage.getItem(welcomeNotificationKey) === "1") return;
+      if (sessionStorage.getItem(welcomeNotificationKey) === "1") return;
     } catch {
       // Continue with an in-memory notification when storage is unavailable.
     }
@@ -173,7 +173,7 @@ export function ChatWidget({
       setShowWelcomeNotification(true);
       playChatChime();
       try {
-        localStorage.setItem(welcomeNotificationKey, "1");
+        sessionStorage.setItem(welcomeNotificationKey, "1");
       } catch {
         // storage errors ignored
       }
@@ -223,7 +223,7 @@ export function ChatWidget({
     setIsMinimized(false);
     setIsOpen(true);
     try {
-      localStorage.setItem(welcomeNotificationKey, "1");
+      sessionStorage.setItem(welcomeNotificationKey, "1");
     } catch {
       // storage errors ignored
     }
