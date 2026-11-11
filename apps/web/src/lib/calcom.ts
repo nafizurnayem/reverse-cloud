@@ -291,6 +291,7 @@ export type CalcomWebhook = {
   triggerEvent: string; createdAt: string; bookingUid: string | null;
   meetingTypeKey: string | null; eventTypeId: string | null; proposalId: string | null;
   attendeeName: string | null; attendeeEmail: string | null; attendeeTimeZone: string | null;
+  attendeePhone: string | null;
   startsAt: string | null; endsAt: string | null;
 };
 
@@ -310,6 +311,8 @@ export function parseCalcomWebhook(input: unknown): CalcomWebhook | null {
   const uid = booking.uid ?? record(booking.booking).uid ?? body.uid;
   const proposal = metadata.bookingProposalId ?? metadata.proposalId ?? metadata.booking_proposal_id;
   const eventIdValue = booking.eventTypeId ?? eventType.id;
+  const phoneResponse = record(responses.phone);
+  const phoneValue = metadata.phone ?? phoneResponse.value ?? booking.attendeePhone ?? attendee.phoneNumber;
   return {
     triggerEvent, createdAt,
     bookingUid: optionalString(uid, 200),
@@ -319,6 +322,7 @@ export function parseCalcomWebhook(input: unknown): CalcomWebhook | null {
     attendeeName: optionalString(booking.attendeeName ?? attendee.name, 200),
     attendeeEmail: optionalString(booking.attendeeEmail ?? booking.attendee_email ?? booking.email ?? emailResponse.value ?? attendee.email, 320)?.toLowerCase() ?? null,
     attendeeTimeZone: optionalString(booking.attendeeTimezone ?? attendee.timeZone, 100),
+    attendeePhone: optionalString(phoneValue, 50),
     startsAt: optionalDate(booking.startTime),
     endsAt: optionalDate(booking.endTime),
   };
