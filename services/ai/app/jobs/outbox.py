@@ -130,7 +130,7 @@ def _invite_email(payload: dict[str, Any], settings: Settings) -> tuple[str, str
     client_name = payload.get("client_name") or "Valued Client"
     token = payload.get("token") or ""
     site_url = getattr(settings, "site_url", "https://reversecloud.io").rstrip("/")
-    invite_url = f"{site_url}/{locale}/accept-invite?token={token}"
+    invite_url = f"{site_url}/accept-invite?token={token}"
 
     if locale == "bn":
         subject = "রিভার্স ক্লাউড ক্লায়েন্ট পোর্টালে আপনার আমন্ত্রণ"

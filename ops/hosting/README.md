@@ -4,9 +4,9 @@ This directory contains the server control plane for the Ubuntu laptop preview:
 
 - `docker-compose.yml` defines pinned Ollama and Cloudflared services plus
   commit-tagged web and FastAPI AI services.
-- `deploy.sh` polls GitHub `Dev` through SSH on port 443, tests AI and web
-  candidates on ports 8001 and 3001, runs live AI regression smoke tests,
-  deploys on ports 8000 and 3000, and rolls back a failed replacement.
+- `deploy.sh` polls GitHub `Dev` through SSH, tests AI and web candidates on
+  ports 8001 and 3001, synchronizes public AI knowledge, deploys on ports 8000
+  and 3000, and rolls back a failed replacement.
 
 Installed server root: `/home/nafz/reverse-cloud-hosting`.
 
