@@ -286,43 +286,53 @@ html:lang(bn) .eyebrow {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A D M I N   P A N E L
-   Enterprise SaaS Standard: Linear & Stripe aesthetic
-   Light Mode: Slate 50 (#F8FAFC) Canvas | Pure White (#FFFFFF) Surfaces
-   Dark Mode: Slate 950 (#090D16) Canvas | Slate 900 (#0F172A) Surfaces
-   Borders: Slate 200 (#E2E8F0) / Slate 800 (#1E293B)
-   Accent: Indigo 600/700 (#4F46E5 / #4338CA) / Indigo 500/400 (#6366F1 / #818CF8)
+   Light Mode: Creamy Parchment × Woody Warmth
+     Canvas  #FAF7F2 (warm parchment) | Surfaces #FFFDF8 (candlelight white)
+     Borders warm hemp #E6DDD0 / #CDBFAC
+     Text espresso #2A1A0E / walnut #6B5040 / driftwood #A88D78
+     Accent Indigo 600/700 (kept for contrast & interactivity)
+   Dark Mode: Slate 950 / Slate 900 (unchanged)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .admin-shell {
-  --admin-bg: #F8FAFC;
-  --admin-surface: #FFFFFF;
-  --admin-surface-subtle: #F8FAFC;
-  --admin-surface-hover: #F1F5F9;
-  --admin-border: #E2E8F0;
-  --admin-border-subtle: #F1F5F9;
-  --admin-border-strong: #CBD5E1;
-  --admin-text-primary: #0F172A;
-  --admin-text-secondary: #475569;
-  --admin-text-muted: #94A3B8;
+  /* ── Surfaces ── */
+  --admin-bg: #FAF7F2;              /* warm parchment canvas           */
+  --admin-surface: #FFFDF8;         /* candlelight white surfaces       */
+  --admin-surface-subtle: #F5F0E8;  /* slightly deeper cream            */
+  --admin-surface-hover: #EDE6D8;   /* warm hover tint                  */
+
+  /* ── Borders ── */
+  --admin-border: #E6DDD0;          /* warm hemp border                 */
+  --admin-border-subtle: #EDE8DF;   /* very subtle warm separator       */
+  --admin-border-strong: #CDBFAC;   /* richer tan for emphasis          */
+
+  /* ── Typography ── */
+  --admin-text-primary: #2A1A0E;    /* deep espresso                    */
+  --admin-text-secondary: #6B5040;  /* mid walnut brown                 */
+  --admin-text-muted: #A88D78;      /* driftwood tan                    */
+
+  /* ── Accent (Indigo kept for contrast & a/11y) ── */
   --admin-accent: #4F46E5;
   --admin-accent-hover: #4338CA;
-  --admin-accent-subtle: #EEF2FF;
+  --admin-accent-subtle: #F0EDFF;   /* warm-tinted indigo glow          */
   --admin-accent-border: #C7D2FE;
-  --admin-input-bg: #FFFFFF;
-  --admin-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --admin-shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
 
-  /* Status badge tokens - light */
-  --admin-badge-prospect-bg: #EEF2FF;
+  /* ── Inputs & Shadows ── */
+  --admin-input-bg: #FFFDF8;
+  --admin-shadow-sm: 0 1px 3px rgba(42, 26, 14, 0.07);
+  --admin-shadow-md: 0 4px 14px -2px rgba(42, 26, 14, 0.12);
+
+  /* ── Status badge tokens – warm light ── */
+  --admin-badge-prospect-bg: #EEEAFF;
   --admin-badge-prospect-text: #4338CA;
   --admin-badge-prospect-border: #C7D2FE;
   --admin-badge-linked-bg: #ECFDF5;
   --admin-badge-linked-text: #047857;
   --admin-badge-linked-border: #A7F3D0;
-  --admin-badge-warning-bg: #FFFBEB;
-  --admin-badge-warning-text: #B45309;
+  --admin-badge-warning-bg: #FFF8ED;
+  --admin-badge-warning-text: #92400E;
   --admin-badge-warning-border: #FDE68A;
-  --admin-badge-danger-bg: #FEF2F2;
+  --admin-badge-danger-bg: #FFF1F0;
   --admin-badge-danger-text: #DC2626;
   --admin-badge-danger-border: #FECDD3;
 
@@ -386,9 +396,15 @@ html:lang(bn) .eyebrow {
   color: var(--admin-text-primary);
   background: var(--admin-surface);
   border-right: 1px solid var(--admin-border);
+  border-top: 3px solid #C9733A; /* warm woody accent stripe */
   flex-direction: column;
   overflow-y: auto;
   gap: 1.25rem;
+}
+
+/* Remove woody stripe in dark mode */
+.admin-shell[data-theme="dark"] .admin-sidebar {
+  border-top: none;
 }
 
 .admin-sidebar-header {
@@ -414,13 +430,19 @@ html:lang(bn) .eyebrow {
   height: 2.35rem;
   border-radius: 0.65rem;
   color: #FFFFFF;
-  background: linear-gradient(135deg, #6366F1 0%, #4338CA 100%);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.28);
+  background: linear-gradient(135deg, #C9733A 0%, #7C3A14 100%);
+  box-shadow: 0 2px 8px rgba(124, 58, 20, 0.30);
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   place-items: center;
   flex-shrink: 0;
+}
+
+/* Dark mode: restore indigo gradient */
+.admin-shell[data-theme="dark"] .admin-brand-mark {
+  background: linear-gradient(135deg, #6366F1 0%, #4338CA 100%);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.28);
 }
 
 .admin-brand-mark-inner {
@@ -825,7 +847,11 @@ html:lang(bn) .eyebrow {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--admin-accent);
+  color: #9B6033; /* warm woody amber in light mode */
+}
+
+.admin-shell[data-theme="dark"] .admin-welcome-greeting {
+  color: var(--admin-accent); /* restore indigo in dark mode */
 }
 
 .admin-welcome-bar h1 {
@@ -890,11 +916,15 @@ html:lang(bn) .eyebrow {
 
 .admin-kicker {
   margin: 0 0 0.3rem;
-  color: var(--admin-accent);
+  color: #9B6033; /* warm woody amber in light mode */
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.admin-shell[data-theme="dark"] .admin-kicker {
+  color: var(--admin-accent);
 }
 
 .admin-section-heading {
