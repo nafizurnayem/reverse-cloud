@@ -64,9 +64,9 @@ export default async function AdminLayout({ children, params }: {
 
       <div className="admin-workspace">
         <header className="admin-topbar">
-          <div>
-            <p>{t("signedInAs")}</p>
+          <div className="admin-topbar-identity">
             <strong>{displayName}</strong>
+            <small>{access.roles.map((role) => role.name).join(" · ")}</small>
           </div>
           <span className="admin-permission-count">
             {t("permissionCount", { count: access.permissions.length })}
