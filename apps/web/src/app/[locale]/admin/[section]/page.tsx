@@ -19,11 +19,12 @@ export default async function AdminSectionPage({ params }: {
 
   return (
     <main className="admin-page">
-      <section className="admin-hero admin-section-hero">
-        <p className="admin-kicker">{t("workspace")}</p>
-        <h1>{t(`sections.${section.slug}.title`)}</h1>
-        <p>{t(`sections.${section.slug}.description`)}</p>
-      </section>
+      <div className="admin-header">
+        <div>
+          <h1>{t(`sections.${section.slug}.title`)}</h1>
+          <p>{t(`sections.${section.slug}.description`)}</p>
+        </div>
+      </div>
       <section className="admin-placeholder" aria-label={t("statusLabel")}>
         <span className="admin-status-dot" aria-hidden="true" />
         <div>
