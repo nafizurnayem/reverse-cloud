@@ -64,7 +64,6 @@ export function UserMenu({ name, email, avatarUrl }: Props) {
       hintSequenceRef.current.forEach(clearTimeout);
       hintSequenceRef.current = [];
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Close on click-outside / Escape ──────────────────────────────────────
