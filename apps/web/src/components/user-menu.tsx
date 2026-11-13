@@ -18,22 +18,67 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+const HINT_KEY = "um_portal_hinted";
+// Total auto-sequence: 400ms delay + 3000ms open + 300ms close animation = ~3.7s
+
 export function UserMenu({ name, email, avatarUrl }: Props) {
   const locale = useLocale();
   const isBn = locale === "bn";
   const [open, setOpen] = useState(false);
+  const [portalHint, setPortalHint] = useState(false);
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
+  // Track whether the auto-sequence is in flight so manual interactions cancel it
+  const hintSequenceRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const isAutoSequenceRef = useRef(false);
 
-  // Close on click-outside
+  // ── Auto-hint on first visit per session ──────────────────────────────────
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(HINT_KEY)) return;
+    } catch {
+      return; // sessionStorage blocked (private browsing, etc.)
+    }
+
+    isAutoSequenceRef.current = true;
+
+    // Slight delay so the page settles before we open the menu
+    const t1 = setTimeout(() => {
+      setOpen(true);
+      setPortalHint(true);
+
+      // Close after 3 seconds
+      const t2 = setTimeout(() => {
+        setOpen(false);
+        setPortalHint(false);
+        isAutoSequenceRef.current = false;
+        try { sessionStorage.setItem(HINT_KEY, "1"); } catch { /* ignore */ }
+      }, 3000);
+
+      hintSequenceRef.current.push(t2);
+    }, 400);
+
+    hintSequenceRef.current.push(t1);
+
+    return () => {
+      hintSequenceRef.current.forEach(clearTimeout);
+      hintSequenceRef.current = [];
+    };
+  }, []);
+
+  // ── Close on click-outside / Escape ──────────────────────────────────────
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setPortalHint(false);
       }
     }
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setPortalHint(false);
+      }
     }
     if (open) {
       document.addEventListener("mousedown", handleClick);
@@ -45,7 +90,23 @@ export function UserMenu({ name, email, avatarUrl }: Props) {
     };
   }, [open]);
 
+  function cancelAutoSequence() {
+    if (isAutoSequenceRef.current) {
+      hintSequenceRef.current.forEach(clearTimeout);
+      hintSequenceRef.current = [];
+      isAutoSequenceRef.current = false;
+      setPortalHint(false);
+      try { sessionStorage.setItem(HINT_KEY, "1"); } catch { /* ignore */ }
+    }
+  }
+
+  function handleToggle() {
+    cancelAutoSequence();
+    setOpen((prev) => !prev);
+  }
+
   function handleSignOut() {
+    cancelAutoSequence();
     startTransition(() => signOut(locale));
   }
 
@@ -60,7 +121,7 @@ export function UserMenu({ name, email, avatarUrl }: Props) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls="user-menu-dropdown"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleToggle}
         className="group flex items-center gap-2 rounded-full border border-border bg-card pl-1 pr-3 py-1 text-xs font-medium text-foreground shadow-subtle transition-all hover:bg-muted hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {/* Avatar circle */}
@@ -122,11 +183,24 @@ export function UserMenu({ name, email, avatarUrl }: Props) {
             <Link
               href="/portal"
               role="menuitem"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-              onClick={() => setOpen(false)}
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted${
+                portalHint ? " user-menu-portal-hint" : ""
+              }`}
+              onClick={() => { cancelAutoSequence(); setOpen(false); }}
             >
               <User className="h-3.5 w-3.5 text-muted-foreground" />
               <span>{isBn ? "আমার পোর্টাল" : "My Portal"}</span>
+              {portalHint && (
+                <span
+                  aria-hidden="true"
+                  className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-primary animate-pulse"
+                >
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" className="shrink-0">
+                    <circle cx="4" cy="4" r="4" />
+                  </svg>
+                  {isBn ? "খুলুন" : "Open"}
+                </span>
+              )}
             </Link>
           </div>
 
