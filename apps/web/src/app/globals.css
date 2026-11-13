@@ -1743,3 +1743,31 @@ html:lang(bn) .admin-kicker {
     justify-content: space-between;
   }
 }
+
+/* ── User-menu portal hint animation ───────────────────────────────────────
+   Draws the user's eye to "My Portal" by cycling between a highlighted and
+   normal background three times over ~3 s (matches the JS auto-close timer).
+   Uses the site's existing primary/muted tokens so it stays on-brand.
+─────────────────────────────────────────────────────────────────────────── */
+@keyframes portal-hint-bg {
+  0%,  100% { background-color: transparent; }
+  20%        { background-color: hsl(var(--primary) / 0.10); }
+  40%        { background-color: transparent; }
+  60%        { background-color: hsl(var(--primary) / 0.10); }
+  80%        { background-color: transparent; }
+}
+
+@keyframes portal-hint-scale {
+  0%,  100% { transform: scale(1); }
+  20%        { transform: scale(1.015); }
+  40%        { transform: scale(1); }
+  60%        { transform: scale(1.015); }
+  80%        { transform: scale(1); }
+}
+
+.user-menu-portal-hint {
+  animation:
+    portal-hint-bg    3s ease-in-out forwards,
+    portal-hint-scale 3s ease-in-out forwards;
+  transform-origin: center;
+}
