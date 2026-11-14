@@ -14,7 +14,11 @@ export default async function ContentPage({ params }: { params: Promise<{ locale
   const t = await getTranslations({ locale, namespace: "AdminContent" });
   return (
     <main className="admin-page content-page">
-      <header className="content-header"><div><p className="admin-kicker">{t("eyebrow")}</p><h1>{t("title")}</h1><p>{t("description")}</p></div></header>
+      <header className="content-header">
+        <div>
+          <h1>{t("title")}</h1>
+        </div>
+      </header>
       <div className="content-resource-grid">
         {resources.map((resource, index) => (
           <Link href={`/admin/content/${resource}`} className="content-resource-card" key={resource}>

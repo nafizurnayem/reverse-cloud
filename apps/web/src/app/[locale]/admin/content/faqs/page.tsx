@@ -24,7 +24,7 @@ export default async function FaqsPage({ params, searchParams }: { params: Promi
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.faqs.title")} description={t("resources.faqs.description")} backLabel={t("back")} />
       <ActionMessage saved={query.saved ? t("saved") : null} error={query.error ? t(`errors.${query.error}`) : null} />
-      <EditorPanel title={selected ? t("editItem") : t("newFaq")}>
+      <EditorPanel title={selected ? t("editItem") : t("newFaq")} defaultOpen={Boolean(selected)}>
         <form action={saveFaq} className="content-form"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={selected?.id ?? ""}/>
           <SelectField label={t("fields.service")} name="service_id" defaultValue={selected?.service_id ?? ""}><option value="">{t("generalFaq")}</option>{services.map((service) => <option value={service.id} key={service.id}>{service.name_en}</option>)}</SelectField>
           <Field label={t("fields.sortOrder")} name="sort_order" type="number" defaultValue={selected?.sort_order ?? 0}/>

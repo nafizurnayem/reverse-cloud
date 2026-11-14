@@ -21,7 +21,7 @@ export default async function BlogPage({ params, searchParams }: { params: Promi
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.blog.title")} description={t("resources.blog.description")} backLabel={t("back")} />
       <ActionMessage saved={query.saved ? t("saved") : null} error={query.error ? t(`errors.${query.error}`) : null} />
-      <EditorPanel title={selected ? t("editItem") : t("newBlog")}>
+      <EditorPanel title={selected ? t("editItem") : t("newBlog")} defaultOpen={Boolean(selected)}>
         <form action={saveBlogPost} className="content-form"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={selected?.id ?? ""}/>
           <Field label={t("fields.titleEn")} name="title_en" defaultValue={selected?.title_en}/><Field label={t("fields.titleBn")} name="title_bn" defaultValue={selected?.title_bn}/>
           <Field label={t("fields.slug")} name="slug" defaultValue={selected?.slug}/><SelectField label={t("status")} name="status" defaultValue={selected?.status ?? "draft"}><option value="draft">{t("draft")}</option><option value="published">{t("published")}</option><option value="archived">{t("archived")}</option></SelectField>

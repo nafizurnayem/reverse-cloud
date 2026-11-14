@@ -20,7 +20,7 @@ export default async function ReviewsPage({ params, searchParams }: { params: Pr
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} backLabel={tc("backDashboard")} backHref="/admin" />
       <ActionMessage saved={query.saved ? tc("saved") : null} error={query.error ? tc(`errors.${query.error}`) : null}/>
-      <EditorPanel title={selected ? tc("editItem") : t("newReview")}>
+      <EditorPanel title={selected ? tc("editItem") : t("newReview")} defaultOpen={Boolean(selected)}>
         <form action={saveReview} className="content-form"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={selected?.id ?? ""}/>
           <Field label={t("fields.name")} name="reviewer_name" defaultValue={selected?.reviewer_name} required/><Field label={t("fields.title")} name="reviewer_title" defaultValue={selected?.reviewer_title}/>
           <Field label={t("fields.rating")} name="rating" type="number" min="1" step="1" defaultValue={selected?.rating ?? 5} required/>

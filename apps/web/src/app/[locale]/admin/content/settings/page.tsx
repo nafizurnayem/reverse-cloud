@@ -20,7 +20,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.settings.title")} description={t("resources.settings.description")} backLabel={t("back")} />
       <ActionMessage saved={query.saved ? t("saved") : null} error={query.error ? t(`errors.${query.error}`) : null} />
-      <EditorPanel title={selected ? t("editItem") : t("newSetting")}>
+      <EditorPanel title={selected ? t("editItem") : t("newSetting")} defaultOpen={Boolean(selected)}>
         <form action={saveSetting} className="content-form"><input type="hidden" name="locale" value={locale}/>
           <Field label={t("fields.settingKey")} name="key" defaultValue={selected?.key} required readOnly={Boolean(selected)}/>
           <TextareaField label={t("fields.jsonValue")} name="value" defaultValue={selected ? JSON.stringify(selected.value, null, 2) : ""} required rows={7} placeholder='"value"'/>

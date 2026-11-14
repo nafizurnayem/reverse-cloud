@@ -115,60 +115,61 @@ export default async function StaffPage({ params, searchParams }: {
   return (
     <main className="admin-page content-page staff-page">
       <ContentHeader
-        eyebrow={t("eyebrow")}
         title={t("title")}
-        description={t("description")}
         backLabel={common("backDashboard")}
         backHref="/admin"
       />
       <ActionMessage saved={saved} error={error} />
 
-      <section className="content-editor">
-        <h2>{local.addTitle}</h2>
-        <p className="staff-help">{local.addDescription}</p>
-        <form action={addStaffMember} className="content-form">
-          <input type="hidden" name="locale" value={locale} />
-          <label className="content-field">
-            <span>{local.emailLabel}</span>
-            <input
-              name="email"
-              type="email"
-              autoComplete="email"
-              maxLength={254}
-              placeholder="staff@example.com"
-              required
-            />
-          </label>
-          <label className="content-field">
-            <span>{local.roleLabel}</span>
-            <select name="role_id" required defaultValue="">
-              <option value="" disabled>{local.rolePlaceholder}</option>
-              {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-            </select>
-          </label>
-          <button className="content-primary-button" type="submit">{local.addSubmit}</button>
-        </form>
-      </section>
+      <div className="staff-top-row">
+        <section className="content-editor staff-add-card">
+          <h2>{local.addTitle}</h2>
+          <p className="staff-help">{local.addDescription}</p>
+          <form action={addStaffMember} className="content-form staff-add-form">
+            <input type="hidden" name="locale" value={locale} />
+            <label className="content-field">
+              <span>{local.emailLabel}</span>
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                maxLength={254}
+                placeholder="staff@example.com"
+                required
+              />
+            </label>
+            <label className="content-field">
+              <span>{local.roleLabel}</span>
+              <select name="role_id" required defaultValue="">
+                <option value="" disabled>{local.rolePlaceholder}</option>
+                {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+              </select>
+            </label>
+            <div className="staff-add-actions">
+              <button className="content-primary-button" type="submit">{local.addSubmit}</button>
+            </div>
+          </form>
+        </section>
 
-      <section className="content-editor staff-role-summary">
-        <h2>{t("rolesTitle")}</h2>
-        <div className="staff-role-grid">
-          {roles.map((role) => (
-            <article key={role.id}>
-              <strong>{role.name}</strong>
-              <code>{role.key}</code>
-              <p>{role.description ?? t("noDescription")}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+        <section className="content-editor staff-role-summary">
+          <h2>{t("rolesTitle")}</h2>
+          <div className="staff-role-grid">
+            {roles.map((role) => (
+              <article key={role.id}>
+                <strong>{role.name}</strong>
+                <code>{role.key}</code>
+                <p>{role.description ?? t("noDescription")}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
 
-      <section className="content-list">
+      <section className="content-list staff-people-section">
         <div className="content-list-heading">
           <h2>{t("peopleTitle")}</h2>
           <span>{users.length}</span>
         </div>
-        <p className="staff-help">{local.staffOnlyDescription}</p>
         <div className="content-table-wrap">
           <table className="content-table staff-table">
             <thead>

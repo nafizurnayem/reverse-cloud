@@ -6,16 +6,16 @@ function inputValue(value: unknown) {
 }
 
 export function ContentHeader({ eyebrow, title, description, backLabel, backHref = "/admin/content" }: {
-  eyebrow: string; title: string; description: string; backLabel?: string; backHref?: string;
+  eyebrow?: string; title: string; description?: string; backLabel?: string; backHref?: string;
 }) {
   return (
     <header className="content-header">
       <div>
-        <p className="admin-kicker">{eyebrow}</p>
+        {eyebrow ? <p className="admin-kicker">{eyebrow}</p> : null}
         <h1>{title}</h1>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
       </div>
-      {backLabel ? <Link className="content-secondary-button" href={backHref}>{backLabel}</Link> : null}
+      {backLabel ? <Link className="content-secondary-button content-dashboard-btn" href={backHref}>{backLabel}</Link> : null}
     </header>
   );
 }
@@ -25,8 +25,67 @@ export function ActionMessage({ saved, error }: { saved: string | null; error: s
   return <p className={`content-message ${error ? "content-message-error" : "content-message-success"}`} role={error ? "alert" : "status"}>{error ?? saved}</p>;
 }
 
-export function EditorPanel({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="content-editor"><h2>{title}</h2>{children}</section>;
+export function EditorPanel({
+  title,
+  children,
+  defaultOpen = false,
+  description,
+  badge,
+  className = "",
+  openLabel = "Open form",
+  closeLabel = "Close form",
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  description?: ReactNode;
+  badge?: ReactNode;
+  className?: string;
+  openLabel?: string;
+  closeLabel?: string;
+}) {
+  return (
+    <details
+      className={`content-editor content-editor-collapsible ${className}`.trim()}
+      open={defaultOpen ? true : undefined}
+    >
+      <summary className="content-editor-summary">
+        <div className="content-editor-summary-left">
+          <span className="content-editor-icon-badge" aria-hidden="true">
+            <span className="content-editor-icon-symbol" />
+          </span>
+          <div className="content-editor-title-wrap">
+            <h2>{title}</h2>
+            {description ? <p className="content-editor-desc">{description}</p> : null}
+          </div>
+          {badge ? <span className="content-editor-badge">{badge}</span> : null}
+        </div>
+        <div className="content-editor-summary-right">
+          <span className="content-editor-toggle-btn">
+            <span className="content-editor-label-closed">{openLabel}</span>
+            <span className="content-editor-label-open">{closeLabel}</span>
+            <svg
+              className="content-editor-chevron"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+        </div>
+      </summary>
+      <div className="content-editor-body">
+        {children}
+      </div>
+    </details>
+  );
 }
 
 export function Field({ label, name, defaultValue, type = "text", required = false, min, step, maxLength, placeholder, readOnly = false }: {
