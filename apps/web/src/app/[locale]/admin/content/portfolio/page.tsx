@@ -27,7 +27,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.portfolio.title")} description={t("resources.portfolio.description")} backLabel={t("back")} />
       <ActionMessage saved={query.saved ? t("saved") : null} error={query.error ? t(`errors.${query.error}`) : null} />
-      <EditorPanel title={selected ? t("editItem") : t("newPortfolio")}>
+      <EditorPanel title={selected ? t("editItem") : t("newPortfolio")} defaultOpen={Boolean(selected)}>
         <form action={savePortfolio} className="content-form"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={selected?.id ?? ""}/>
           <Field label={t("fields.titleEn")} name="title_en" defaultValue={selected?.title_en} required/><Field label={t("fields.titleBn")} name="title_bn" defaultValue={selected?.title_bn}/>
           <Field label={t("fields.slug")} name="slug" defaultValue={selected?.slug}/><Field label={t("fields.clientName")} name="public_client_name" defaultValue={selected?.public_client_name}/>
@@ -42,7 +42,7 @@ export default async function PortfolioPage({ params, searchParams }: { params: 
           <FormActions saveLabel={t("save")} cancelLabel={t("cancel")} cancelHref="/admin/content/portfolio" />
         </form>
       </EditorPanel>
-      {selected ? <EditorPanel title={t("media.title")}>
+      {selected ? <EditorPanel title={t("media.title")} defaultOpen={false}>
         <form action={uploadPortfolioMedia} className="content-form"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="portfolio_item_id" value={selected.id}/>
           <Field label={t("media.file")} name="file" type="file" required/><Field label={t("fields.sortOrder")} name="sort_order" type="number" defaultValue={selected.portfolio_media?.length ?? 0}/>
           <Field label={t("media.altEn")} name="alt_en"/><Field label={t("media.altBn")} name="alt_bn"/>

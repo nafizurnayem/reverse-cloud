@@ -22,7 +22,7 @@ export default async function ServicesPage({ params, searchParams }: { params: P
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.services.title")} description={t("resources.services.description")} backLabel={t("back")} />
       <ActionMessage saved={query.saved ? t("saved") : null} error={errorMessage} />
-      <EditorPanel title={selected ? t("editItem") : t("newService")}>
+      <EditorPanel title={selected ? t("editItem") : t("newService")} defaultOpen={Boolean(selected)}>
         <form action={saveService} className="content-form">
           <input type="hidden" name="locale" value={locale} /><input type="hidden" name="id" value={selected?.id ?? ""} />
           <Field label={t("fields.nameEn")} name="name_en" defaultValue={selected?.name_en} required />
