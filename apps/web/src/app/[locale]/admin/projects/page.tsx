@@ -134,7 +134,7 @@ export default async function ProjectsPage({ params, searchParams }: {
       </section>
 
       {canCreate || selected ? (
-        <EditorPanel key={selected?.id ?? "new"} title={selected ? `${t("editProject")}: ${selected.title}` : t("newProject")}>
+        <EditorPanel key={selected?.id ?? "new"} title={selected ? `${t("editProject")}: ${selected.title}` : t("newProject")} defaultOpen={Boolean(selected)}>
           <form key={selected?.id ?? "new"} action={saveProject} className="content-form">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={selected?.id ?? ""} />

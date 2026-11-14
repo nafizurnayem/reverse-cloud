@@ -78,7 +78,7 @@ export default async function PaymentsPage({ params, searchParams }: { params: P
       <button className="content-primary-button" type="submit">{t("filters.apply")}</button><Link className="content-secondary-button" href="/admin/payments">{t("filters.clear")}</Link>
     </form></section>
 
-    {canManage ? <EditorPanel title={selectedItem ? t("schedule.edit") : t("schedule.new")}><form action={savePaymentItem} className="content-form">
+    {canManage ? <EditorPanel title={selectedItem ? t("schedule.edit") : t("schedule.new")} defaultOpen={Boolean(selectedItem)}><form action={savePaymentItem} className="content-form">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="id" value={selectedItem?.id ?? ""} /><input type="hidden" name="existing_paid_at" value={selectedItem?.paid_at ?? ""} />
       <SelectField label={t("fields.project")} name="project_id" defaultValue={selectedItem?.project_id ?? ""}><option value="" disabled>{t("fields.selectProject")}</option>{selectedItem && !projects.some((project) => project.id === selectedItem.project_id) ? <option value={selectedItem.project_id}>{t("unknownProject")}</option> : null}{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</SelectField>
       <Field label={t("fields.title")} name="title" defaultValue={selectedItem?.title} maxLength={200} required />
@@ -91,7 +91,7 @@ export default async function PaymentsPage({ params, searchParams }: { params: P
       <FormActions saveLabel={t("schedule.save")} cancelLabel={t("cancel")} cancelHref="/admin/payments" />
     </form></EditorPanel> : <p className="content-message">{t("readOnly")}</p>}
 
-    {canManage && selectedItem && selectedItem.status !== "cancelled" && !selectedPayment?.voided_at ? <EditorPanel title={selectedPayment ? t("records.edit") : t("records.new")}><form action={savePayment} className="content-form">
+    {canManage && selectedItem && selectedItem.status !== "cancelled" && !selectedPayment?.voided_at ? <EditorPanel title={selectedPayment ? t("records.edit") : t("records.new")} defaultOpen={Boolean(selectedPayment)}><form action={savePayment} className="content-form">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="id" value={selectedPayment?.id ?? ""} /><input type="hidden" name="payment_item_id" value={selectedItem.id} /><input type="hidden" name="currency" value={selectedItem.currency} />
       <div className="payment-item-context"><strong>{selectedItem.title}</strong><span>{t("records.context", { currency: selectedItem.currency, amount: money(Number(selectedItem.amount_due), selectedItem.currency, locale) })}</span></div>
       <Field label={t("fields.amountPaid")} name="amount_paid" type="number" min="0.01" step="0.01" defaultValue={selectedPayment?.amount_paid} required />

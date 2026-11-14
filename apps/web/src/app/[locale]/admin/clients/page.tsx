@@ -201,7 +201,7 @@ export default async function ClientsPage({ params, searchParams }: {
         </form>
       </section>
 
-      <EditorPanel title={selected ? t("editClient") : t("newClient")}>
+      <EditorPanel title={selected ? t("editClient") : t("newClient")} defaultOpen={Boolean(selected)}>
         <form action={saveClient} className="content-form">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="id" value={selected?.id ?? ""} />
