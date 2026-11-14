@@ -117,8 +117,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   };
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${sansFont.variable} ${bengaliFont.variable} ${
           locale === "bn" ? "font-bengali" : "font-sans"
         } antialiased`}
