@@ -288,6 +288,22 @@ export function ChatWidget({
     }
   }
 
+  function handleBookingConfirmed() {
+    const now = Date.now();
+    const followUp: ChatMessageItem = {
+      id: `booking-thanks-${now}`,
+      role: "assistant",
+      content: isBn
+        ? "বুকিং করার জন্য ধন্যবাদ! আর কোনোভাবে কি আমি আপনাকে সাহায্য করতে পারি?"
+        : "Thank you for booking! Is there anything else I can help you with?",
+      createdAt: now,
+    };
+    setMessages((current) => [
+      ...(current.length > 0 ? current : [greetingMessage]),
+      followUp,
+    ]);
+  }
+
   async function handleSendMessage(userInput: string) {
     if (!userInput.trim() || isStreaming) return;
 
@@ -599,6 +615,7 @@ export function ChatWidget({
                 turnstileSiteKey={turnstileSiteKey}
                 onTriggerFallback={() => setFallbackMode(true)}
                 onCardAction={handleCardAction}
+                onBookingConfirmed={handleBookingConfirmed}
               />
 
               {/* Fallback Banner rendered once at container level when in Error/Fallback Mode */}

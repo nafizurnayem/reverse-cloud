@@ -17,6 +17,7 @@ interface ChatMessageListProps {
   turnstileSiteKey?: string;
   onTriggerFallback?: () => void;
   onCardAction?: (action: string) => void;
+  onBookingConfirmed?: () => void;
 }
 
 export function ChatMessageList({
@@ -25,6 +26,7 @@ export function ChatMessageList({
   turnstileSiteKey = "",
   onTriggerFallback,
   onCardAction,
+  onBookingConfirmed,
 }: ChatMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -116,6 +118,7 @@ export function ChatMessageList({
                           data={card.data}
                           locale={locale}
                           turnstileSiteKey={turnstileSiteKey}
+                          onBookingConfirmed={onBookingConfirmed}
                         />
                       );
                     }
