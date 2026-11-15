@@ -30,7 +30,7 @@ type TurnstileApi = {
     sitekey: string;
     action: string;
     language: "en" | "bn";
-    size: "compact";
+    size: "flexible";
     callback: (token: string) => void;
     "expired-callback": () => void;
     "error-callback": () => void;
@@ -191,7 +191,7 @@ export function BookingSchedulerCard({
       sitekey: siteKey,
       action: "schedule_booking",
       language: locale,
-      size: "compact",
+      size: "flexible",
       callback: (token) => setTurnstileToken(token),
       "expired-callback": () => setTurnstileToken(""),
       "error-callback": () => setTurnstileToken(""),
@@ -377,7 +377,7 @@ export function BookingSchedulerCard({
             strategy="afterInteractive"
             onReady={() => setTurnstileScriptReady(true)}
           />
-          {siteKey ? <div className="contact-turnstile"><div ref={turnstileContainerRef} /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
+          {siteKey ? <div className="booking-turnstile"><div ref={turnstileContainerRef} /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
         </div>
       )}
 

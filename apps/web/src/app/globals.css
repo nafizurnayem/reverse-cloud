@@ -2350,6 +2350,17 @@ details.content-editor-collapsible[open] .content-editor-summary {
   font-size: 0.78rem;
 }
 
+.booking-turnstile,
+.booking-turnstile > div {
+  width: 100%;
+  min-width: 0;
+}
+
+.booking-turnstile {
+  min-height: 65px;
+  overflow: hidden;
+}
+
 .contact-consent {
   display: flex;
   padding: 0.85rem;
