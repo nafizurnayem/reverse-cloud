@@ -95,6 +95,19 @@ Watch deployments:
 tail -f /home/nafz/reverse-cloud-hosting/logs/deploy.log
 ```
 
+From the development computer, stream every available container log in one
+terminal (including privacy-safe page, click, form-action, API-result, and
+browser-error events):
+
+```sh
+cd "/home/nafiz/Nafiz Drive/reverse-cloud"
+./ops/hosting/watch-server-logs.sh
+```
+
+Use `./ops/hosting/watch-activity.sh` when only visitor activity is needed.
+Both commands are read-only; `Ctrl+C` ends the local stream without stopping
+the website.
+
 Check the cron entry:
 
 ```sh

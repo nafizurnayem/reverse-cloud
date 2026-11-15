@@ -23,3 +23,14 @@ actions, API results, and browser errors on the main PC with:
 ```
 
 Press `Ctrl+C` to stop watching. This does not stop the website.
+
+Stream all available website-server events in one terminal with:
+
+```sh
+./ops/hosting/watch-server-logs.sh
+```
+
+This combines the web activity records with web, AI, monitor, knowledge-sync,
+Ollama, and both Cloudflare connector logs. It does not record form values,
+passwords, tokens, or message text. Press `Ctrl+C` to stop watching; the
+containers continue running.
