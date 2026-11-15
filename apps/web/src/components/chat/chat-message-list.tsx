@@ -5,6 +5,7 @@ import { Bot, User } from "lucide-react";
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
 import {
   ConfirmationCard,
+  BookingCancellationCard,
   BookingSchedulerCard,
   EstimateCard,
   HumanHandoffCard,
@@ -18,6 +19,7 @@ interface ChatMessageListProps {
   onTriggerFallback?: () => void;
   onCardAction?: (action: string) => void;
   onBookingConfirmed?: () => void;
+  onBookingCancelled?: () => void;
 }
 
 export function ChatMessageList({
@@ -27,6 +29,7 @@ export function ChatMessageList({
   onTriggerFallback,
   onCardAction,
   onBookingConfirmed,
+  onBookingCancelled,
 }: ChatMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -121,6 +124,9 @@ export function ChatMessageList({
                           onBookingConfirmed={onBookingConfirmed}
                         />
                       );
+                    }
+                    if (card.type === "booking_cancellation") {
+                      return <BookingCancellationCard key={idx} locale={locale} onCancelled={onBookingCancelled} />;
                     }
                     return null;
                   })}

@@ -54,7 +54,8 @@ export type ChatCard =
   | { type: "lead_saved"; data: LeadSavedCardData }
   | { type: "human_handoff"; data: HumanHandoffCardData }
   | { type: "booking_proposal"; data: BookingProposalCardData }
-  | { type: "booking_scheduler"; data: BookingSchedulerCardData };
+  | { type: "booking_scheduler"; data: BookingSchedulerCardData }
+  | { type: "booking_cancellation" };
 
 export interface ChatMessageItem {
   id: string;

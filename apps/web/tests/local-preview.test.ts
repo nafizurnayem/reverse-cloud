@@ -94,6 +94,23 @@ describe("local Ollama preview", () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
+  it("returns the secure cancellation card instead of booking slots", async () => {
+    const request = new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "I want to cancel my booking" }],
+      }),
+    });
+    const response = await localPreviewChat(request);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      reply: expect.stringContaining("securely cancel"),
+      cards: [{ type: "booking_cancellation" }],
+    });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it("limits transcript history before sending it to the model", async () => {
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",
