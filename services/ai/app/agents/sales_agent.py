@@ -118,7 +118,7 @@ async def run_agent_stream(
                     try:
                         data = part.content if isinstance(part.content, dict) else json.loads(part.content)
                     except Exception:
-                        data = {"raw": str(part.content)}
+                        continue
                     if not isinstance(data, dict):
                         continue
                     if data.get("error") or data.get("status") in {"error", "confirmation_required"}:

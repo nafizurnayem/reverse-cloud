@@ -62,8 +62,8 @@ async def get_project_status(
     try:
         client_uuid = UUID(effective_client_id)
         proj_uuid = UUID(project_id) if project_id else None
-    except ValueError as exc:
-        return {"error": "invalid_uuid", "message": f"Invalid UUID identifier: {exc}"}
+    except ValueError:
+        return {"error": "invalid_uuid", "message": "The requested project could not be identified."}
 
     pool = ctx.deps.db_pool if ctx else None
     if pool is None:

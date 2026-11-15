@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
-import { isCancellationRequest } from "@/lib/chat/response-policy";
+import { isCancellationRequest, restrictedChatReply } from "@/lib/chat/response-policy";
 import { parseChatStream } from "@/lib/chat/stream-parser";
 import {
   createMockChatResponse,
@@ -340,6 +340,15 @@ export function ChatWidget({
 
     const baseMessages = messages.length > 0 ? messages : [greetingMessage];
     const updatedMessages = [...baseMessages, userMsg];
+    const restrictedReply = restrictedChatReply(userInput, isBn ? "bn" : "en");
+    if (restrictedReply) {
+      setMessages([...updatedMessages, {
+        ...assistantMsg,
+        content: restrictedReply,
+        isStreaming: false,
+      }]);
+      return;
+    }
     if (isCancellationRequest(userInput)) {
       setMessages([...updatedMessages, {
         ...assistantMsg,
