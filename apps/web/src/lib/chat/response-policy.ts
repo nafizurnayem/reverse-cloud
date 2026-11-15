@@ -49,6 +49,13 @@ export function isBookingRequest(value: string) {
     || /(?:বুক|বুকিং|সময়|সময়|মিটিং|পরামর্শ|কল)/u.test(text);
 }
 
+export function isCancellationRequest(value: string) {
+  const text = normalize(value);
+  return (/\b(?:cancel|cancellation)\b/u.test(text)
+    && /\b(?:booking|appointment|meeting|call|schedule)\b/u.test(text))
+    || /(?:বুকিং|অ্যাপয়েন্টমেন্ট|মিটিং|কল).{0,20}বাতিল|বাতিল.{0,20}(?:বুকিং|অ্যাপয়েন্টমেন্ট|মিটিং|কল)/u.test(text);
+}
+
 export function safeChatFallback(locale: ChatLocale) {
   return locale === "bn"
     ? "আমি এই প্রশ্নের নির্ভরযোগ্য উত্তর এখনই যাচাই করতে পারিনি। তবে আমাদের সেবা, প্রজেক্টের আনুমানিক বাজেট বা মিটিং বুকিংয়ে সাহায্য করতে পারি। চাইলে আমি টিমের কারও সঙ্গেও যুক্ত করে দেব।"

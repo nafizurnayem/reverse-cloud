@@ -25,10 +25,20 @@ export async function DELETE(
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError || !auth.user) return json({ ok: false, code: "authentication_required" }, 401);
 
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("user_id", auth.user.id)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (clientError) return json({ ok: false, code: "cancellation_unavailable" }, 503);
+  if (!client) return json({ ok: false, code: "appointment_not_found" }, 404);
+
   const { data: meeting, error: meetingError } = await supabase
     .from("meetings")
-    .select("id,client_id,calcom_booking_uid,starts_at,status")
+    .select("id,client_id,proposal_id,calcom_booking_uid,starts_at,status")
     .eq("id", id)
+    .eq("client_id", client.id)
     .in("status", ["confirmed", "rescheduled"])
     .maybeSingle();
   if (meetingError) return json({ ok: false, code: "cancellation_unavailable" }, 503);
@@ -57,9 +67,10 @@ export async function DELETE(
     return json({ ok: false, code: "cancellation_unavailable" }, 502);
   }
 
-  const removed = await createAdminClient()
+  const admin = createAdminClient();
+  const updated = await admin
     .from("meetings")
-    .delete()
+    .update({ status: "cancelled" })
     .eq("id", meeting.id)
     .eq("client_id", meeting.client_id)
     .eq("calcom_booking_uid", meeting.calcom_booking_uid)
@@ -67,10 +78,19 @@ export async function DELETE(
     .select("id")
     .maybeSingle();
 
-  if (removed.error || !removed.data) {
+  let proposalUpdateFailed = false;
+  if (!updated.error && updated.data && meeting.proposal_id) {
+    const proposal = await admin
+      .from("booking_proposals")
+      .update({ status: "cancelled" })
+      .eq("id", meeting.proposal_id);
+    proposalUpdateFailed = Boolean(proposal.error);
+  }
+
+  if (updated.error || !updated.data || proposalUpdateFailed) {
     // Cal.com already accepted the cancellation. Its signed webhook can still
     // deactivate the local row, so do not encourage a duplicate cancellation.
-    console.error("Cancelled booking could not be removed from the local database");
+    console.error("Cancelled booking could not be synchronized to the local database");
     return json({ ok: true, synchronizationPending: true }, 202);
   }
 

@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
+import { isCancellationRequest } from "@/lib/chat/response-policy";
 import { parseChatStream } from "@/lib/chat/stream-parser";
 import {
   createMockChatResponse,
@@ -304,6 +305,18 @@ export function ChatWidget({
     ]);
   }
 
+  function handleBookingCancelled() {
+    const now = Date.now();
+    setMessages((current) => [...current, {
+      id: `booking-cancelled-${now}`,
+      role: "assistant",
+      content: isBn
+        ? "আপনার বুকিং সফলভাবে বাতিল হয়েছে। আর কোনোভাবে কি আমি আপনাকে সাহায্য করতে পারি?"
+        : "Your booking has been cancelled successfully. Is there anything else I can help you with?",
+      createdAt: now,
+    }]);
+  }
+
   async function handleSendMessage(userInput: string) {
     if (!userInput.trim() || isStreaming) return;
 
@@ -327,6 +340,17 @@ export function ChatWidget({
 
     const baseMessages = messages.length > 0 ? messages : [greetingMessage];
     const updatedMessages = [...baseMessages, userMsg];
+    if (isCancellationRequest(userInput)) {
+      setMessages([...updatedMessages, {
+        ...assistantMsg,
+        content: isBn
+          ? "আমি আপনার আসন্ন বুকিং নিরাপদভাবে বাতিল করতে সাহায্য করতে পারি। নিচে চালিয়ে যান।"
+          : "I can help you securely cancel your upcoming booking. Continue below.",
+        cards: [{ type: "booking_cancellation" }],
+        isStreaming: false,
+      }]);
+      return;
+    }
     setMessages([...updatedMessages, assistantMsg]);
     setIsStreaming(true);
 
@@ -616,6 +640,7 @@ export function ChatWidget({
                 onTriggerFallback={() => setFallbackMode(true)}
                 onCardAction={handleCardAction}
                 onBookingConfirmed={handleBookingConfirmed}
+                onBookingCancelled={handleBookingCancelled}
               />
 
               {/* Fallback Banner rendered once at container level when in Error/Fallback Mode */}

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { limitPreviewChatRequests, requestIp } from "@/lib/ratelimit";
 import { validateChatPayload } from "@/lib/chat/values";
 import { directPublicKnowledgeReply, retrievePublicKnowledge } from "@/lib/chat/public-knowledge";
-import { directChatReply, ensureUsefulChatReply, isBookingRequest } from "@/lib/chat/response-policy";
+import { directChatReply, ensureUsefulChatReply, isBookingRequest, isCancellationRequest } from "@/lib/chat/response-policy";
 
 const maxBodyBytes = 16_000;
 let busy = false;
@@ -57,6 +57,14 @@ export async function localPreviewChat(request: NextRequest) {
   busy = true;
   try {
     const latest = messages.at(-1)!;
+    if (isCancellationRequest(latest.content)) {
+      return NextResponse.json({
+        reply: validated.data.locale === "bn"
+          ? "আমি আপনার আসন্ন বুকিং নিরাপদভাবে বাতিল করতে সাহায্য করতে পারি। নিচে চালিয়ে যান।"
+          : "I can help you securely cancel your upcoming booking. Continue below.",
+        cards: [{ type: "booking_cancellation" }],
+      }, { headers: { "cache-control": "no-store" } });
+    }
     if (isBookingRequest(latest.content)) {
       return NextResponse.json({
         reply: validated.data.locale === "bn"
