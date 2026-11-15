@@ -105,7 +105,7 @@ describe("local Ollama preview", () => {
     const response = await localPreviewChat(request);
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      reply: expect.stringContaining("securely cancel"),
+      reply: expect.stringContaining("Checking your account"),
       cards: [{ type: "booking_cancellation" }],
     });
     expect(mocks.fetch).not.toHaveBeenCalled();

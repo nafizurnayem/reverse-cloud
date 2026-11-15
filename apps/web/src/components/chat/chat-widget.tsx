@@ -311,8 +311,8 @@ export function ChatWidget({
       id: `booking-cancelled-${now}`,
       role: "assistant",
       content: isBn
-        ? "আপনার বুকিং সফলভাবে বাতিল হয়েছে। আর কোনোভাবে কি আমি আপনাকে সাহায্য করতে পারি?"
-        : "Your booking has been cancelled successfully. Is there anything else I can help you with?",
+        ? "আপনার বুকিং সফলভাবে বাতিল হয়েছে। আপনি কি অন্য কোনো সময় আবার বুক করতে চান, নাকি আমাদের অন্য কোনো সেবা নিয়ে সাহায্য চান?"
+        : "Your booking has been cancelled successfully. Would you like to book another time or get help with one of our services?",
       createdAt: now,
     }]);
   }
@@ -343,9 +343,6 @@ export function ChatWidget({
     if (isCancellationRequest(userInput)) {
       setMessages([...updatedMessages, {
         ...assistantMsg,
-        content: isBn
-          ? "আমি আপনার আসন্ন বুকিং নিরাপদভাবে বাতিল করতে সাহায্য করতে পারি। নিচে চালিয়ে যান।"
-          : "I can help you securely cancel your upcoming booking. Continue below.",
         cards: [{ type: "booking_cancellation" }],
         isStreaming: false,
       }]);
