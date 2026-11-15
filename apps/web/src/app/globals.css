@@ -2350,13 +2350,13 @@ details.content-editor-collapsible[open] .content-editor-summary {
   font-size: 0.78rem;
 }
 
-.chat-turnstile,
-.chat-turnstile > div {
+.booking-turnstile,
+.booking-turnstile > div {
   width: 100%;
   min-width: 0;
 }
 
-.chat-turnstile {
+.booking-turnstile {
   min-height: 65px;
   overflow: hidden;
 }

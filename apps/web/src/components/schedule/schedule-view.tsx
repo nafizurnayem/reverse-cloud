@@ -641,13 +641,13 @@ export function ScheduleView({ meetingTypes, prefill, locale, siteKey }: Schedul
                   strategy="afterInteractive"
                 />
                 {siteKey ? (
-                  <div className="contact-turnstile py-1">
+                  <div className="booking-turnstile py-1">
                     <div
                       className="cf-turnstile"
                       data-sitekey={siteKey}
                       data-action="schedule_booking"
                       data-language={locale}
-                      data-size="compact"
+                      data-size="flexible"
                     />
                   </div>
                 ) : null}

@@ -377,7 +377,7 @@ export function BookingSchedulerCard({
             strategy="afterInteractive"
             onReady={() => setTurnstileScriptReady(true)}
           />
-          {siteKey ? <div className="chat-turnstile"><div ref={turnstileContainerRef} /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
+          {siteKey ? <div className="booking-turnstile"><div ref={turnstileContainerRef} /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
         </div>
       )}
 
