@@ -129,10 +129,14 @@ export async function POST(request: NextRequest) {
     if (input.source === "chat" && (!input.phone || input.phone.replace(/\D/g, "").length < 7)) {
       return json({ ok: false, code: "phone_required" }, 400);
     }
+    if (!input.turnstileToken) {
+      return json({ ok: false, code: "turnstile_required" }, 403);
+    }
     const challenge = await verifyTurnstile(input.turnstileToken, ip, {
       expectedAction: "schedule_booking",
     });
     if (!challenge.success) {
+      console.warn("Schedule booking Turnstile rejected", { errors: challenge.errors });
       const unavailable = challenge.errors.some(
         (code) => code === "missing-secret" || code === "siteverify-unavailable",
       );

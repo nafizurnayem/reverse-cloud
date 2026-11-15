@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Calendar, CheckCircle2, Clock, Loader2, Mail, Phone, ShieldCheck, User } from "lucide-react";
 import type { BookingSchedulerCardData } from "@/lib/chat/protocol";
 import { bookingCountryCodes, normalizePhoneNumber } from "@/lib/phone";
@@ -23,6 +23,24 @@ interface BookingInfo {
   startsAt: string;
   endsAt: string;
   meetingUrl?: string;
+}
+
+type TurnstileApi = {
+  render: (container: HTMLElement, options: {
+    sitekey: string;
+    action: string;
+    language: "en" | "bn";
+    size: "compact";
+    callback: (token: string) => void;
+    "expired-callback": () => void;
+    "error-callback": () => void;
+  }) => string;
+  reset: (widgetId?: string) => void;
+  remove: (widgetId: string) => void;
+};
+
+function turnstileApi() {
+  return (window as unknown as { turnstile?: TurnstileApi }).turnstile;
 }
 
 function requestedTime(value: string) {
@@ -86,6 +104,10 @@ export function BookingSchedulerCard({
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<BookingInfo | null>(null);
+  const [turnstileScriptReady, setTurnstileScriptReady] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const siteKey = turnstileSiteKey;
   const meetingType = data.meetingTypeKey ?? "discovery_call";
@@ -159,6 +181,30 @@ export function BookingSchedulerCard({
     return () => { active = false; };
   }, [data.requestedText, meetingType, selectedDate, timeZone]);
 
+  useEffect(() => {
+    if (isAuthenticated !== false || !siteKey || !turnstileScriptReady) return;
+    const api = turnstileApi();
+    const container = turnstileContainerRef.current;
+    if (!api || !container || turnstileWidgetIdRef.current) return;
+
+    const widgetId = api.render(container, {
+      sitekey: siteKey,
+      action: "schedule_booking",
+      language: locale,
+      size: "compact",
+      callback: (token) => setTurnstileToken(token),
+      "expired-callback": () => setTurnstileToken(""),
+      "error-callback": () => setTurnstileToken(""),
+    });
+    turnstileWidgetIdRef.current = widgetId;
+
+    return () => {
+      api.remove(widgetId);
+      turnstileWidgetIdRef.current = null;
+      setTurnstileToken("");
+    };
+  }, [isAuthenticated, locale, siteKey, turnstileScriptReady]);
+
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(isBn ? "bn-BD" : "en-US", {
       timeZone,
@@ -188,8 +234,10 @@ export function BookingSchedulerCard({
         return;
       }
     }
-    const formData = new FormData(event.currentTarget);
-    const turnstileToken = String(formData.get("cf-turnstile-response") ?? "");
+    if (!isAuthenticated && !turnstileToken) {
+      setError(isBn ? "সিকিউরিটি যাচাই সম্পন্ন করুন।" : "Complete the security verification first.");
+      return;
+    }
     const normalizedPhone = isAuthenticated ? null : normalizePhoneNumber(countryCode, phone);
     startTransition(async () => {
       try {
@@ -213,12 +261,16 @@ export function BookingSchedulerCard({
         });
         const payload = await response.json();
         if (!response.ok || !payload.ok) {
-          window.turnstile?.reset();
+          const widgetId = turnstileWidgetIdRef.current;
+          if (widgetId) turnstileApi()?.reset(widgetId);
+          setTurnstileToken("");
           if (payload.code === "slot_unavailable") {
             setSelectedSlot(null);
             setError(isBn ? "সময়টি আর উপলভ্য নেই। অন্য সময় বেছে নিন।" : "That slot is no longer available. Choose another time.");
           } else if (payload.code === "active_booking_exists") {
             setError(isBn ? "এই ইমেইলে ইতিমধ্যে একটি আসন্ন বুকিং রয়েছে।" : "This email already has an upcoming booking.");
+          } else if (payload.code === "turnstile_required") {
+            setError(isBn ? "সিকিউরিটি যাচাই সম্পন্ন করুন।" : "Complete the security verification first.");
           } else if (payload.code === "turnstile_failed") {
             setError(isBn ? "সিকিউরিটি যাচাই ব্যর্থ হয়েছে। আবার চেষ্টা করুন।" : "Security verification failed. Please try again.");
           } else if (payload.code === "protection_unavailable") {
@@ -320,13 +372,17 @@ export function BookingSchedulerCard({
               className="min-w-0 flex-1 bg-transparent py-2 outline-none"
             />
           </label>
-          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
-          {siteKey ? <div className="contact-turnstile"><div className="cf-turnstile" data-sitekey={siteKey} data-action="schedule_booking" data-language={locale} data-size="compact" /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
+          <Script
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+            strategy="afterInteractive"
+            onReady={() => setTurnstileScriptReady(true)}
+          />
+          {siteKey ? <div className="contact-turnstile"><div ref={turnstileContainerRef} /></div> : <div className="text-destructive">{isBn ? "সিকিউরিটি যাচাই কনফিগার করা নেই।" : "Security verification is not configured."}</div>}
         </div>
       )}
 
       {error && <div role="alert" className="rounded-lg bg-destructive/10 p-2 text-destructive">{error}</div>}
-      <button type="submit" disabled={isPending || isAuthenticated === null || !selectedSlot || (!isAuthenticated && !siteKey)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 font-bold text-primary-foreground disabled:opacity-50">
+      <button type="submit" disabled={isPending || isAuthenticated === null || !selectedSlot || (!isAuthenticated && (!siteKey || !turnstileToken))} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 font-bold text-primary-foreground disabled:opacity-50">
         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         {isPending ? (isBn ? "বুক করা হচ্ছে..." : "Booking...") : (isBn ? "বুকিং নিশ্চিত করুন" : "Confirm booking")}
       </button>
