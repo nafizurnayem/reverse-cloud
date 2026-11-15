@@ -60,8 +60,8 @@ export async function localPreviewChat(request: NextRequest) {
     if (isCancellationRequest(latest.content)) {
       return NextResponse.json({
         reply: validated.data.locale === "bn"
-          ? "আমি আপনার আসন্ন বুকিং নিরাপদভাবে বাতিল করতে সাহায্য করতে পারি। নিচে চালিয়ে যান।"
-          : "I can help you securely cancel your upcoming booking. Continue below.",
+          ? "বাতিল করার আগে আপনার অ্যাকাউন্ট ও আসন্ন বুকিং যাচাই করা হচ্ছে।"
+          : "Checking your account and upcoming booking before cancellation.",
         cards: [{ type: "booking_cancellation" }],
       }, { headers: { "cache-control": "no-store" } });
     }
