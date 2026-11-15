@@ -158,8 +158,8 @@ async def create_booking_hold(
     try:
         start_time = datetime.fromisoformat(starts_at.replace("Z", "+00:00"))
         end_time = datetime.fromisoformat(ends_at.replace("Z", "+00:00"))
-    except ValueError as exc:
-        return {"status": "error", "message": f"Invalid timestamp format: {exc}"}
+    except ValueError:
+        return {"status": "error", "message": "Please choose a valid meeting date and time."}
 
     if end_time <= start_time:
         return {"status": "error", "message": "ends_at must be strictly after starts_at."}

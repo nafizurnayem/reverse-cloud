@@ -32,14 +32,42 @@ _GREETINGS_BN = {
     "শুভ সকাল",
     "শুভ সন্ধ্যা",
 }
-_THANKS_EN = {"thanks", "thank you", "thank you very much", "thanks a lot"}
-_THANKS_BN = {"ধন্যবাদ", "অনেক ধন্যবাদ"}
+_THANKS_EN = {"thanks", "thank you", "thank you very much", "thanks a lot", "no thanks", "no thank you"}
+_THANKS_BN = {"ধন্যবাদ", "অনেক ধন্যবাদ", "না ধন্যবাদ"}
 _GOODBYES_EN = {"bye", "goodbye", "see you", "talk later"}
 _GOODBYES_BN = {"বিদায়", "আবার দেখা হবে", "পরে কথা হবে"}
+
+_RESTRICTED_REQUESTS = [
+    re.compile(r"\b(?:write|generate|create|provide|give|show|share|send|explain)\b.{0,48}\b(?:source\s+code|code|script|repository|repo)\b", re.I | re.S),
+    re.compile(r"\b(?:system\s+prompt|hidden\s+instructions?|environment\s+variables?|\.env|web\.env|api[_ -]?key|access[_ -]?token|secret|password|credentials?|connection\s+string)\b", re.I),
+    re.compile(r"\b(?:show|give|reveal|dump|list|share|provide|send|export|access|read|download)\b.{0,64}\b(?:database|schema|tables?|sql|source\s+code|repository|internal|private|confidential|logs?|documents?|files?)\b", re.I | re.S),
+    re.compile(r"\b(?:show|give|reveal|dump|list|share|provide|send|export|access|tell)\b.{0,64}\b(?:users?|clients?|customers?|admins?|project\s+managers?|developers?|staff)\b.{0,32}\b(?:information|data|details|emails?|phones?|names?|accounts?|records?|passwords?)\b", re.I | re.S),
+    re.compile(r"\b(?:list|dump|export|access)\b.{0,32}\b(?:users?|clients?|customers?|admins?|project\s+managers?|developers?|staff)\b|\b(?:internal|private|confidential)\s+(?:documents?|files?|logs?|code|repository)\b|\bdatabase\s+dump\b", re.I | re.S),
+    re.compile(r"\b(?:ignore|disregard)\b.{0,32}\b(?:instructions?|prompts?|rules?)\b|\b(?:jailbreak|developer\s+mode|bypass\s+(?:safety|security|rules|filters))\b", re.I | re.S),
+    re.compile(r"\b(?:weather|recipe|cook(?:ing)?|medical\s+advice|diagnos(?:e|is)|legal\s+advice|politics|election|sports?\s+score|homework|exam\s+answers?|write\s+(?:a\s+)?(?:poem|song|story|joke)|stock\s+tips?|crypto(?:currency)?\s+trading|capital\s+of)\b", re.I),
+    re.compile(r"(?:কোড|স্ক্রিপ্ট|সোর্স\s*কোড).{0,32}(?:লিখ|তৈরি|দাও|দেখাও)|(?:সিস্টেম\s*প্রম্পট|গোপন\s*নির্দেশ|পাসওয়ার্ড|সিক্রেট|এপিআই\s*কি|ডাটাবেস\s*ডাম্প|ডেটাবেস\s*ডাম্প)", re.S),
+]
 
 
 def _normalized(text: str) -> str:
     return _SPACE.sub(" ", _PUNCTUATION.sub(" ", text.casefold())).strip()
+
+
+def scope_refusal_reply(locale: str) -> str:
+    return (
+        "দুঃখিত, আমি শুধু রিভার্স ক্লাউডের সহকারী। আমি এ বিষয়ে সাহায্য করতে পারি না। "
+        "আমি আমাদের সেবা, প্রজেক্টের আনুমানিক বাজেট বা মিটিং বুকিংয়ে সাহায্য করতে পারি।"
+        if locale == "bn"
+        else "Sorry, I’m only the Reverse Cloud assistant, so I can’t help with that. "
+        "I can help with our services, project estimates, or meeting bookings."
+    )
+
+
+def restricted_reply(text: str, locale: str) -> str | None:
+    """Reject clearly unrelated or sensitive requests before tools or models run."""
+    if any(pattern.search(text) for pattern in _RESTRICTED_REQUESTS):
+        return scope_refusal_reply(locale)
+    return None
 
 
 def direct_reply(text: str, locale: str) -> str | None:

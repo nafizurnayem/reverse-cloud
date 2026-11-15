@@ -102,6 +102,7 @@ def test_bengali_injection_and_pii_redaction():
     assert redact_pii("Email me@example.com or call +880 1712-345678") == (
         "Email [REDACTED_EMAIL] or call [REDACTED_PHONE]"
     )
+    assert redact_pii("api_key=should-not-leak") == "[REDACTED_SECRET]"
     assert estimate_token_count("abcdef") == 2
 
 
@@ -141,7 +142,7 @@ def test_chat_kill_switch_active_returns_service_disabled(monkeypatch):
     assert "AI chat is temporarily disabled" in response.text
 
 
-def test_chat_prompt_injection_returns_guardrail_blocked(monkeypatch):
+def test_chat_prompt_injection_returns_friendly_refusal(monkeypatch):
     secret = "test-secret"
     timestamp = str(int(time.time()))
     body = {
@@ -177,7 +178,8 @@ def test_chat_prompt_injection_returns_guardrail_blocked(monkeypatch):
         )
 
     assert response.status_code == 200
-    assert "guardrail_blocked" in response.text
+    assert "only the Reverse Cloud assistant" in response.text
+    assert "guardrail_blocked" not in response.text
 
 
 def test_chat_caps_history_before_streaming(monkeypatch):

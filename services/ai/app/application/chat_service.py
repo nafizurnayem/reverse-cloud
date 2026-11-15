@@ -14,7 +14,7 @@ from ..adapters.postgres.conversations import PostgresConversationRepository
 from ..agents.sales_agent import run_agent_stream
 from ..config import get_settings
 from ..domain.events import AgentEvent, CardEvent, ChatEvent, TextChunk, UsageEvent
-from ..domain.response_policy import direct_reply, ensure_useful_reply
+from ..domain.response_policy import direct_reply, ensure_useful_reply, restricted_reply, scope_refusal_reply
 from ..observability.chat_tracing import log_chat_completion
 from ..ports.conversations import ConversationRepository
 from ..schemas.chat import ChatRequest
@@ -67,14 +67,11 @@ class ChatService:
 
         payload.messages = cap_message_history(payload.messages)
         latest_user_message = next((message.content for message in reversed(payload.messages) if message.role == "user"), "")
-        if detect_prompt_injection(latest_user_message):
-            yield ChatEvent("error", {
-                "code": "guardrail_blocked",
-                "message": "Your message cannot be processed by the AI system.",
-            })
-            return
-
-        immediate_reply = direct_reply(latest_user_message, payload.locale)
+        immediate_reply = (
+            scope_refusal_reply(payload.locale)
+            if detect_prompt_injection(latest_user_message)
+            else restricted_reply(latest_user_message, payload.locale) or direct_reply(latest_user_message, payload.locale)
+        )
         if immediate_reply is not None:
             if self._repository is not None:
                 try:

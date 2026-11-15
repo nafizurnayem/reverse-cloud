@@ -59,6 +59,10 @@ _INJECTION_PATTERNS = [
 
 _EMAIL_PATTERN = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
 _PHONE_PATTERN = re.compile(r"(?<!\w)(?:\+?\d[\d\s().-]{7,}\d)(?!\w)")
+_SECRET_PATTERN = re.compile(
+    r"\b(?:api[_ -]?key|access[_ -]?token|secret|password|connection\s+string)\b\s*[:=]\s*\S+",
+    re.IGNORECASE,
+)
 
 MAX_HISTORY_MESSAGES = 20
 MAX_TOOL_CALLS_PER_TURN = 6
@@ -80,10 +84,13 @@ def detect_prompt_injection(text: str) -> bool:
 
 
 def redact_pii(text: str) -> str:
-    """Remove common contact details before text reaches logs or chat output."""
+    """Remove common contact details and secret assignments from chat output."""
     if not text:
         return text
-    return _PHONE_PATTERN.sub("[REDACTED_PHONE]", _EMAIL_PATTERN.sub("[REDACTED_EMAIL]", text))
+    return _SECRET_PATTERN.sub(
+        "[REDACTED_SECRET]",
+        _PHONE_PATTERN.sub("[REDACTED_PHONE]", _EMAIL_PATTERN.sub("[REDACTED_EMAIL]", text)),
+    )
 
 
 def estimate_token_count(text: str) -> int:
