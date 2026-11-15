@@ -36,6 +36,22 @@ describe("local Ollama preview", () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
+  it("responds politely when the user declines more help", async () => {
+    const request = new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "no thanks" }],
+      }),
+    });
+    const response = await localPreviewChat(request);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      reply: "You’re welcome! Tell me if you’d like help with anything else.",
+    });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it("adds retrieved public facts to the model prompt", async () => {
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",

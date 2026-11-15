@@ -6,8 +6,8 @@ const greetings = {
 };
 
 const thanks = {
-  en: new Set(["thanks", "thank you", "thank you very much", "thanks a lot"]),
-  bn: new Set(["ধন্যবাদ", "অনেক ধন্যবাদ"]),
+  en: new Set(["thanks", "thank you", "thank you very much", "thanks a lot", "no thanks", "no thank you"]),
+  bn: new Set(["ধন্যবাদ", "অনেক ধন্যবাদ", "না ধন্যবাদ"]),
 };
 
 const goodbyes = {
