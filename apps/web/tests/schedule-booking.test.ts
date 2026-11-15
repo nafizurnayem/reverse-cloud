@@ -362,6 +362,15 @@ describe("POST /api/schedule/book", () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
+  it("rejects a missing guest Turnstile token before verification", async () => {
+    const response = await POST(request({ ...input, turnstileToken: "" }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: "turnstile_required" });
+    expect(mocks.verify).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it("does not create a booking when the selected slot disappeared", async () => {
     mocks.fetch.mockReset().mockResolvedValueOnce(slotsResponse([]));
 
