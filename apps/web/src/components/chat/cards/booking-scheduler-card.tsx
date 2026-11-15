@@ -12,6 +12,7 @@ interface BookingSchedulerCardProps {
   data: BookingSchedulerCardData;
   locale?: "en" | "bn";
   turnstileSiteKey?: string;
+  onBookingConfirmed?: () => void;
 }
 
 interface SlotItem {
@@ -66,6 +67,7 @@ export function BookingSchedulerCard({
   data,
   locale = "en",
   turnstileSiteKey = "",
+  onBookingConfirmed,
 }: BookingSchedulerCardProps) {
   const isBn = locale === "bn";
   const [timeZone] = useState(() => {
@@ -283,6 +285,7 @@ export function BookingSchedulerCard({
           return;
         }
         setBooking(payload.booking);
+        onBookingConfirmed?.();
       } catch {
         setError(isBn ? "নেটওয়ার্ক ত্রুটি। আবার চেষ্টা করুন।" : "Network error. Please try again.");
       }
