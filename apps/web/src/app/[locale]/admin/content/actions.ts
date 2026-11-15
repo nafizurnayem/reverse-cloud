@@ -36,8 +36,19 @@ function actionError(access: StaffAccess, resource: Resource, error: ContentErro
   redirect(`${resourcePath(access, resource)}?error=${error}`);
 }
 
-function actionSuccess(locale: Locale, access: StaffAccess, resource: Resource): never {
+function actionSuccess(locale: Locale, access: StaffAccess, resource: Resource, slug?: string): never {
   revalidatePath(`/${locale}/admin/content/${resource}`);
+  for (const loc of routing.locales) {
+    revalidatePath(`/${loc}/${resource}`);
+    revalidatePath(`/${loc}/pricing`);
+    revalidatePath(`/${loc}`);
+    if (slug) {
+      revalidatePath(`/${loc}/${resource}/${slug}`);
+    }
+  }
+  revalidatePath(`/${resource}`);
+  revalidatePath("/pricing");
+  revalidatePath("/");
   redirect(`${resourcePath(access, resource)}?saved=1`);
 }
 
@@ -53,22 +64,30 @@ export async function saveService(formData: FormData) {
   const nameEn = text(formData, "name_en");
   const slug = normalizeSlug(text(formData, "slug") || nameEn);
   if (!nameEn || !slug) actionError(access, "services", "invalidInput");
+  const isPublished = checkbox(formData, "is_published");
+  const rawSummaryEn = optionalText(formData, "summary_en");
+  const rawBodyEn = optionalText(formData, "body_en");
+  const summaryEn = rawSummaryEn || (isPublished ? nameEn : null);
+  const bodyEn = rawBodyEn || (isPublished ? (rawSummaryEn || nameEn) : null);
   const payload = {
-    slug, name_en: nameEn,
+    slug,
+    name_en: nameEn,
     name_bn: optionalText(formData, "name_bn"),
-    summary_en: optionalText(formData, "summary_en"), summary_bn: optionalText(formData, "summary_bn"),
-    body_en: optionalText(formData, "body_en"), body_bn: optionalText(formData, "body_bn"),
+    summary_en: summaryEn,
+    summary_bn: optionalText(formData, "summary_bn"),
+    body_en: bodyEn,
+    body_bn: optionalText(formData, "body_bn"),
     icon: optionalText(formData, "icon"),
     pricing_model: text(formData, "pricing_model") || "custom",
     starting_from_usd: decimal(formData, "starting_from_usd"),
     sort_order: integer(formData, "sort_order"),
-    is_published: checkbox(formData, "is_published"),
+    is_published: isPublished,
   };
   const result = id && validId(id)
     ? await supabase.from("services").update(payload).eq("id", id)
     : await supabase.from("services").insert(payload);
   if (result.error) actionError(access, "services", contentErrorKey(result.error));
-  actionSuccess(locale, access, "services");
+  actionSuccess(locale, access, "services", slug);
 }
 
 export async function setServiceArchived(formData: FormData) {
