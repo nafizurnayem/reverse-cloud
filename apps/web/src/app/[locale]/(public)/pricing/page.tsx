@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SERVICES_CATALOG } from "@/lib/services-catalog";
+import { getPublishedServices } from "@/lib/services-server";
 import {
   Briefcase,
   Calendar,
@@ -35,9 +35,10 @@ export default async function PricingPage({ params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, tDetail] = await Promise.all([
+  const [t, tDetail, services] = await Promise.all([
     getTranslations({ locale, namespace: "Pricing" }),
     getTranslations({ locale, namespace: "ServiceDetail" }),
+    getPublishedServices(),
   ]);
 
   const modelLabels: Record<string, string> = {
@@ -153,7 +154,7 @@ export default async function PricingPage({ params }: Props) {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {SERVICES_CATALOG.map((service) => {
+          {services.map((service) => {
             const name = locale === "bn" ? service.name_bn : service.name_en;
             const price = service.starting_from_usd
               ? `$${service.starting_from_usd.toLocaleString()} USD`

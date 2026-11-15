@@ -10,7 +10,7 @@ import {
   getAllServiceSlugs,
   SERVICES_CATALOG,
 } from "@/lib/services-catalog";
-import { getServiceBySlug } from "@/lib/services-server";
+import { getPublishedServices, getServiceBySlug } from "@/lib/services-server";
 
 import {
   ArrowLeft,
@@ -86,9 +86,10 @@ export default async function ServiceDetailPage({ params }: Props) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, service] = await Promise.all([
+  const [t, service, allServices] = await Promise.all([
     getTranslations({ locale, namespace: "ServiceDetail" }),
     getServiceBySlug(slug),
+    getPublishedServices(),
   ]);
 
   if (!service) {
@@ -120,7 +121,9 @@ export default async function ServiceDetailPage({ params }: Props) {
     : t("customQuote");
 
   // Related other services
-  const otherServices = SERVICES_CATALOG.filter((s) => s.slug !== service.slug).slice(0, 3);
+  const otherServices = (allServices.length > 0 ? allServices : SERVICES_CATALOG)
+    .filter((s) => s.slug !== service.slug)
+    .slice(0, 3);
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20 lg:px-8">

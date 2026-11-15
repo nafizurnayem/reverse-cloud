@@ -36,7 +36,7 @@ export default async function ServicesPage({ params, searchParams }: { params: P
           <SelectField label={t("fields.pricingModel")} name="pricing_model" defaultValue={selected?.pricing_model ?? "custom"}><option value="fixed">{t("options.fixed")}</option><option value="hourly">{t("options.hourly")}</option><option value="retainer">{t("options.retainer")}</option><option value="custom">{t("options.custom")}</option></SelectField>
           <Field label={t("fields.startingUsd")} name="starting_from_usd" type="number" min="0" step="0.01" defaultValue={selected?.starting_from_usd} />
           <Field label={t("fields.sortOrder")} name="sort_order" type="number" defaultValue={selected?.sort_order ?? 0} />
-          <CheckboxField label={t("fields.published")} name="is_published" defaultChecked={selected?.is_published} hint={t("hints.servicePublish")} />
+          <CheckboxField label={t("fields.published")} name="is_published" defaultChecked={selected ? selected.is_published : true} hint={t("hints.servicePublish")} />
           <FormActions saveLabel={t("save")} cancelLabel={t("cancel")} cancelHref="/admin/content/services" />
         </form>
       </EditorPanel>
