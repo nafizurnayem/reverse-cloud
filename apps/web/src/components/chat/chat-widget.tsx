@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   Bot,
@@ -13,12 +13,14 @@ import {
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
 import { isCancellationRequest, restrictedChatReply } from "@/lib/chat/response-policy";
 import { parseChatStream } from "@/lib/chat/stream-parser";
+import { ChatRequestError, requestChatResponse } from "@/lib/chat/request";
 import {
   createMockChatResponse,
   type MockStreamScenario,
 } from "@/lib/chat/mock-stream";
 import { ChatMessageList } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
+import { ChatSecurityCheck } from "./chat-security-check";
 import { FallbackState } from "./cards";
 
 const welcomeNotificationKey = "rc_chat_welcome_notified_v2";
@@ -120,9 +122,42 @@ export function ChatWidget({
   });
   const [isStreaming, setIsStreaming] = useState(false);
   const [fallbackMode, setFallbackMode] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const activeRequest = useRef<AbortController | null>(null);
+  const verification = useRef<{
+    resolve: (token: string) => void;
+    reject: (error: Error) => void;
+  } | null>(null);
   const [selectedMockScenario, setSelectedMockScenario] = useState<MockStreamScenario>("greeting");
 
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+
+  useEffect(() => () => activeRequest.current?.abort(), []);
+
+  const handleVerified = useCallback((token: string) => {
+    verification.current?.resolve(token);
+  }, []);
+
+  const handleVerificationError = useCallback(() => {
+    verification.current?.reject(new ChatRequestError("turnstile_failed", 403));
+  }, []);
+
+  async function verifyChat(signal: AbortSignal) {
+    if (!turnstileSiteKey) throw new ChatRequestError("protection_unavailable", 503);
+    signal.throwIfAborted();
+    setIsVerifying(true);
+    const cancel = () => verification.current?.reject(new DOMException("Aborted", "AbortError"));
+    try {
+      return await new Promise<string>((resolve, reject) => {
+        verification.current = { resolve, reject };
+        signal.addEventListener("abort", cancel, { once: true });
+      });
+    } finally {
+      signal.removeEventListener("abort", cancel);
+      verification.current = null;
+      setIsVerifying(false);
+    }
+  }
 
   // Browsers require a visitor gesture before allowing audible playback.
   // Prime audio on the first ordinary interaction and play a queued welcome
@@ -268,6 +303,8 @@ export function ChatWidget({
   }
 
   function handleReset() {
+    activeRequest.current?.abort();
+    activeRequest.current = null;
     setMessages([]);
     setFallbackMode(false);
     setIsStreaming(false);
@@ -359,6 +396,8 @@ export function ChatWidget({
     }
     setMessages([...updatedMessages, assistantMsg]);
     setIsStreaming(true);
+    const controller = new AbortController();
+    activeRequest.current = controller;
 
     try {
       let response: Response;
@@ -391,19 +430,16 @@ export function ChatWidget({
           locale: effectiveLocale,
         });
       } else {
-        // Live API call
-        response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            messages: updatedMessages.map((m) => ({
-              role: m.role === "assistant" ? "assistant" : "user",
-              content: m.content,
-            })),
-            locale: effectiveLocale,
-          }),
-        });
+        response = await requestChatResponse({
+          messages: updatedMessages.filter((m) => m.content.trim()).slice(-50).map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: m.content,
+          })),
+          locale: effectiveLocale,
+        }, () => verifyChat(controller.signal), controller.signal);
       }
+
+      if (controller.signal.aborted) return;
 
       // Check HTTP error or kill switch
       if (!response.ok || !response.body) {
@@ -444,6 +480,7 @@ export function ChatWidget({
       const streamedCards: ChatCard[] = [];
 
       for await (const event of parseChatStream(response.body)) {
+        if (controller.signal.aborted) return;
         if (event.event === "text_delta") {
           streamedText += event.data.text;
           setMessages((prev) =>
@@ -481,23 +518,42 @@ export function ChatWidget({
             : m,
         ),
       );
-    } catch {
-      setFallbackMode(true);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const recoverable = error instanceof ChatRequestError && error.status < 500;
+      setFallbackMode(!recoverable);
+      let errorMessage = isBn
+        ? "চ্যাট সেবা সাময়িকভাবে অনুপলব্ধ। যোগাযোগ ফর্ম ব্যবহার করুন।"
+        : "Live chat service is temporarily unavailable. Please connect via our contact form.";
+      if (error instanceof ChatRequestError && error.status === 403) {
+        errorMessage = isBn
+          ? "নিরাপত্তা যাচাই সম্পূর্ণ হয়নি। অনুগ্রহ করে আবার বার্তা পাঠান।"
+          : "Security verification was not completed. Please send your message again.";
+      } else if (error instanceof ChatRequestError && error.status === 429) {
+        errorMessage = isBn
+          ? "একটু অপেক্ষা করে আবার বার্তা পাঠান।"
+          : "Please wait a moment before sending another message.";
+      } else if (recoverable) {
+        errorMessage = isBn
+          ? "বার্তাটি পাঠানো যায়নি। নতুন চ্যাট শুরু করে আবার চেষ্টা করুন।"
+          : "Your message could not be sent. Start a new chat and try again.";
+      }
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsgId
             ? {
                 ...m,
                 isStreaming: false,
-                error: isBn
-                  ? "নেটওয়ার্ক ত্রুটি। যোগাযোগ ফর্ম ব্যবহার করুন।"
-                  : "Network error occurred. Please use our contact form.",
+                error: errorMessage,
               }
             : m,
         ),
       );
     } finally {
-      setIsStreaming(false);
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setIsStreaming(false);
+      }
     }
   }
 
@@ -649,11 +705,21 @@ export function ChatWidget({
                 onBookingCancelled={handleBookingCancelled}
               />
 
+              {isVerifying && (
+                <ChatSecurityCheck
+                  siteKey={turnstileSiteKey}
+                  locale={effectiveLocale}
+                  onVerified={handleVerified}
+                  onError={handleVerificationError}
+                />
+              )}
+
               {/* Fallback Banner rendered once at container level when in Error/Fallback Mode */}
               {fallbackMode && (
                 <div className="p-3 border-t bg-card">
                   <FallbackState
                     locale={effectiveLocale}
+                    siteKey={turnstileSiteKey}
                     onSuccess={() => setFallbackMode(false)}
                   />
                 </div>
