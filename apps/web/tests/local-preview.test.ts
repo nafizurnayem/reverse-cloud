@@ -7,8 +7,13 @@ vi.mock("@/lib/ratelimit", () => ({
   requestIp: () => "192.0.2.1",
   limitPreviewChatRequests: mocks.limit,
 }));
+vi.mock("@/lib/services-server", async () => {
+  const { SERVICES_CATALOG } = await import("../src/lib/services-catalog");
+  return { getPublishedServices: async () => SERVICES_CATALOG };
+});
 
 import { localPreviewChat } from "../src/lib/chat/local-preview";
+import { SERVICES_CATALOG } from "../src/lib/services-catalog";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -92,20 +97,20 @@ describe("local Ollama preview", () => {
     expect(body.options).toEqual({ num_ctx: 1_024, num_predict: 48 });
   });
 
-  it("answers broad service questions from the catalog without model latency", async () => {
+  it.each(["services", "What services does Reverse Cloud provide?", "I want to book a service"])("lists services before asking for a booking choice for %s", async (content) => {
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",
       body: JSON.stringify({
         locale: "en",
-        messages: [{ role: "user", content: "What services does Reverse Cloud provide?" }],
+        messages: [{ role: "user", content }],
       }),
     });
     const response = await localPreviewChat(request);
     expect(response.status).toBe(200);
     const payload = await response.json();
-    expect(payload.reply).toContain("Website Development");
-    expect(payload.reply).toContain("AI Chatbots & Agents");
-    expect(payload.reply).toContain("/services");
+    for (const service of SERVICES_CATALOG) expect(payload.reply).toContain(service.name_en);
+    expect(payload.reply).toMatch(/Which service would you like to book\?$/);
+    expect(payload.cards).toBeUndefined();
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 

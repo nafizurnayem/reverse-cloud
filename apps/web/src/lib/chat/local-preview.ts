@@ -3,7 +3,8 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { limitPreviewChatRequests, requestIp } from "@/lib/ratelimit";
 import { validateChatPayload } from "@/lib/chat/values";
-import { directPublicKnowledgeReply, retrievePublicKnowledge } from "@/lib/chat/public-knowledge";
+import { directPublicKnowledgeReply, isServiceListRequest, retrievePublicKnowledge } from "@/lib/chat/public-knowledge";
+import { getPublishedServices } from "@/lib/services-server";
 import { directChatReply, ensureUsefulChatReply, isBookingRequest, isCancellationRequest, restrictedChatReply } from "@/lib/chat/response-policy";
 
 const maxBodyBytes = 16_000;
@@ -69,6 +70,10 @@ export async function localPreviewChat(request: NextRequest) {
         cards: [{ type: "booking_cancellation" }],
       }, { headers: { "cache-control": "no-store" } });
     }
+    if (isServiceListRequest(latest.content)) {
+      const reply = directPublicKnowledgeReply(latest.content, validated.data.locale, await getPublishedServices());
+      return NextResponse.json({ reply }, { headers: { "cache-control": "no-store" } });
+    }
     if (isBookingRequest(latest.content)) {
       return NextResponse.json({
         reply: validated.data.locale === "bn"
@@ -84,11 +89,6 @@ export async function localPreviewChat(request: NextRequest) {
     if (directReply) {
       return NextResponse.json({ reply: directReply }, { headers: { "cache-control": "no-store" } });
     }
-    const directKnowledgeReply = directPublicKnowledgeReply(latest.content, validated.data.locale);
-    if (directKnowledgeReply) {
-      return NextResponse.json({ reply: directKnowledgeReply }, { headers: { "cache-control": "no-store" } });
-    }
-
     const knowledge = retrievePublicKnowledge(latest.content, validated.data.locale);
     const groundedQuestion = knowledge
       ? `Reference facts:\n${knowledge}\n\nQuestion: ${latest.content}`

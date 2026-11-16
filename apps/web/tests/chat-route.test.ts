@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   from: vi.fn(),
   maybeSingle: vi.fn(),
+  services: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -19,6 +20,7 @@ vi.mock("@/lib/ratelimit", () => ({
 }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.verify }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/services-server", () => ({ getPublishedServices: mocks.services }));
 
 import { POST } from "../src/app/api/chat/route";
 
@@ -61,6 +63,10 @@ beforeEach(() => {
   vi.stubEnv("CHAT_COOKIE_SECRET", "0123456789abcdef0123456789abcdef");
   mocks.limit.mockResolvedValue(allowedRate());
   mocks.verify.mockResolvedValue({ success: true, errors: [] });
+  mocks.services.mockResolvedValue([
+    { name_en: "Website Development", name_bn: "ওয়েবসাইট ডেভেলপমেন্ট", sort_order: 10 },
+    { name_en: "Custom Integration", name_bn: "কাস্টম ইন্টিগ্রেশন", sort_order: 20 },
+  ]);
   const clientQuery = {
     select: vi.fn(),
     eq: vi.fn(),
@@ -89,6 +95,31 @@ afterEach(() => {
 });
 
 describe("POST /api/chat", () => {
+  it("answers services with the complete published catalog and a booking question", async () => {
+    const response = await POST(request({
+      messages: [{ role: "user", content: "services" }],
+      locale: "en",
+    }, { token: "turnstile-token" }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      reply: "Our services\n\n• Website Development\n• Custom Integration\n\nWhich service would you like to book?",
+    });
+    expect(response.cookies.get("rc_chat_session")).toBeDefined();
+    expect(mocks.services).toHaveBeenCalledOnce();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("requires verification before answering a new session's services request", async () => {
+    const response = await POST(request({
+      messages: [{ role: "user", content: "services" }],
+      locale: "en",
+    }));
+
+    expect(response.status).toBe(403);
+    expect(mocks.services).not.toHaveBeenCalled();
+  });
+
   it("establishes a protected cookie session and signs the normalized upstream request", async () => {
     const response = await POST(request(payload, { token: "turnstile-token" }));
     expect(response.status).toBe(200);

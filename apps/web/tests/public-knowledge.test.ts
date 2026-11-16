@@ -2,9 +2,47 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { retrievePublicKnowledge } from "../src/lib/chat/public-knowledge";
+import { directPublicKnowledgeReply, retrievePublicKnowledge } from "../src/lib/chat/public-knowledge";
+import { SERVICES_CATALOG } from "../src/lib/services-catalog";
 
 describe("temporary public-site retrieval", () => {
+  it.each(["services", "Services?", "your services please", "Show all services", "I want to book a service"])(
+    "lists every service and asks for a booking choice for %s",
+    (query) => {
+      const reply = directPublicKnowledgeReply(query, "en");
+      for (const service of SERVICES_CATALOG) expect(reply).toContain(`• ${service.name_en}\n`);
+      expect(reply?.split("\n").filter((line) => line.startsWith("• "))).toHaveLength(SERVICES_CATALOG.length);
+      expect(reply).toMatch(/Which service would you like to book\?$/);
+    },
+  );
+
+  it.each(["সেবা", "সার্ভিস", "আপনাদের সেবাগুলো", "সব সেবা", "services"])(
+    "lists every service in Bengali for %s",
+    (query) => {
+      const reply = directPublicKnowledgeReply(query, "bn");
+      for (const service of SERVICES_CATALOG) expect(reply).toContain(`• ${service.name_bn}\n`);
+      expect(reply).toMatch(/আপনি কোন সেবাটি বুক করতে চান\?$/);
+    },
+  );
+
+  it.each([
+    "Tell me about AdSense services",
+    "Book Website Development",
+    "Book AI Chatbots & Agents services",
+    "Tell me about marketing services",
+    "What is the weather?",
+  ])("preserves specific service and other requests for %s", (query) => {
+    expect(directPublicKnowledgeReply(query, "en")).toBeNull();
+  });
+
+  it("uses the supplied published catalog in its display order", () => {
+    const reply = directPublicKnowledgeReply("services", "en", [
+      { name_en: "Custom Integration", name_bn: "কাস্টম ইন্টিগ্রেশন", sort_order: 20 },
+      { name_en: "Cloud Support", name_bn: "ক্লাউড সাপোর্ট", sort_order: 10 },
+    ]);
+    expect(reply).toBe("Our services\n\n• Cloud Support\n• Custom Integration\n\nWhich service would you like to book?");
+  });
+
   it("retrieves a cited service price for an English question", () => {
     const excerpt = retrievePublicKnowledge("What is the starting price for Website Development?", "en");
     expect(excerpt).toMatch(/^Website Development /);

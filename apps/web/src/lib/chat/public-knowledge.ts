@@ -1,6 +1,6 @@
 import { BLOG_CATALOG } from "@/lib/blog-catalog";
 import { PORTFOLIO_CATALOG } from "@/lib/portfolio-catalog";
-import { SERVICES_CATALOG } from "@/lib/services-catalog";
+import { SERVICES_CATALOG, type ServiceDetailItem } from "@/lib/services-catalog";
 
 type Locale = "en" | "bn";
 type Document = { title: string; content: string; path: string };
@@ -45,20 +45,48 @@ function terms(value: string) {
   return [...new Set((value.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((term) => term.length > 2 && !stopwords.has(term)))];
 }
 
-export function directPublicKnowledgeReply(query: string, locale: Locale): string | null {
-  const normalized = query.toLocaleLowerCase().replace(/\s+/g, " ").trim();
-  const asksForServices = locale === "bn"
-    ? /(?:কী|কি|কোন|তালিকা|সম্পর্কে).{0,28}(?:সেবা|সার্ভিস)|(?:সেবা|সার্ভিস).{0,28}(?:কী|কি|কোন)/u.test(normalized)
-    : /\b(?:what|which|list|show|tell).{0,36}\bservices?\b|\bservices?\b.{0,24}\b(?:offer|provide|available)\b|\bwhat do you do\b/u.test(normalized);
-  if (!asksForServices) return null;
+function normalizeServiceQuery(query: string) {
+  return query.toLocaleLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  const names = SERVICES_CATALOG
+export function isServiceListRequest(query: string): boolean {
+  const normalized = normalizeServiceQuery(query);
+  const asksForAll = /\b(?:all|every|full|complete)\b.{0,24}\bservices?\b/u.test(normalized)
+    || /(?:সব|সকল|সম্পূর্ণ).{0,16}(?:সেবা|সার্ভিস)/u.test(normalized);
+  if (asksForAll) return true;
+
+  // A named service should keep its own details and booking flow.
+  const namesSpecificService = SERVICES_CATALOG.some((service) =>
+    normalized.includes(normalizeServiceQuery(service.name_en))
+    || normalized.includes(normalizeServiceQuery(service.name_bn))
+    || normalized.includes(service.slug.replaceAll("-", " ")),
+  );
+  if (namesSpecificService) return false;
+
+  return /^(?:(?:please|your|our|available)\s+)*services?(?:\s+please)?$/u.test(normalized)
+    || /\b(?:what|which|list|show|tell).{0,36}\bservices?\b|\bservices?\b.{0,24}\b(?:offer|provide|available)\b|\bwhat do you do\b/u.test(normalized)
+    || /\b(?:want|need|book)\b.{0,24}\b(?:a\s+)?services?\b/u.test(normalized)
+    || /^(?:(?:আপনাদের|আপনার)\s*)?(?:সেবা(?:গুলো|সমূহ)?|সার্ভিস(?:গুলো|সমূহ)?)$/u.test(normalized)
+    || /(?:কী|কি|কোন|তালিকা|সম্পর্কে).{0,28}(?:সেবা|সার্ভিস)|(?:সেবা|সার্ভিস).{0,28}(?:কী|কি|কোন|চাই)/u.test(normalized);
+}
+
+export function directPublicKnowledgeReply(
+  query: string,
+  locale: Locale,
+  services: Pick<ServiceDetailItem, "name_en" | "name_bn" | "sort_order">[] = SERVICES_CATALOG,
+): string | null {
+  if (!isServiceListRequest(query)) return null;
+
+  const names = services
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map((service) => locale === "bn" ? service.name_bn : service.name_en);
+    .map((service) => `• ${locale === "bn" ? service.name_bn : service.name_en}`);
   return locale === "bn"
-    ? `আমাদের সেবাগুলো হলো: ${names.join("、")}। বিস্তারিত জানতে /services দেখুন, অথবা আপনার প্রজেক্ট সম্পর্কে বললে আমি উপযুক্ত সেবা বেছে দিতে পারি।`
-    : `Our services are: ${names.join(", ")}. See /services for details, or tell me about your project and I can suggest the best fit.`;
+    ? `আমাদের সেবাগুলো\n\n${names.join("\n")}\n\nআপনি কোন সেবাটি বুক করতে চান?`
+    : `Our services\n\n${names.join("\n")}\n\nWhich service would you like to book?`;
 }
 
 export function retrievePublicKnowledge(query: string, locale: Locale): string {
