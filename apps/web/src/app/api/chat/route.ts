@@ -7,6 +7,9 @@ import {
 } from "@/lib/chat/session";
 import { validateChatPayload } from "@/lib/chat/values";
 import { localPreviewChat } from "@/lib/chat/local-preview";
+import { directPublicKnowledgeReply, isServiceListRequest } from "@/lib/chat/public-knowledge";
+import { restrictedChatReply } from "@/lib/chat/response-policy";
+import { getPublishedServices } from "@/lib/services-server";
 import {
   limitChatRequests,
   requestIp,
@@ -176,6 +179,12 @@ export async function POST(request: NextRequest) {
       }
       return json({ error: "Security check failed", code: "turnstile_failed" }, 403, rate);
     }
+  }
+
+  const latestUserMessage = validated.data.messages.findLast((message) => message.role === "user")?.content ?? "";
+  if (!restrictedChatReply(latestUserMessage, validated.data.locale) && isServiceListRequest(latestUserMessage)) {
+    const reply = directPublicKnowledgeReply(latestUserMessage, validated.data.locale, await getPublishedServices());
+    return json({ reply }, 200, rate, session);
   }
 
   const clientId = await authenticatedClientId();
