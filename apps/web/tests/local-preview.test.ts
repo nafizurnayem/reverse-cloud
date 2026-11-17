@@ -14,11 +14,30 @@ vi.mock("@/lib/services-server", async () => {
 
 import { localPreviewChat } from "../src/lib/chat/local-preview";
 import { SERVICES_CATALOG } from "../src/lib/services-catalog";
+import { parseChatStream } from "../src/lib/chat/stream-parser";
+
+function ollamaResponse(content: string | string[]) {
+  const chunks = Array.isArray(content) ? content : [content];
+  return new Response([
+    ...chunks.map((chunk) => JSON.stringify({ message: { content: chunk }, done: false })),
+    JSON.stringify({ message: { content: "" }, done: true }),
+    "",
+  ].join("\n"));
+}
+
+async function streamedReply(response: Response) {
+  let reply = "";
+  expect(response.headers.get("content-type")).toContain("text/event-stream");
+  for await (const event of parseChatStream(response.body!)) {
+    if (event.event === "text_delta") reply += event.data.text;
+  }
+  return reply;
+}
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.limit.mockResolvedValue({ allowed: true });
-  mocks.fetch.mockResolvedValue(new Response(JSON.stringify({ message: { content: "Starts at USD 1200." } })));
+  mocks.fetch.mockResolvedValue(ollamaResponse("Starts at USD 1200."));
   vi.stubGlobal("fetch", mocks.fetch);
 });
 
@@ -88,13 +107,37 @@ describe("local Ollama preview", () => {
     });
     const response = await localPreviewChat(request);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ reply: "Starts at USD 1200." });
+    expect(await streamedReply(response)).toBe("Starts at USD 1200.");
     const body = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
     expect(body.messages.at(-1).content).toContain("Starting price: USD 1200");
     expect(body.messages.at(-1).content).toContain("/services/website-development");
     expect(body.model).toBe("llama3.2:1b-instruct-q4_K_M");
+    expect(body.stream).toBe(true);
     expect(body.keep_alive).toBe("24h");
     expect(body.options).toEqual({ num_ctx: 1_024, num_predict: 48 });
+  });
+
+  it("streams safe model sentences as incremental text deltas", async () => {
+    mocks.fetch.mockResolvedValueOnce(ollamaResponse([
+      "First safe sentence. ",
+      "Second safe sentence.",
+    ]));
+    const response = await localPreviewChat(new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "Explain this unusual project requirement" }],
+      }),
+    }));
+
+    const events = [];
+    for await (const event of parseChatStream(response.body!)) events.push(event);
+    expect(events).toEqual([
+      { event: "message_start", data: {} },
+      { event: "text_delta", data: { text: "First safe sentence." } },
+      { event: "text_delta", data: { text: " Second safe sentence." } },
+      { event: "message_end", data: { reason: "stop" } },
+    ]);
   });
 
   it.each(["services", "What services does Reverse Cloud provide?", "I want to book a service"])("lists services before asking for a booking choice for %s", async (content) => {
@@ -214,7 +257,7 @@ describe("local Ollama preview", () => {
   });
 
   it("replaces an unhelpful model answer with a useful next step", async () => {
-    mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ message: { content: "I don't know." } })));
+    mocks.fetch.mockResolvedValueOnce(ollamaResponse("I don't know."));
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",
       body: JSON.stringify({
@@ -223,15 +266,15 @@ describe("local Ollama preview", () => {
       }),
     });
     const response = await localPreviewChat(request);
-    const payload = await response.json();
-    expect(payload.reply).toContain("couldn’t verify");
-    expect(payload.reply).toContain("connect you with the team");
+    const reply = await streamedReply(response);
+    expect(reply).toContain("couldn’t verify");
+    expect(reply).toContain("connect you with the team");
   });
 
   it("redacts contact details and secret assignments from model output", async () => {
-    mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({
-      message: { content: "Email admin@example.com, call +880 1712-345678, api_key=should-not-leak." },
-    })));
+    mocks.fetch.mockResolvedValueOnce(ollamaResponse(
+      "Email admin@example.com, call +880 1712-345678, api_key=should-not-leak.",
+    ));
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",
       body: JSON.stringify({
@@ -240,15 +283,15 @@ describe("local Ollama preview", () => {
       }),
     });
     const response = await localPreviewChat(request);
-    expect(await response.json()).toEqual({
-      reply: "Email [REDACTED_EMAIL], call [REDACTED_PHONE], [REDACTED_SECRET]",
-    });
+    expect(await streamedReply(response)).toBe(
+      "Email [REDACTED_EMAIL], call [REDACTED_PHONE], [REDACTED_SECRET]",
+    );
   });
 
   it("removes a model fragment left after the fast output cap", async () => {
-    mocks.fetch.mockResolvedValueOnce(new Response(JSON.stringify({
-      message: { content: "Use Next.js with PostgreSQL. Another unfinished recommendation that" },
-    })));
+    mocks.fetch.mockResolvedValueOnce(ollamaResponse(
+      "Use Next.js with PostgreSQL. Another unfinished recommendation that",
+    ));
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",
       body: JSON.stringify({
@@ -257,6 +300,6 @@ describe("local Ollama preview", () => {
       }),
     });
     const response = await localPreviewChat(request);
-    expect(await response.json()).toEqual({ reply: "Use Next.js with PostgreSQL." });
+    expect(await streamedReply(response)).toBe("Use Next.js with PostgreSQL.");
   });
 });

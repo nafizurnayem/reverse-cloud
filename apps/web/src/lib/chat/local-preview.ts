@@ -18,6 +18,76 @@ import { directChatReply, ensureUsefulChatReply, isBookingRequest, isCancellatio
 const maxBodyBytes = 16_000;
 let busy = false;
 
+function sse(event: string, data: Record<string, unknown>) {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function streamOllamaReply(
+  body: ReadableStream<Uint8Array>,
+  locale: "en" | "bn",
+  finished: () => void,
+) {
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = body.getReader();
+      const decoder = new TextDecoder();
+      let lines = "";
+      let pendingText = "";
+      let emitted = false;
+
+      const emit = (text: string) => {
+        const safe = ensureUsefulChatReply(text, locale);
+        if (!safe) return;
+        controller.enqueue(encoder.encode(sse("text_delta", { text: `${emitted ? " " : ""}${safe}` })));
+        emitted = true;
+      };
+      const flushSentences = () => {
+        for (;;) {
+          const boundary = pendingText.search(/[.!?।](?=\s)/u);
+          if (boundary < 0) return;
+          emit(pendingText.slice(0, boundary + 1));
+          pendingText = pendingText.slice(boundary + 1).trimStart();
+        }
+      };
+      const consumeLine = (line: string) => {
+        if (!line.trim()) return;
+        const payload = JSON.parse(line) as { error?: unknown; message?: { content?: unknown } };
+        if (typeof payload.error === "string") throw new Error("Ollama stream failed");
+        if (typeof payload.message?.content === "string") {
+          pendingText += payload.message.content;
+          flushSentences();
+        }
+      };
+
+      try {
+        controller.enqueue(encoder.encode(sse("message_start", {})));
+        for (;;) {
+          const { done, value } = await reader.read();
+          lines += decoder.decode(value, { stream: !done });
+          const parts = lines.split("\n");
+          lines = parts.pop() ?? "";
+          for (const line of parts) consumeLine(line);
+          if (done) break;
+        }
+        consumeLine(lines);
+        const remainder = pendingText.trim();
+        if (!emitted || /[.!?।]$/u.test(remainder)) emit(remainder);
+        controller.enqueue(encoder.encode(sse("message_end", { reason: "stop" })));
+      } catch {
+        controller.enqueue(encoder.encode(sse("error", {
+          code: "service_unavailable",
+          message: "Live chat service is temporarily unavailable.",
+        })));
+      } finally {
+        reader.releaseLock();
+        finished();
+        controller.close();
+      }
+    },
+  });
+}
+
 function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status, headers: { "cache-control": "no-store" } });
 }
@@ -64,6 +134,7 @@ export async function localPreviewChat(request: NextRequest) {
   if (busy) return error("The chatbot is busy; please try again shortly", 429);
 
   busy = true;
+  let streamOwnsBusy = false;
   try {
     const latest = messages.at(-1)!;
     const restrictedReply = restrictedChatReply(latest.content, validated.data.locale);
@@ -121,7 +192,7 @@ export async function localPreviewChat(request: NextRequest) {
           ...messages.slice(0, -1),
           { role: "user", content: groundedQuestion },
         ],
-        stream: false,
+        stream: true,
         keep_alive: "24h",
         options: { num_ctx: 1_024, num_predict: 48 },
       }),
@@ -129,17 +200,19 @@ export async function localPreviewChat(request: NextRequest) {
       cache: "no-store",
     });
     if (!response.ok) return error("Chatbot is unavailable", 502);
-    const result = await response.json() as { message?: { content?: unknown } };
-    if (typeof result.message?.content !== "string" || !result.message.content.trim()) {
-      return error("Chatbot returned an empty reply", 502);
-    }
-    return NextResponse.json(
-      { reply: ensureUsefulChatReply(result.message.content, validated.data.locale) },
-      { headers: { "cache-control": "no-store" } },
+    if (!response.body) return error("Chatbot returned an empty reply", 502);
+    streamOwnsBusy = true;
+    return new NextResponse(
+      streamOllamaReply(response.body, validated.data.locale, () => { busy = false; }),
+      { headers: {
+        "cache-control": "no-cache, no-transform",
+        "content-type": "text/event-stream",
+        "x-accel-buffering": "no",
+      } },
     );
   } catch {
     return error("Chatbot timed out or is unavailable", 502);
   } finally {
-    busy = false;
+    if (!streamOwnsBusy) busy = false;
   }
 }
