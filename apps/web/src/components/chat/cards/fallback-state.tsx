@@ -175,13 +175,13 @@ export function FallbackState({
         </label>
 
         {siteKey ? (
-          <div className="contact-turnstile py-1">
+          <div className="booking-turnstile py-1">
             <div
               className="cf-turnstile"
               data-sitekey={siteKey}
               data-action="contact"
               data-language={locale}
-              data-size="compact"
+              data-size="flexible"
             />
           </div>
         ) : null}
