@@ -3,7 +3,6 @@ import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
-  signInWithOAuth: vi.fn(),
   signInWithOtp: vi.fn(),
   exchangeCodeForSession: vi.fn(),
   getUser: vi.fn(),
@@ -21,11 +20,11 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
   continueWithClientAccount,
-  signInWithGoogle,
   signInWithMagicLink,
   signOut,
 } from "../src/app/[locale]/(auth)/actions";
 import { GET } from "../src/app/[locale]/(auth)/auth/callback/route";
+import { GET as completeGoogleSignIn } from "../src/app/[locale]/(auth)/auth/complete/route";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -33,7 +32,6 @@ beforeEach(() => {
   vi.stubEnv("TRUSTED_PUBLIC_ORIGINS", "");
   mocks.createClient.mockResolvedValue({
     auth: {
-      signInWithOAuth: mocks.signInWithOAuth,
       signInWithOtp: mocks.signInWithOtp,
       exchangeCodeForSession: mocks.exchangeCodeForSession,
       getUser: mocks.getUser,
@@ -47,10 +45,6 @@ beforeEach(() => {
   mocks.from.mockImplementation((table: string) => table === "staff_roles" ? staffQuery : clientQuery);
   mocks.staffLimit.mockResolvedValue({ data: [], error: null });
   mocks.clientSingle.mockResolvedValue({ data: null, error: null });
-  mocks.signInWithOAuth.mockResolvedValue({
-    data: { url: "https://project.supabase.co/auth/v1/authorize" },
-    error: null,
-  });
   mocks.signInWithOtp.mockResolvedValue({ data: { user: null, session: null }, error: null });
   mocks.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
   mocks.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
@@ -92,36 +86,6 @@ describe("magic-link start", () => {
 
     await expect(signInWithMagicLink("en", "https://evil.example", formData)).rejects.toThrow(
       "redirect:/login?error=magic_link_start_failed&next=%2F",
-    );
-  });
-});
-
-describe("Google OAuth start", () => {
-  it("uses the selected locale and safe destination in redirectTo", async () => {
-    await expect(signInWithGoogle("bn", "/bn/admin?tab=staff")).rejects.toThrow(
-      "redirect:https://project.supabase.co/auth/v1/authorize",
-    );
-    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
-      provider: "google",
-      options: {
-        redirectTo: "https://reverse-cloud.example/auth/callback?next=%2Fadmin%3Ftab%3Dstaff",
-        skipBrowserRedirect: true,
-      },
-    });
-  });
-
-  it("rejects an external post-login destination", async () => {
-    await expect(signInWithGoogle("en", "https://evil.example")).rejects.toThrow(
-      "redirect:https://project.supabase.co/auth/v1/authorize",
-    );
-    const call = mocks.signInWithOAuth.mock.calls[0][0];
-    expect(new URL(call.options.redirectTo).searchParams.get("next")).toBe("/");
-  });
-
-  it("returns a localized stable error when OAuth cannot start", async () => {
-    mocks.signInWithOAuth.mockResolvedValue({ data: { url: null }, error: new Error("provider disabled") });
-    await expect(signInWithGoogle("bn", "/bn/portal")).rejects.toThrow(
-      "redirect:/login?error=oauth_start_failed&next=%2Fportal",
     );
   });
 });
@@ -315,6 +279,35 @@ describe("OAuth callback", () => {
     expect(destination.searchParams.get("error")).toBe("invalid_or_expired_invite");
     expect(destination.searchParams.has("token")).toBe(false);
     expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+});
+
+describe("Google ID-token completion", () => {
+  const context = (locale: string) => ({ params: Promise.resolve({ locale }) });
+
+  it("finishes an existing browser session without an OAuth authorization redirect", async () => {
+    mocks.clientSingle.mockResolvedValue({ data: { id: "client-1" }, error: null });
+    const response = await completeGoogleSignIn(
+      new NextRequest("https://reverse-cloud.example/en/auth/complete?next=%2Fen%2Fservices"),
+      context("en"),
+    );
+
+    expect(mocks.getUser).toHaveBeenCalled();
+    expect(mocks.exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://reverse-cloud.example/services");
+  });
+
+  it("rejects external destinations and missing sessions safely", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: new Error("missing session") });
+    const response = await completeGoogleSignIn(
+      new NextRequest("https://reverse-cloud.example/bn/auth/complete?next=https://evil.example"),
+      context("bn"),
+    );
+
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.origin).toBe("https://reverse-cloud.example");
+    expect(destination.pathname).toBe("/login");
+    expect(destination.searchParams.get("error")).toBe("oauth_callback_failed");
   });
 });
 

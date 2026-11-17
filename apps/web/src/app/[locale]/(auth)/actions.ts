@@ -18,33 +18,6 @@ function checkedEmail(value: FormDataEntryValue | null) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
 }
 
-export async function signInWithGoogle(localeValue: string, nextValue: string) {
-  const locale = checkedLocale(localeValue);
-  const next = safePostLoginPath(nextValue, locale);
-
-  let providerUrl: string | null = null;
-  try {
-    const callback = new URL("/auth/callback", requireSiteUrl());
-    callback.searchParams.set("next", next);
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callback.toString(),
-        skipBrowserRedirect: true,
-      },
-    });
-    if (!error) providerUrl = data.url;
-  } catch {
-    // The localized login page displays a stable error without exposing details.
-  }
-
-  if (!providerUrl) {
-    redirect(`/login?error=oauth_start_failed&next=${encodeURIComponent(next)}`);
-  }
-  redirect(providerUrl);
-}
-
 export async function signInWithMagicLink(
   localeValue: string,
   nextValue: string,
