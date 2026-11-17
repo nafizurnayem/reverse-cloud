@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Bot,
   MessageSquare,
@@ -10,10 +10,18 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import { usePathname } from "@/i18n/navigation";
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
+import { chatPagePath, chatSuggestionKeys } from "@/lib/site-sections";
 import { isCancellationRequest, restrictedChatReply } from "@/lib/chat/response-policy";
 import { parseChatStream } from "@/lib/chat/stream-parser";
 import { ChatRequestError, requestChatResponse } from "@/lib/chat/request";
+import {
+  OPEN_CHAT_EVENT,
+  cleanLaunchPrompt,
+  readOpenChatRequest,
+  type OpenChatRequest,
+} from "@/lib/chat/launcher";
 import {
   createMockChatResponse,
   type MockStreamScenario,
@@ -111,6 +119,10 @@ export function ChatWidget({
   const activeLocale = useLocale() === "bn" ? "bn" : "en";
   const effectiveLocale = locale ?? activeLocale;
   const isBn = effectiveLocale === "bn";
+  const pathname = usePathname();
+  const tSuggestions = useTranslations("Chat.suggestions");
+  const quickPrompts = chatSuggestionKeys(pathname).map((key) => tSuggestions(key));
+  const pagePath = chatPagePath(pathname);
   const [isOpen, setIsOpen] = useState(initialOpen);
   const wasOpen = useRef(false);
   const pendingWelcomePopup = useRef(false);
@@ -131,6 +143,8 @@ export function ChatWidget({
   const [selectedMockScenario, setSelectedMockScenario] = useState<MockStreamScenario>("greeting");
 
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+  const [prefill, setPrefill] = useState<{ id: number; text: string }>();
+  const launchHandler = useRef<(request: OpenChatRequest) => void>(() => {});
 
   useEffect(() => () => activeRequest.current?.abort(), []);
 
@@ -196,8 +210,12 @@ export function ChatWidget({
         const searchParams = new URLSearchParams(window.location.search);
         const shouldOpen = searchParams.get("openChat") === "true";
         const proposalId = searchParams.get("confirmProposal");
+        // A link may suggest a message, but it is only prefilled: the visitor
+        // must press send, so a crafted URL can't speak for them.
+        const linkedPrompt = cleanLaunchPrompt(searchParams.get("chatPrompt"));
+        if (linkedPrompt) setPrefill({ id: Date.now(), text: linkedPrompt });
 
-        if (shouldOpen || proposalId) {
+        if (shouldOpen || proposalId || linkedPrompt) {
           setIsOpen(true);
           setIsMinimized(false);
           sessionStorage.setItem(welcomeNotificationKey, "1");
@@ -301,6 +319,25 @@ export function ChatWidget({
       // storage errors ignored
     }
   }
+
+  // Site buttons (AskAiButton) open the chat through a window event.
+  useEffect(() => {
+    launchHandler.current = (request) => {
+      handleOpenChat();
+      if (!request.prompt) return;
+      if (request.autoSend && !isStreaming && !isVerifying && !fallbackMode) {
+        void handleSendMessage(request.prompt);
+      } else {
+        setPrefill({ id: Date.now(), text: request.prompt });
+      }
+    };
+  });
+
+  useEffect(() => {
+    const onOpenChat = (event: Event) => launchHandler.current(readOpenChatRequest(event));
+    window.addEventListener(OPEN_CHAT_EVENT, onOpenChat);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpenChat);
+  }, []);
 
   function handleReset() {
     activeRequest.current?.abort();
@@ -436,6 +473,7 @@ export function ChatWidget({
             content: m.content,
           })),
           locale: effectiveLocale,
+          ...(pagePath ? { page: { path: pagePath } } : {}),
         }, () => verifyChat(controller.signal), controller.signal);
       }
 
@@ -731,6 +769,8 @@ export function ChatWidget({
                   onSendMessage={handleSendMessage}
                   isStreaming={isStreaming}
                   locale={effectiveLocale}
+                  quickPrompts={quickPrompts}
+                  prefill={prefill}
                 />
               )}
             </>

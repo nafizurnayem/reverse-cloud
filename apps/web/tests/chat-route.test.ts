@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   maybeSingle: vi.fn(),
   services: vi.fn(),
+  serviceBySlug: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -20,7 +21,10 @@ vi.mock("@/lib/ratelimit", () => ({
 }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.verify }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/services-server", () => ({ getPublishedServices: mocks.services }));
+vi.mock("@/lib/services-server", () => ({
+  getPublishedServices: mocks.services,
+  getServiceBySlug: mocks.serviceBySlug,
+}));
 
 import { POST } from "../src/app/api/chat/route";
 
@@ -175,6 +179,67 @@ describe("POST /api/chat", () => {
         .update(`${new Headers(init.headers).get("x-ai-timestamp")}.${upstreamBody}`)
         .digest("hex"),
     );
+  });
+
+  it("sends enabled site sections and no page context when the browser sends no page", async () => {
+    await POST(request(payload, { token: "turnstile-token" }));
+    const parsed = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
+    expect(parsed.page_context).toBeUndefined();
+    expect(parsed.page).toBeUndefined();
+    expect(parsed.enabled_sections).toEqual(expect.arrayContaining(["services", "portfolio", "contact"]));
+    expect(parsed.enabled_content_types).toEqual(["service", "portfolio", "blog"]);
+  });
+
+  it("resolves a service page into server-verified page context", async () => {
+    mocks.serviceBySlug.mockResolvedValue({ name_en: "AI Automation", name_bn: "এআই অটোমেশন" });
+
+    await POST(request(
+      { ...payload, locale: "en", page: { path: "/services/ai-automation" } },
+      { token: "turnstile-token" },
+    ));
+
+    expect(mocks.serviceBySlug).toHaveBeenCalledWith("ai-automation");
+    const parsed = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
+    expect(parsed.page).toBeUndefined();
+    expect(parsed.page_context).toEqual({
+      section: "services",
+      path: "/services/ai-automation",
+      slug: "ai-automation",
+      content_type: "service",
+      title: "AI Automation",
+    });
+  });
+
+  it("falls back to the section when a detail slug is not published", async () => {
+    mocks.serviceBySlug.mockResolvedValue(null);
+
+    await POST(request(
+      { ...payload, page: { path: "/services/not-real" } },
+      { token: "turnstile-token" },
+    ));
+
+    const parsed = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
+    expect(parsed.page_context).toEqual({ section: "services", path: "/services" });
+  });
+
+  it("drops page context for pages outside the public site sections", async () => {
+    await POST(request(
+      { ...payload, page: { path: "/admin/clients" } },
+      { token: "turnstile-token" },
+    ));
+
+    const parsed = JSON.parse(String(mocks.fetch.mock.calls[0][1].body));
+    expect(parsed.page_context).toBeUndefined();
+  });
+
+  it("rejects a malformed page path", async () => {
+    const response = await POST(request(
+      { ...payload, page: { path: "https://evil.example/" } },
+      { token: "turnstile-token" },
+    ));
+
+    expect(response.status).toBe(400);
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("reuses the signed conversation cookie without another Turnstile challenge", async () => {

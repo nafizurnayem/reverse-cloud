@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AskAiButton } from "@/components/chat/ask-ai-button";
 import {
   getAllPortfolioSlugs,
   getPortfolioItemBySlug,
@@ -64,8 +65,9 @@ export default async function PortfolioDetailPage({ params }: Props) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, item] = await Promise.all([
+  const [t, tAsk, item] = await Promise.all([
     getTranslations({ locale, namespace: "Portfolio" }),
+    getTranslations({ locale, namespace: "Chat.ask" }),
     getPortfolioItemBySlug(slug),
   ]);
 
@@ -237,6 +239,11 @@ export default async function PortfolioDetailPage({ params }: Props) {
             <span>{t("startProject")}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
+          <AskAiButton
+            label={tAsk("portfolioLabel")}
+            prompt={tAsk("portfolioPrompt", { project: title })}
+            className="h-11 px-6"
+          />
           <Link
             href="/portfolio"
             className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-background px-6 text-sm font-semibold text-foreground transition-all hover:bg-accent hover:text-accent-foreground"

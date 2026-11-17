@@ -770,7 +770,34 @@
     "newChat": "New Chat",
     "resetNotice": "Chat has been reset. How can I assist you with your project?",
     "scenario": "Scenario:",
-    "offlineNotice": "Live chat service is temporarily unavailable. Please connect via our contact form."
+    "offlineNotice": "Live chat service is temporarily unavailable. Please connect via our contact form.",
+    "suggestions": {
+      "whatServices": "What services do you offer?",
+      "getEstimate": "Can I get a project estimate?",
+      "bookCall": "I'd like to book a discovery call",
+      "whichServiceFits": "Which service fits my project?",
+      "thisService": "What does this service include and cost?",
+      "buildSimilar": "Can you build something like this for me?",
+      "similarProjects": "Show me similar projects",
+      "whatAffectsPrice": "What affects the price of a project?",
+      "applyToMyProject": "How could this apply to my project?",
+      "howYouWork": "How do you work with clients?",
+      "whatHappensOnCall": "What happens on a discovery call?",
+      "talkToHuman": "I'd like to talk to a person",
+      "projectStatus": "How is my project going?",
+      "whatDoIOwe": "Do I have any payments due?",
+      "nextMeeting": "When is my next meeting?"
+    },
+    "ask": {
+      "serviceLabel": "Ask AI about this service",
+      "servicePrompt": "Tell me more about {service} and what it would cost for my project.",
+      "portfolioLabel": "Ask AI about a project like this",
+      "portfolioPrompt": "I'd like something similar to the \"{project}\" project. What would it involve and cost?",
+      "pricingLabel": "Get a tailored estimate from AI",
+      "pricingPrompt": "I'd like a tailored estimate for my project.",
+      "wizardLabel": "Discuss my results with AI",
+      "wizardPrompt": "The service finder suggested {services}. Which one fits my project best, and what would it cost?"
+    }
   },
   "Portal": {
     "eyebrow": "Client portal",

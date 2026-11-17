@@ -39,6 +39,18 @@ def format_search_results(results: list[dict[str, Any]]) -> str:
     return "\n\n---\n\n".join(formatted_parts) or "No safe knowledge found for the query."
 
 
+# Knowledge sources that belong to a website section the web app can disable.
+SECTION_SOURCE_TYPES = {"service", "portfolio", "blog"}
+
+
+def filter_disabled_sources(results: list[dict[str, Any]], deps: AgentDeps) -> list[dict[str, Any]]:
+    """Drop results whose website section is disabled (e.g. blog posts after Blog is removed)."""
+    return [
+        r for r in results
+        if r.get("source_type") not in SECTION_SOURCE_TYPES or deps.content_type_enabled(str(r.get("source_type")))
+    ]
+
+
 async def search_knowledge(
     ctx: RunContext[AgentDeps],
     query: str,
@@ -65,12 +77,16 @@ async def search_knowledge(
     locale = ctx.deps.locale if ctx else "en"
     embedder = ctx.deps.embedder if ctx else None
 
+    top_k = max(1, min(top_k, 10))
     results = await hybrid_search(
         query=clean_query,
         pool=pool,
-        top_k=top_k,
+        # Over-fetch so removing disabled website sections still leaves enough results.
+        top_k=top_k + 5 if ctx and ctx.deps.enabled_content_types is not None else top_k,
         locale=locale,
         embedder=embedder,
     )
+    if ctx:
+        results = filter_disabled_sources(results, ctx.deps)
 
-    return format_search_results(results)
+    return format_search_results(results[:top_k])

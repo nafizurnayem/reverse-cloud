@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { AskAiButton } from "@/components/chat/ask-ai-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -45,6 +47,7 @@ export function WizardContainer({ questions, locale, labels }: WizardContainerPr
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [results, setResults] = useState<TopServiceResult[] | null>(null);
+  const tAsk = useTranslations("Chat.ask");
 
   const currentQ = questions[currentStep];
   const totalSteps = questions.length;
@@ -187,6 +190,15 @@ export function WizardContainer({ questions, locale, labels }: WizardContainerPr
             <RotateCcw className="h-4 w-4" />
             <span>{labels.restart}</span>
           </button>
+          <AskAiButton
+            label={tAsk("wizardLabel")}
+            prompt={tAsk("wizardPrompt", {
+              services: results
+                .map((res) => (locale === "bn" ? res.service.name_bn : res.service.name_en))
+                .join(", "),
+            })}
+            className="py-2.5"
+          />
           <Link
             href="/contact"
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90"

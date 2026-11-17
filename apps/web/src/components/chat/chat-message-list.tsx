@@ -10,6 +10,7 @@ import {
   EstimateCard,
   HumanHandoffCard,
   LeadSavedCard,
+  PageLinksCard,
 } from "./cards";
 
 interface ChatMessageListProps {
@@ -124,6 +125,9 @@ export function ChatMessageList({
                           onBookingConfirmed={onBookingConfirmed}
                         />
                       );
+                    }
+                    if (card.type === "page_links") {
+                      return <PageLinksCard key={idx} data={card.data} />;
                     }
                     if (card.type === "booking_cancellation") {
                       return <BookingCancellationCard key={idx} locale={locale} onCancelled={onBookingCancelled} />;

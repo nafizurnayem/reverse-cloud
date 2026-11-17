@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Loader2, Send, Sparkles } from "lucide-react";
 
 interface ChatInputProps {
@@ -10,6 +10,8 @@ interface ChatInputProps {
   locale?: "en" | "bn";
   placeholder?: string;
   quickPrompts?: string[];
+  /** Text placed in the box for the visitor to review; a new `id` applies it again. */
+  prefill?: { id: number; text: string };
 }
 
 export function ChatInput({
@@ -19,9 +21,22 @@ export function ChatInput({
   locale = "en",
   placeholder,
   quickPrompts,
+  prefill,
 }: ChatInputProps) {
   const isBn = locale === "bn";
   const [text, setText] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Apply a new prefill during render (not in an effect) to avoid a cascading update.
+  const [appliedPrefillId, setAppliedPrefillId] = useState<number | null>(null);
+  if (prefill && prefill.id !== appliedPrefillId) {
+    setAppliedPrefillId(prefill.id);
+    setText(prefill.text);
+  }
+
+  useEffect(() => {
+    if (appliedPrefillId !== null) textareaRef.current?.focus();
+  }, [appliedPrefillId]);
 
   const defaultPlaceholder = isBn
     ? "সার্ভিস, বাজেট বা আর্কিটেকচার সম্পর্কে জিজ্ঞাসা করুন..."
@@ -75,6 +90,7 @@ export function ChatInput({
 
       <form onSubmit={handleSubmit} className="relative flex items-end gap-2">
         <textarea
+          ref={textareaRef}
           rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}

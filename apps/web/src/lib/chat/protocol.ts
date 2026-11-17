@@ -49,13 +49,23 @@ export interface BookingSchedulerCardData {
   meetingTypeKey?: "discovery_call" | "technical_consult";
 }
 
+/** A link suggested by the AI. It carries keys and slugs, never URLs. */
+export type PageLinkData =
+  | { kind: "section"; section: string }
+  | { kind: "service" | "portfolio" | "blog"; slug: string; title: string };
+
+export interface PageLinksCardData {
+  links: PageLinkData[];
+}
+
 export type ChatCard =
   | { type: "estimate"; data: EstimateCardData }
   | { type: "lead_saved"; data: LeadSavedCardData }
   | { type: "human_handoff"; data: HumanHandoffCardData }
   | { type: "booking_proposal"; data: BookingProposalCardData }
   | { type: "booking_scheduler"; data: BookingSchedulerCardData }
-  | { type: "booking_cancellation" };
+  | { type: "booking_cancellation" }
+  | { type: "page_links"; data: PageLinksCardData };
 
 export interface ChatMessageItem {
   id: string;

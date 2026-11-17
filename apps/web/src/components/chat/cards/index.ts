@@ -5,3 +5,4 @@ export { ConfirmationCard } from "./confirmation-card";
 export { BookingSchedulerCard } from "./booking-scheduler-card";
 export { BookingCancellationCard } from "./booking-cancellation-card";
 export { FallbackState } from "./fallback-state";
+export { PageLinksCard } from "./page-links-card";

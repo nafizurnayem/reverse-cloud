@@ -11,6 +11,7 @@ from ..tools.project_status import get_project_status
 from ..tools.save_lead import save_lead
 from ..tools.scheduling import create_booking_hold, get_available_slots
 from ..tools.services import list_services
+from ..tools.site_links import suggest_pages
 
 TOOL_CARD_TYPES: dict[str, str] = {
     "create_booking_hold": "booking_proposal",
@@ -18,6 +19,7 @@ TOOL_CARD_TYPES: dict[str, str] = {
     "save_lead": "lead_saved",
     "request_human_handoff": "human_handoff",
     "get_project_status": "project_status",
+    "suggest_pages": "page_links",
 }
 
 
@@ -30,3 +32,4 @@ def register_tools(agent: Agent) -> None:
     agent.tool(get_available_slots)
     agent.tool(create_booking_hold)
     agent.tool(get_project_status)
+    agent.tool(suggest_pages)

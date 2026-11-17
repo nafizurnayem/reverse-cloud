@@ -7,6 +7,7 @@ import {
 } from "@/lib/chat/session";
 import { validateChatPayload } from "@/lib/chat/values";
 import { localPreviewChat } from "@/lib/chat/local-preview";
+import { chatSiteContext, resolveChatPageContext } from "@/lib/chat/page-context";
 import { directPublicKnowledgeReply, isServiceListRequest } from "@/lib/chat/public-knowledge";
 import { restrictedChatReply } from "@/lib/chat/response-policy";
 import { getPublishedServices } from "@/lib/services-server";
@@ -187,11 +188,17 @@ export async function POST(request: NextRequest) {
     return json({ reply }, 200, rate, session);
   }
 
-  const clientId = await authenticatedClientId();
+  const { page, ...chatInput } = validated.data;
+  const [clientId, pageContext] = await Promise.all([
+    authenticatedClientId(),
+    resolveChatPageContext(page?.path, chatInput.locale),
+  ]);
   const body = JSON.stringify({
-    ...validated.data,
+    ...chatInput,
     conversation_id: session.id,
     ...(clientId ? { client_id: clientId } : {}),
+    ...(pageContext ? { page_context: pageContext } : {}),
+    ...chatSiteContext(),
   });
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = createHmac("sha256", serviceSecret)

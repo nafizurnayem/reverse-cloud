@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AskAiButton } from "@/components/chat/ask-ai-button";
 import {
   getAllServiceSlugs,
   SERVICES_CATALOG,
@@ -86,8 +87,9 @@ export default async function ServiceDetailPage({ params }: Props) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, service, allServices] = await Promise.all([
+  const [t, tAsk, service, allServices] = await Promise.all([
     getTranslations({ locale, namespace: "ServiceDetail" }),
+    getTranslations({ locale, namespace: "Chat.ask" }),
     getServiceBySlug(slug),
     getPublishedServices(),
   ]);
@@ -185,6 +187,11 @@ export default async function ServiceDetailPage({ params }: Props) {
                 <span>{t("requestProposal")}</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              <AskAiButton
+                label={tAsk("serviceLabel")}
+                prompt={tAsk("servicePrompt", { service: name })}
+                className="h-10 w-full"
+              />
             </div>
           </div>
         </div>

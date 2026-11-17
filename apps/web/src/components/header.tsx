@@ -7,6 +7,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { UserMenu } from "@/components/user-menu";
 import { isDashboardDestination } from "@/lib/auth/routes";
+import { navSections } from "@/lib/site-sections";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -27,17 +28,11 @@ export function Header({
   const locale = useLocale();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navLinks = [
-    { href: "/", label: t("home") },
-    { href: "/services", label: t("services") },
-    { href: "/portfolio", label: t("portfolio") },
-    { href: "/pricing", label: t("pricing") },
-    { href: "/blog", label: t("blog") },
-    { href: "/about", label: t("about") },
-    { href: "/wizard", label: t("wizard") },
-    { href: "/schedule", label: t("schedule") },
-    { href: "/contact", label: t("contact") },
-  ];
+  // Menu entries come from the shared section list in @/lib/site-sections.
+  const navLinks = navSections().map((section) => ({
+    href: section.path,
+    label: t(section.labelKey),
+  }));
 
   // Track pathname changes to close mobile drawer without cascading state updates
   const [prevPathname, setPrevPathname] = useState(pathname);

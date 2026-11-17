@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AskAiButton } from "@/components/chat/ask-ai-button";
 import { getPublishedServices } from "@/lib/services-server";
 import {
   Briefcase,
@@ -35,9 +36,10 @@ export default async function PricingPage({ params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, tDetail, services] = await Promise.all([
+  const [t, tDetail, tAsk, services] = await Promise.all([
     getTranslations({ locale, namespace: "Pricing" }),
     getTranslations({ locale, namespace: "ServiceDetail" }),
+    getTranslations({ locale, namespace: "Chat.ask" }),
     getPublishedServices(),
   ]);
 
@@ -245,6 +247,11 @@ export default async function PricingPage({ params }: Props) {
           >
             {t("contactUs")}
           </Link>
+          <AskAiButton
+            label={tAsk("pricingLabel")}
+            prompt={tAsk("pricingPrompt")}
+            className="h-11 px-6"
+          />
           <Link
             href="/services"
             className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-background px-6 text-sm font-semibold text-foreground transition-all hover:bg-accent hover:text-accent-foreground"
