@@ -1,7 +1,7 @@
 import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { ArrowRight, Briefcase, Calendar, Clock, Flag, Layers, Sparkles } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import { fetchClientProjects, fetchUpcomingClientAppointment } from "@/lib/portal/portal-server";
@@ -63,7 +63,7 @@ export default async function PortalProjectsPage({
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Link href="/wizard" className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
+          <Link href="/services#service-finder" className="group rounded-2xl border bg-card p-5 shadow-sm transition-colors hover:border-primary/50">
             <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
             <h3 className="mt-3 font-bold text-foreground">{isBn ? "সার্ভিস ফাইন্ডার" : "Service Finder"}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -102,7 +102,7 @@ export default async function PortalProjectsPage({
               : "No projects are assigned yet. Use the Service Finder or browse services above, then request a proposal to get started."}
           </p>
           <Link
-            href="/wizard"
+            href="/services#service-finder"
             className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
           >
             <span>{isBn ? "সেবা খুঁজুন" : "Find a service"}</span>

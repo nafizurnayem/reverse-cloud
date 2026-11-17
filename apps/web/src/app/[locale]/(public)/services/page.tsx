@@ -7,6 +7,8 @@ import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPublishedServices } from "@/lib/services-server";
+import { WizardContainer } from "@/components/wizard/wizard-container";
+import { getWizardQuestions } from "@/lib/wizard-server";
 import {
   ArrowRight,
   Bot,
@@ -56,11 +58,32 @@ export default async function ServicesPage({ params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
 
-  const [t, tDetail, services] = await Promise.all([
+  const [t, tDetail, tWizard, services, questions] = await Promise.all([
     getTranslations({ locale, namespace: "Services" }),
     getTranslations({ locale, namespace: "ServiceDetail" }),
+    getTranslations({ locale, namespace: "Wizard" }),
     getPublishedServices(),
+    getWizardQuestions(),
   ]);
+
+  const wizardLabels = {
+    stepLabel: tWizard.raw("stepLabel") as string,
+    multiHint: tWizard("multiHint"),
+    next: tWizard("next"),
+    back: tWizard("back"),
+    calculate: tWizard("calculate"),
+    restart: tWizard("restart"),
+    resultsTitle: tWizard("resultsTitle"),
+    resultsSubtitle: tWizard("resultsSubtitle"),
+    matchLabel: tWizard.raw("matchLabel") as string,
+    startingFrom: tWizard("startingFrom"),
+    customQuote: tWizard("customQuote"),
+    viewService: tWizard("viewService"),
+    requestService: tWizard("requestService"),
+    ctaTitle: tWizard("ctaTitle"),
+    ctaSubtitle: tWizard("ctaSubtitle"),
+    contactUs: tWizard("contactUs"),
+  };
 
   const modelLabels: Record<string, string> = {
     fixed: tDetail("fixedModel"),
@@ -83,6 +106,18 @@ export default async function ServicesPage({ params }: Props) {
         <p className="mt-4 text-lg leading-relaxed text-muted-foreground sm:text-xl">
           {t("hero.description")}
         </p>
+
+        {/* Quick jump to Service Finder CTA */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a
+            href="#service-finder"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-primary shadow-subtle transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>{locale === "bn" ? "উপযুক্ত সেবা খুঁজে পেতে সার্ভিস ফাইন্ডার ব্যবহার করুন" : "Unsure what you need? Try our Service Finder"}</span>
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        </div>
       </div>
 
       {/* Services Grid (All 11 seeded capabilities) */}
@@ -133,6 +168,31 @@ export default async function ServicesPage({ params }: Props) {
           );
         })}
       </div>
+
+      {/* Interactive Service Finder Section */}
+      <section
+        id="service-finder"
+        className="mt-24 scroll-mt-24 rounded-3xl border border-border/80 bg-gradient-to-b from-card via-card/90 to-brand-accent/5 p-6 shadow-subtle sm:p-10 lg:p-12"
+      >
+        <div className="mx-auto max-w-3xl text-center mb-10">
+          <Badge variant="outline" className="mb-4 border-brand-accent/50 bg-brand-accent/10 text-primary">
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            {tWizard("hero.eyebrow")}
+          </Badge>
+          <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
+            {tWizard("hero.title")}
+          </h2>
+          <p className="mt-3 text-base text-muted-foreground sm:text-lg">
+            {tWizard("hero.description")}
+          </p>
+        </div>
+
+        <WizardContainer
+          questions={questions}
+          locale={locale}
+          labels={wizardLabels}
+        />
+      </section>
 
       {/* Call to action section */}
       <div className="mt-20 rounded-2xl border border-border/80 bg-gradient-to-b from-card to-muted/30 p-8 text-center shadow-subtle sm:p-12">

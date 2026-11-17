@@ -86,7 +86,7 @@ export function Footer({ accountHref = null }: { accountHref?: string | null }) 
               </li>
               <li>
                 <Link
-                  href="/wizard"
+                  href="/services#service-finder"
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {t("wizard")}
