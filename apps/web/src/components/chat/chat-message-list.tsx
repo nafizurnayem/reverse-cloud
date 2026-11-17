@@ -35,17 +35,22 @@ export function ChatMessageList({
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const isStreaming = messages.some((message) => message.isStreaming);
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: isStreaming ? "auto" : "smooth",
+      });
     }
   }, [messages]);
 
   return (
     <div
       ref={scrollRef}
-      className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 space-y-4 text-xs scroll-smooth"
+      className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 space-y-4 text-xs"
     >
       {messages.map((msg) => {
         const isUser = msg.role === "user";
+        const isTyping = !isUser && msg.isStreaming && !msg.content && !msg.error && !msg.cards?.length;
 
         return (
           <div
@@ -63,6 +68,20 @@ export function ChatMessageList({
             </div>
 
             <div className={`flex min-w-0 flex-col space-y-1.5 max-w-[85%] [overflow-wrap:anywhere] ${isUser ? "items-end" : "items-start"}`}>
+              {isTyping && (
+                <div
+                  role="status"
+                  aria-label={locale === "bn" ? "রিভার্স ক্লাউড এআই লিখছে" : "Reverse Cloud AI is typing"}
+                  className="chat-typing-bubble flex h-9 items-center gap-1.5 rounded-2xl rounded-tl-none border bg-muted px-3.5"
+                >
+                  <span className="chat-typing-dot" aria-hidden="true" />
+                  <span className="chat-typing-dot" aria-hidden="true" />
+                  <span className="chat-typing-dot" aria-hidden="true" />
+                  <span className="sr-only">
+                    {locale === "bn" ? "উত্তর লেখা হচ্ছে…" : "Writing a reply…"}
+                  </span>
+                </div>
+              )}
               {msg.content && (
                 <div
                   className={`rounded-2xl px-3.5 py-2.5 leading-relaxed text-xs ${

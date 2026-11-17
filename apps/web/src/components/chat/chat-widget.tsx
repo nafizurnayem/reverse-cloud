@@ -13,6 +13,7 @@ import {
 import type { ChatCard, ChatMessageItem } from "@/lib/chat/protocol";
 import { isCancellationRequest, restrictedChatReply } from "@/lib/chat/response-policy";
 import { parseChatStream } from "@/lib/chat/stream-parser";
+import { revealChatTextByWord } from "@/lib/chat/text-reveal";
 import { ChatRequestError, requestChatResponse } from "@/lib/chat/request";
 import {
   createMockChatResponse,
@@ -269,6 +270,7 @@ export function ChatWidget({
 
   // Persist chat messages to sessionStorage across navigations / login return
   useEffect(() => {
+    if (isStreaming) return;
     try {
       if (messages.length > 0) {
         sessionStorage.setItem("rc_chat_history", JSON.stringify(messages));
@@ -276,7 +278,7 @@ export function ChatWidget({
     } catch {
       // storage errors ignored
     }
-  }, [messages]);
+  }, [isStreaming, messages]);
 
   const greetingMessage: ChatMessageItem = {
     id: "welcome-1",
@@ -478,18 +480,21 @@ export function ChatWidget({
       // Stream the response
       let streamedText = "";
       const streamedCards: ChatCard[] = [];
+      const wordDelayMs = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 24;
 
       for await (const event of parseChatStream(response.body)) {
         if (controller.signal.aborted) return;
         if (event.event === "text_delta") {
-          streamedText += event.data.text;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId
-                ? { ...m, content: streamedText }
-                : m,
-            ),
-          );
+          await revealChatTextByWord(event.data.text, (segment) => {
+            streamedText += segment;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, content: streamedText }
+                  : m,
+              ),
+            );
+          }, { delayMs: wordDelayMs, signal: controller.signal });
         } else if (event.event === "card") {
           streamedCards.push(event.data);
           setMessages((prev) =>
