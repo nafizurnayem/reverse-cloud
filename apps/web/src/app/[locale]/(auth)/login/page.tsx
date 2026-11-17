@@ -6,9 +6,9 @@ import { routing } from "@/i18n/routing";
 import { needsClientAccountLink, postLoginPathFromQuery } from "@/lib/auth/routes";
 import { accountDestination } from "@/lib/auth/destination";
 import { createClient } from "@/lib/supabase/server";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import {
   continueWithClientAccount,
-  signInWithGoogle,
   signInWithMagicLink,
   signOut,
 } from "../actions";
@@ -48,6 +48,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
   const loggedOut = query.logged_out === "1";
   const magicLinkSent = query.magic_link_sent === "1";
   const t = await getTranslations({ locale, namespace: "Login" });
+  const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() ?? "";
 
   let user: { id: string; email?: string } | null = null;
   try {
@@ -94,9 +95,16 @@ export default async function LoginPage({ params, searchParams }: Props) {
         ) : (
           <>
             <p className="description">{t("description")}</p>
-            <form action={signInWithGoogle.bind(null, locale, next)}>
-              <button className="auth-button" type="submit">{t("google")}</button>
-            </form>
+            {googleClientId ? (
+              <GoogleSignIn
+                clientId={googleClientId}
+                locale={locale}
+                next={next}
+                errorMessage={t("errors.oauth_start_failed")}
+              />
+            ) : (
+              <p className="auth-message auth-error" role="alert">{t("errors.oauth_start_failed")}</p>
+            )}
             <div className="auth-divider" role="separator"><span>{t("or")}</span></div>
             <form className="auth-email-form" action={signInWithMagicLink.bind(null, locale, next)}>
               <label htmlFor="login-email">{t("emailLabel")}</label>

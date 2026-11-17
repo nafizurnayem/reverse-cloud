@@ -101,7 +101,7 @@ export function safePostLoginPath(
     if (parsed.origin !== base.origin) return fallback;
     const clean = localizedPath(`${parsed.pathname}${parsed.search}${parsed.hash}`, locale);
     const authPath = clean.split(/[?#]/, 1)[0].replace(/\/$/, "");
-    if (authPath === "/login" || authPath === "/auth/callback") {
+    if (authPath === "/login" || authPath === "/auth/callback" || authPath === "/auth/complete") {
       return fallback;
     }
     return clean;
