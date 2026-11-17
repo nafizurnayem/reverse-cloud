@@ -34,7 +34,6 @@ export function Header({
     { href: "/pricing", label: t("pricing") },
     { href: "/blog", label: t("blog") },
     { href: "/about", label: t("about") },
-    { href: "/wizard", label: t("wizard") },
     { href: "/schedule", label: t("schedule") },
     { href: "/contact", label: t("contact") },
   ];
