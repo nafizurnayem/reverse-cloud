@@ -7,7 +7,14 @@ import {
 } from "@/lib/chat/session";
 import { validateChatPayload } from "@/lib/chat/values";
 import { localPreviewChat } from "@/lib/chat/local-preview";
-import { directPublicKnowledgeReply, isServiceListRequest } from "@/lib/chat/public-knowledge";
+import {
+  directPublicKnowledgeReply,
+  directServiceDiscoveryReply,
+  isServiceDiscoveryFollowUp,
+  isServiceDiscoveryRequest,
+  isServiceListRequest,
+  relevantServiceReply,
+} from "@/lib/chat/public-knowledge";
 import { restrictedChatReply } from "@/lib/chat/response-policy";
 import { getPublishedServices } from "@/lib/services-server";
 import {
@@ -182,7 +189,18 @@ export async function POST(request: NextRequest) {
   }
 
   const latestUserMessage = validated.data.messages.findLast((message) => message.role === "user")?.content ?? "";
-  if (!restrictedChatReply(latestUserMessage, validated.data.locale) && isServiceListRequest(latestUserMessage)) {
+  const restrictedReply = restrictedChatReply(latestUserMessage, validated.data.locale);
+  if (restrictedReply) {
+    return json({ reply: restrictedReply }, 200, rate, session);
+  }
+  if (isServiceDiscoveryRequest(latestUserMessage)) {
+    return json({ reply: directServiceDiscoveryReply(validated.data.locale) }, 200, rate, session);
+  }
+  if (isServiceDiscoveryFollowUp(validated.data.messages)) {
+    const reply = relevantServiceReply(latestUserMessage, validated.data.locale, await getPublishedServices());
+    return json({ reply }, 200, rate, session);
+  }
+  if (isServiceListRequest(latestUserMessage)) {
     const reply = directPublicKnowledgeReply(latestUserMessage, validated.data.locale, await getPublishedServices());
     return json({ reply }, 200, rate, session);
   }

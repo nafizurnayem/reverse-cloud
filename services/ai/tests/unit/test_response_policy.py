@@ -13,6 +13,12 @@ def test_direct_greetings_are_localized() -> None:
     assert direct_reply("I need a website", "en") is None
 
 
+def test_service_discovery_asks_for_requirements_without_calling_the_model() -> None:
+    reply = direct_reply("help me to find a service", "en") or ""
+    assert "what you want to build" in reply
+    assert "most relevant service" in reply
+
+
 def test_unhelpful_and_repetitive_model_output_is_replaced() -> None:
     assert "couldn’t verify" in ensure_useful_reply("I don't know.", "en")
     assert "নির্ভরযোগ্য উত্তর" in ensure_useful_reply("জানি না", "bn")

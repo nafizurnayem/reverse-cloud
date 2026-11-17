@@ -2,10 +2,41 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { directPublicKnowledgeReply, retrievePublicKnowledge } from "../src/lib/chat/public-knowledge";
+import {
+  directPublicKnowledgeReply,
+  directServiceDiscoveryReply,
+  isServiceDiscoveryFollowUp,
+  isServiceDiscoveryRequest,
+  relevantServiceReply,
+  retrievePublicKnowledge,
+} from "../src/lib/chat/public-knowledge";
 import { SERVICES_CATALOG } from "../src/lib/services-catalog";
 
 describe("temporary public-site retrieval", () => {
+  it("starts a service discovery conversation instead of refusing the request", () => {
+    expect(isServiceDiscoveryRequest("help me to find a service")).toBe(true);
+    expect(isServiceDiscoveryRequest("I need help choosing a service")).toBe(true);
+    expect(directServiceDiscoveryReply("en")).toContain("what you want to build");
+  });
+
+  it("matches a follow-up project description to a service and returns its details", () => {
+    const messages = [
+      { role: "user" as const, content: "help me to find a service" },
+      { role: "assistant" as const, content: directServiceDiscoveryReply("en") },
+      { role: "user" as const, content: "I need a service for a fast bilingual website with a CMS" },
+    ];
+
+    expect(isServiceDiscoveryFollowUp(messages)).toBe(true);
+    expect(isServiceDiscoveryFollowUp([
+      ...messages,
+      { role: "assistant", content: "Website Development is the best fit." },
+      { role: "user", content: "Book a meeting" },
+    ])).toBe(false);
+    const reply = relevantServiceReply(messages.at(-1)!.content, "en");
+    expect(reply).toContain("Website Development");
+    expect(reply).toContain("/services/website-development");
+  });
+
   it.each(["services", "Services?", "your services please", "Show all services", "I want to book a service"])(
     "lists every service and asks for a booking choice for %s",
     (query) => {

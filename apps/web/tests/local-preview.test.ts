@@ -114,6 +114,42 @@ describe("local Ollama preview", () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
+  it("asks what the visitor needs before recommending a service", async () => {
+    const response = await localPreviewChat(new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [{ role: "user", content: "I need help choosing a service" }],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      reply: expect.stringContaining("what you want to build"),
+    });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns matching service details after the visitor describes the project", async () => {
+    const response = await localPreviewChat(new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        locale: "en",
+        messages: [
+          { role: "user", content: "help me to find a service" },
+          { role: "assistant", content: "I’ll match your needs to the most relevant service and share its details." },
+          { role: "user", content: "I need a service for a fast bilingual website with a CMS" },
+        ],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.reply).toContain("Website Development");
+    expect(payload.reply).toContain("/services/website-development");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it("returns the live scheduler card for booking requests without model latency", async () => {
     const request = new NextRequest("http://localhost/api/chat", {
       method: "POST",

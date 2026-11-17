@@ -36,6 +36,13 @@ _THANKS_EN = {"thanks", "thank you", "thank you very much", "thanks a lot", "no 
 _THANKS_BN = {"ধন্যবাদ", "অনেক ধন্যবাদ", "না ধন্যবাদ"}
 _GOODBYES_EN = {"bye", "goodbye", "see you", "talk later"}
 _GOODBYES_BN = {"বিদায়", "আবার দেখা হবে", "পরে কথা হবে"}
+_SERVICE_DISCOVERY_EN = re.compile(
+    r"\b(?:help|assist|guide|recommend|suggest).{0,24}\b(?:find(?:ing)?|choos(?:e|ing)|select(?:ing)?|pick(?:ing)?).{0,24}\bservices?\b"
+    r"|\b(?:find(?:ing)?|choos(?:e|ing)|select(?:ing)?|pick(?:ing)?).{0,24}\b(?:a\s+)?services?\b"
+    r"|\bwhich\s+service\s+(?:is\s+)?(?:right|best|suitable)\b",
+    re.I,
+)
+_SERVICE_DISCOVERY_BN = re.compile(r"(?:সেবা|সার্ভিস).{0,20}(?:খুঁজে|বেছে|নির্বাচন|উপযুক্ত)")
 
 _RESTRICTED_REQUESTS = [
     re.compile(r"\b(?:write|generate|create|provide|give|show|share|send|explain)\b.{0,48}\b(?:source\s+code|code|script|repository|repo)\b", re.I | re.S),
@@ -74,6 +81,15 @@ def direct_reply(text: str, locale: str) -> str | None:
     """Handle trivial conversational turns without invoking an LLM or tools."""
     normalized = _normalized(text)
     is_bn = locale == "bn"
+    if (_SERVICE_DISCOVERY_BN if is_bn else _SERVICE_DISCOVERY_EN).search(normalized):
+        return (
+            "অবশ্যই—আপনার কোন সেবাটি প্রয়োজন? আপনি কী তৈরি বা উন্নত করতে চান, আপনার প্রধান লক্ষ্য এবং প্রয়োজনীয় "
+            "ইন্টিগ্রেশন সম্পর্কে সংক্ষেপে বলুন। আপনার তথ্যের সঙ্গে মিলিয়ে আমাদের সবচেয়ে "
+            "উপযুক্ত সেবাটি এবং তার বিস্তারিত জানাব।"
+            if is_bn
+            else "Sure—which service do you need? Tell me what you want to build or improve, your main goal, and any "
+            "integrations you need. I’ll match your needs to the most relevant service and share its details."
+        )
     if normalized in (_GREETINGS_BN if is_bn else _GREETINGS_EN):
         return (
             "হ্যালো! রিভার্স ক্লাউডে স্বাগতম। আমি আমাদের সেবা, প্রজেক্টের বাজেট, "
