@@ -22,6 +22,8 @@ def test_system_prompt_loading() -> None:
 
     assert "Reverse Cloud" in en_prompt
     assert "রিভার্স ক্লাউড" in bn_prompt
+    assert "first ask what they want to build" in en_prompt
+    assert "পরের বিস্তারিত উত্তরে `list_services`" in bn_prompt
     assert "reverscloud" not in en_prompt.lower()
     assert len(en_prompt) > 200
     assert len(bn_prompt) > 200

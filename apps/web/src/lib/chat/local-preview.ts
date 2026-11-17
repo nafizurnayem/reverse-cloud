@@ -3,7 +3,15 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { limitPreviewChatRequests, requestIp } from "@/lib/ratelimit";
 import { validateChatPayload } from "@/lib/chat/values";
-import { directPublicKnowledgeReply, isServiceListRequest, retrievePublicKnowledge } from "@/lib/chat/public-knowledge";
+import {
+  directPublicKnowledgeReply,
+  directServiceDiscoveryReply,
+  isServiceDiscoveryFollowUp,
+  isServiceDiscoveryRequest,
+  isServiceListRequest,
+  relevantServiceReply,
+  retrievePublicKnowledge,
+} from "@/lib/chat/public-knowledge";
 import { getPublishedServices } from "@/lib/services-server";
 import { directChatReply, ensureUsefulChatReply, isBookingRequest, isCancellationRequest, restrictedChatReply } from "@/lib/chat/response-policy";
 
@@ -69,6 +77,16 @@ export async function localPreviewChat(request: NextRequest) {
           : "Checking your account and upcoming booking before cancellation.",
         cards: [{ type: "booking_cancellation" }],
       }, { headers: { "cache-control": "no-store" } });
+    }
+    if (isServiceDiscoveryRequest(latest.content)) {
+      return NextResponse.json(
+        { reply: directServiceDiscoveryReply(validated.data.locale) },
+        { headers: { "cache-control": "no-store" } },
+      );
+    }
+    if (isServiceDiscoveryFollowUp(messages)) {
+      const reply = relevantServiceReply(latest.content, validated.data.locale, await getPublishedServices());
+      return NextResponse.json({ reply }, { headers: { "cache-control": "no-store" } });
     }
     if (isServiceListRequest(latest.content)) {
       const reply = directPublicKnowledgeReply(latest.content, validated.data.locale, await getPublishedServices());
