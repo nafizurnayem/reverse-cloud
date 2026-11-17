@@ -65,9 +65,12 @@ export default async function LoginPage({ params, searchParams }: Props) {
   }
 
   return (
-    <main className="auth-page">
-      <section className="auth-card" aria-labelledby="login-heading">
-        <p className="eyebrow">{t("brand")}</p>
+    <main className="auth-page login-page">
+      <section className="auth-card login-card" aria-labelledby="login-heading">
+        <div className="login-brand">
+          <span className="login-brand-mark" aria-hidden="true">R</span>
+          <p className="eyebrow">{t("brand")}</p>
+        </div>
         <h1 id="login-heading">{user ? t("signedInTitle") : t("title")}</h1>
 
         {error ? <p className="auth-message auth-error" role="alert">{t(`errors.${error}`)}</p> : null}
@@ -126,9 +129,9 @@ export default async function LoginPage({ params, searchParams }: Props) {
             </form>
           </>
         )}
-        <div className="auth-actions">
+        <div className="auth-actions login-footer">
           <Link className="auth-button auth-button-secondary" href="/">
-            {t("backHome")}
+            <span aria-hidden="true">←</span> {t("backHome")}
           </Link>
         </div>
       </section>
