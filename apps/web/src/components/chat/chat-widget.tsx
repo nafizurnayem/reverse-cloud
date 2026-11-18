@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   Bot,
@@ -23,6 +23,7 @@ import { ChatMessageList } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
 import { ChatSecurityCheck } from "./chat-security-check";
 import { FallbackState } from "./cards";
+import { SERVICES_CATALOG } from "@/lib/services-catalog";
 
 const welcomeNotificationKey = "rc_chat_welcome_notified_v2";
 let preparedAudioContext: AudioContext | null = null;
@@ -190,32 +191,86 @@ export function ChatWidget({
     };
   }, []);
 
-  // Restore chat messages from sessionStorage and check openChat/confirmProposal URL query params
+  const greetingMessage: ChatMessageItem = useMemo(() => ({
+    id: "welcome-1",
+    role: "assistant",
+    content: isBn
+      ? "হ্যালো! রিভার্স ক্লাউডে আপনাকে স্বাগতম। আপনি কি কোনো প্রজেক্টের বাজেট এস্টিমেট বা আমাদের ইঞ্জিনিয়ারিং সার্ভিস সম্পর্কে জানতে চান?"
+      : "Hello! Welcome to Reverse Cloud. How can I help you today? Would you like a project budget estimate, or details on our engineering services?",
+    createdAt: 0,
+  }), [isBn]);
+
+  // Restore chat messages from sessionStorage and check openChat/confirmProposal/bookService URL query params
   useEffect(() => {
     queueMicrotask(() => {
       try {
         const searchParams = new URLSearchParams(window.location.search);
         const shouldOpen = searchParams.get("openChat") === "true";
         const proposalId = searchParams.get("confirmProposal");
+        const bookService = searchParams.get("bookService");
 
-        if (shouldOpen || proposalId) {
+        if (shouldOpen || proposalId || bookService) {
           setIsOpen(true);
           setIsMinimized(false);
           sessionStorage.setItem(welcomeNotificationKey, "1");
         }
 
         const saved = sessionStorage.getItem("rc_chat_history");
+        let initialMessages: ChatMessageItem[] = [];
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            initialMessages = parsed;
             setMessages(parsed);
           }
+        }
+
+        if (bookService) {
+          const matched = SERVICES_CATALOG.find((s) => s.slug === bookService);
+          const serviceName = isBn
+            ? (matched?.name_bn || matched?.name_en || bookService)
+            : (matched?.name_en || bookService);
+
+          const alreadyAsked = initialMessages.some(
+            (m) => m.id === `book-service-${bookService}` || (m.role === "assistant" && m.content.includes(serviceName))
+          );
+
+          if (!alreadyAsked) {
+            const now = Date.now();
+            const bookingPromptMsg: ChatMessageItem = {
+              id: `book-service-${bookService}`,
+              role: "assistant",
+              content: isBn
+                ? `আপনি কি **${serviceName}** সেবাটি বুক করতে চান? নিচে থেকে উপযুক্ত সময় বেছে নিয়ে একটি ডিসকভারি কল বা মিটিং বুক করুন, অথবা কোনো প্রশ্ন থাকলে আমাকে জানান।`
+                : `Would you like to book **${serviceName}**? You can choose a convenient slot below to schedule a discovery call, or let me know if you have any questions!`,
+              cards: [
+                {
+                  type: "booking_scheduler",
+                  data: {
+                    requestedText: `Book ${serviceName}`,
+                    meetingTypeKey: "discovery_call",
+                  },
+                },
+              ],
+              createdAt: now,
+            };
+            const updated = [
+              ...(initialMessages.length > 0 ? initialMessages : [greetingMessage]),
+              bookingPromptMsg,
+            ];
+            setMessages(updated);
+            sessionStorage.setItem("rc_chat_history", JSON.stringify(updated));
+          }
+
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete("bookService");
+          window.history.replaceState({}, "", cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
         }
       } catch {
         // storage errors ignored
       }
     });
-  }, []);
+  }, [greetingMessage, isBn]);
 
   // Prompt a first-time visitor once, provided they have not opened the chat.
   useEffect(() => {
@@ -279,15 +334,6 @@ export function ChatWidget({
       // storage errors ignored
     }
   }, [isStreaming, messages]);
-
-  const greetingMessage: ChatMessageItem = {
-    id: "welcome-1",
-    role: "assistant",
-    content: isBn
-      ? "হ্যালো! রিভার্স ক্লাউডে আপনাকে স্বাগতম। আপনি কি কোনো প্রজেক্টের বাজেট এস্টিমেট বা আমাদের ইঞ্জিনিয়ারিং সার্ভিস সম্পর্কে জানতে চান?"
-      : "Hello! Welcome to Reverse Cloud. How can I help you today? Would you like a project budget estimate, or details on our engineering services?",
-    createdAt: 0,
-  };
 
   const activeMessages = messages.length > 0 ? messages : [greetingMessage];
 

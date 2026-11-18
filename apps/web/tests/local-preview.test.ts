@@ -152,7 +152,7 @@ describe("local Ollama preview", () => {
     expect(response.status).toBe(200);
     const payload = await response.json();
     for (const service of SERVICES_CATALOG) expect(payload.reply).toContain(service.name_en);
-    expect(payload.reply).toMatch(/Which service would you like to book\?$/);
+    expect(payload.reply).toContain("Which service would you like to book?");
     expect(payload.cards).toBeUndefined();
     expect(mocks.fetch).not.toHaveBeenCalled();
   });

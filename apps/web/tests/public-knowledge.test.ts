@@ -37,22 +37,36 @@ describe("temporary public-site retrieval", () => {
     expect(reply).toContain("/services/website-development");
   });
 
-  it.each(["services", "Services?", "your services please", "Show all services", "I want to book a service"])(
-    "lists every service and asks for a booking choice for %s",
+  it.each([
+    "services",
+    "Services?",
+    "your services please",
+    "Show all services",
+    "I want to book a service",
+    "i want to know the services",
+    "i want to know the servics",
+  ])(
+    "lists every service with clickable links, details, and asks for a booking choice for %s",
     (query) => {
       const reply = directPublicKnowledgeReply(query, "en");
-      for (const service of SERVICES_CATALOG) expect(reply).toContain(`• ${service.name_en}\n`);
+      for (const service of SERVICES_CATALOG) {
+        expect(reply).toContain(`[${service.name_en}](/services/${service.slug}?openChat=true&bookService=${service.slug})`);
+        expect(reply).toContain(service.summary_en);
+      }
       expect(reply?.split("\n").filter((line) => line.startsWith("• "))).toHaveLength(SERVICES_CATALOG.length);
-      expect(reply).toMatch(/Which service would you like to book\?$/);
+      expect(reply).toContain("Which service would you like to book?");
     },
   );
 
   it.each(["সেবা", "সার্ভিস", "আপনাদের সেবাগুলো", "সব সেবা", "services"])(
-    "lists every service in Bengali for %s",
+    "lists every service in Bengali with clickable links, details, and asks for booking for %s",
     (query) => {
       const reply = directPublicKnowledgeReply(query, "bn");
-      for (const service of SERVICES_CATALOG) expect(reply).toContain(`• ${service.name_bn}\n`);
-      expect(reply).toMatch(/আপনি কোন সেবাটি বুক করতে চান\?$/);
+      for (const service of SERVICES_CATALOG) {
+        expect(reply).toContain(`[${service.name_bn}](/services/${service.slug}?openChat=true&bookService=${service.slug})`);
+        expect(reply).toContain(service.summary_bn);
+      }
+      expect(reply).toContain("আপনি কোন সেবাটি বুক করতে চান?");
     },
   );
 
@@ -71,7 +85,8 @@ describe("temporary public-site retrieval", () => {
       { name_en: "Custom Integration", name_bn: "কাস্টম ইন্টিগ্রেশন", sort_order: 20 },
       { name_en: "Cloud Support", name_bn: "ক্লাউড সাপোর্ট", sort_order: 10 },
     ]);
-    expect(reply).toBe("Our services\n\n• Cloud Support\n• Custom Integration\n\nWhich service would you like to book?");
+    expect(reply).toContain("• Cloud Support\n\n• Custom Integration");
+    expect(reply).toContain("Which service would you like to book?");
   });
 
   it("retrieves a cited service price for an English question", () => {

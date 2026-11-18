@@ -22,6 +22,64 @@ interface ChatMessageListProps {
   onBookingCancelled?: () => void;
 }
 
+function formatMessageContent(content: string, isUser: boolean) {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  const renderTextSegment = (text: string, baseKey: string | number) => {
+    const boldRegex = /\*\*([^*]+)\*\*/g;
+    const subParts: React.ReactNode[] = [];
+    let subLastIndex = 0;
+    let boldMatch: RegExpExecArray | null;
+
+    while ((boldMatch = boldRegex.exec(text)) !== null) {
+      if (boldMatch.index > subLastIndex) {
+        subParts.push(text.substring(subLastIndex, boldMatch.index));
+      }
+      subParts.push(
+        <strong key={`${baseKey}-b-${boldMatch.index}`} className="font-semibold">
+          {boldMatch[1]}
+        </strong>
+      );
+      subLastIndex = boldRegex.lastIndex;
+    }
+    if (subLastIndex < text.length) {
+      subParts.push(text.substring(subLastIndex));
+    }
+    return subParts;
+  };
+
+  while ((match = linkRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(...renderTextSegment(content.substring(lastIndex, match.index), `t-${match.index}`));
+    }
+    const label = match[1];
+    const url = match[2];
+    parts.push(
+      <a
+        key={`l-${match.index}`}
+        href={url}
+        className={
+          isUser
+            ? "font-semibold underline text-primary-foreground hover:opacity-80 transition-opacity"
+            : "font-semibold underline text-primary hover:text-primary/80 transition-colors"
+        }
+      >
+        {label}
+      </a>
+    );
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(...renderTextSegment(content.substring(lastIndex), `t-end`));
+  }
+
+  return parts;
+}
+
 export function ChatMessageList({
   messages,
   locale = "en",
@@ -90,7 +148,7 @@ export function ChatMessageList({
                       : "bg-muted text-foreground rounded-tl-none border"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <p className="whitespace-pre-wrap">{formatMessageContent(msg.content, isUser)}</p>
                   {msg.isStreaming && (
                     <span className="inline-block h-3 w-1.5 ml-1 bg-primary animate-pulse align-middle" />
                   )}
