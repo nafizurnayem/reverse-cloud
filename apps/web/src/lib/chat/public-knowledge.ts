@@ -55,7 +55,7 @@ function normalizeServiceQuery(query: string) {
 
 export function isServiceListRequest(query: string): boolean {
   const normalized = normalizeServiceQuery(query);
-  const asksForAll = /\b(?:all|every|full|complete)\b.{0,24}\bservices?\b/u.test(normalized)
+  const asksForAll = /\b(?:all|every|full|complete)\b.{0,24}\bservic\w*/u.test(normalized)
     || /(?:সব|সকল|সম্পূর্ণ).{0,16}(?:সেবা|সার্ভিস)/u.test(normalized);
   if (asksForAll) return true;
 
@@ -67,11 +67,12 @@ export function isServiceListRequest(query: string): boolean {
   );
   if (namesSpecificService) return false;
 
-  return /^(?:(?:please|your|our|available)\s+)*services?(?:\s+please)?$/u.test(normalized)
-    || /\b(?:what|which|list|show|tell).{0,36}\bservices?\b|\bservices?\b.{0,24}\b(?:offer|provide|available)\b|\bwhat do you do\b/u.test(normalized)
-    || /\b(?:want|need|book)\b.{0,24}\b(?:a\s+)?services?\b/u.test(normalized)
+  return /^(?:(?:please|your|our|available|the)\s+)*servic\w*(?:\s+please)?$/u.test(normalized)
+    || /\b(?:what|which|list|show|tell|know|see|learn|check|details?|info)\b.{0,36}\bservic\w*/u.test(normalized)
+    || /\b(?:want|need|book)\b.{0,36}\bservic\w*/u.test(normalized)
+    || /\bservic\w*.{0,24}\b(?:offer|provide|available|details?|list)\b|\bwhat do you do\b/u.test(normalized)
     || /^(?:(?:আপনাদের|আপনার)\s*)?(?:সেবা(?:গুলো|সমূহ)?|সার্ভিস(?:গুলো|সমূহ)?)$/u.test(normalized)
-    || /(?:কী|কি|কোন|তালিকা|সম্পর্কে).{0,28}(?:সেবা|সার্ভিস)|(?:সেবা|সার্ভিস).{0,28}(?:কী|কি|কোন|চাই)/u.test(normalized);
+    || /(?:কী|কি|কোন|তালিকা|সম্পর্কে|জানতে|দেখতে).{0,28}(?:সেবা|সার্ভিস)|(?:সেবা|সার্ভিস).{0,28}(?:কী|কি|কোন|চাই|জানতে|দেখতে)/u.test(normalized);
 }
 
 export function isServiceDiscoveryRequest(query: string): boolean {
@@ -144,17 +145,29 @@ export function relevantServiceReply(
 export function directPublicKnowledgeReply(
   query: string,
   locale: Locale,
-  services: Pick<ServiceDetailItem, "name_en" | "name_bn" | "sort_order">[] = SERVICES_CATALOG,
+  services: Partial<ServiceDetailItem>[] = SERVICES_CATALOG,
 ): string | null {
   if (!isServiceListRequest(query)) return null;
 
-  const names = services
+  const isBn = locale === "bn";
+  const items = services
     .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((service) => `• ${locale === "bn" ? service.name_bn : service.name_en}`);
-  return locale === "bn"
-    ? `আমাদের সেবাগুলো\n\n${names.join("\n")}\n\nআপনি কোন সেবাটি বুক করতে চান?`
-    : `Our services\n\n${names.join("\n")}\n\nWhich service would you like to book?`;
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((service) => {
+      const name = isBn ? (service.name_bn || service.name_en) : (service.name_en || service.name_bn);
+      const summary = isBn ? (service.summary_bn || service.summary_en) : (service.summary_en || service.summary_bn);
+      const slug = service.slug || "";
+      const link = slug ? `[${name}](/services/${slug}?openChat=true&bookService=${slug})` : name;
+      const priceText = service.starting_from_usd
+        ? (isBn ? ` (শুরু: $${service.starting_from_usd.toLocaleString("en-US")})` : ` (Starting from $${service.starting_from_usd.toLocaleString("en-US")})`)
+        : "";
+      const header = `• ${link}${priceText}`;
+      return summary ? `${header}\n  ${summary}` : header;
+    });
+
+  return isBn
+    ? `আমাদের সেবাগুলো\n\n${items.join("\n\n")}\n\nআপনি কোন সেবাটি বুক করতে চান? বিস্তারিত দেখতে যেকোনো সেবায় ক্লিক করুন, অথবা বুকিং করতে সেবার নামটি জানান।`
+    : `Our services\n\n${items.join("\n\n")}\n\nWhich service would you like to book? Click any service above to view its details, or reply with the service name to schedule a discovery call.`;
 }
 
 export function retrievePublicKnowledge(query: string, locale: Locale): string {

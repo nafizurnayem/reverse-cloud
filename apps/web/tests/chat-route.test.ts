@@ -103,7 +103,7 @@ describe("POST /api/chat", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      reply: "Our services\n\n• Website Development\n• Custom Integration\n\nWhich service would you like to book?",
+      reply: "Our services\n\n• Website Development\n\n• Custom Integration\n\nWhich service would you like to book? Click any service above to view its details, or reply with the service name to schedule a discovery call.",
     });
     expect(response.cookies.get("rc_chat_session")).toBeDefined();
     expect(mocks.services).toHaveBeenCalledOnce();
