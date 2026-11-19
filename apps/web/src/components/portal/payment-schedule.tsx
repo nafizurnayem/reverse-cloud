@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard, FileText } from "lucide-react";
+import { CheckCircle2, CreditCard, FileText } from "lucide-react";
 import type { PortalPaymentItem, PortalProject } from "@/lib/portal/types";
 import { formatBdt, formatUsd } from "@/lib/money";
 import { InvoiceModal } from "./invoice-modal";
@@ -14,6 +14,9 @@ interface PaymentScheduleProps {
 export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
   const isBn = locale === "bn";
   const [selectedInvoice, setSelectedInvoice] = useState<PortalPaymentItem | null>(null);
+
+  const paidCount = project.payments.filter((p) => p.status === "paid").length;
+  const totalCount = project.payments.length;
 
   return (
     <>
@@ -41,6 +44,24 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
           </div>
         </div>
 
+        {/* Summary pill */}
+        {totalCount > 0 && (
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                paidCount === totalCount
+                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              }`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {isBn
+                ? `${paidCount} / ${totalCount} পরিশোধিত`
+                : `${paidCount} of ${totalCount} paid`}
+            </span>
+          </div>
+        )}
+
         {project.payments.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
             <CreditCard className="mx-auto h-6 w-6 text-muted-foreground/40 mb-2" />
@@ -66,6 +87,9 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
+                      {isPaid && (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      )}
                       <span className="font-semibold text-foreground text-xs">
                         {pay.title}
                       </span>
@@ -96,7 +120,11 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
 
                   <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                     <div className="text-right">
-                      <span className="block font-mono font-bold text-xs text-foreground">
+                      <span
+                        className={`block font-mono font-bold text-xs ${
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                        }`}
+                      >
                         {formatUsd(pay.amountUsd)}
                       </span>
                       <span className="block font-mono text-[10px] text-muted-foreground">

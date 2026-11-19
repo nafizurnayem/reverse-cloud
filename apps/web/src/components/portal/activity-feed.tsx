@@ -34,12 +34,27 @@ export function ActivityFeed({ activity, locale }: ActivityFeedProps) {
     }
   }
 
+  function getBorderColor(type: PortalActivityItem["type"]): string {
+    switch (type) {
+      case "milestone_completed":
+        return "border-l-emerald-500";
+      case "payment_received":
+        return "border-l-indigo-500";
+      case "code_committed":
+        return "border-l-amber-500";
+      case "preview_deployed":
+      default:
+        return "border-l-primary";
+    }
+  }
+
   function formatTime(iso: string): string {
     try {
       const date = new Date(iso);
       return date.toLocaleDateString(locale === "bn" ? "bn-BD" : "en-US", {
         month: "short",
         day: "numeric",
+        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -60,14 +75,18 @@ export function ActivityFeed({ activity, locale }: ActivityFeedProps) {
         </span>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {activity.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 p-6 text-center text-xs text-muted-foreground">
-            <Radio className="mx-auto h-6 w-6 text-muted-foreground/40 mb-2" />
-            <p className="font-medium text-foreground">
+          <div className="rounded-xl border border-dashed border-border/70 p-8 text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Radio className="h-6 w-6 text-muted-foreground/30" />
+              <Activity className="h-8 w-8 text-muted-foreground/20" />
+              <Radio className="h-6 w-6 text-muted-foreground/30" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">
               {isBn ? "কোনো সাম্প্রতিক আপডেট নেই" : "No Activity Recorded Yet"}
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
               {isBn
                 ? "প্রজেক্টের কাজের অগ্রগতি ও স্ট্যাটাস আপডেট এখানে দেখানো হবে।"
                 : "Project milestones and status reports will appear here as work progresses."}
@@ -75,17 +94,20 @@ export function ActivityFeed({ activity, locale }: ActivityFeedProps) {
           </div>
         ) : (
           activity.map((item) => (
-            <div key={item.id} className="flex items-start gap-3 text-xs">
+            <div
+              key={item.id}
+              className={`flex items-start gap-3 text-xs rounded-xl border border-l-4 ${getBorderColor(item.type)} bg-card p-3`}
+            >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border bg-muted/40 mt-0.5">
                 {getIcon(item.type)}
               </span>
 
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
                   <span className="font-semibold text-foreground text-xs">
                     {item.title}
                   </span>
-                  <span className="text-[10px] text-muted-foreground font-mono">
+                  <span className="text-[10px] text-muted-foreground font-mono whitespace-nowrap">
                     {formatTime(item.timestamp)}
                   </span>
                 </div>
