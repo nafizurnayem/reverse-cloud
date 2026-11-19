@@ -17,9 +17,10 @@ export function ProjectProgressBar({ project, locale }: ProjectProgressBarProps)
 
   // Build milestone dot positions from visible milestones with weight
   const visibleMilestones = project.milestones.filter((m) => m.isClientVisible);
-  let cumulativeWeight = 0;
-  const milestoneDots = visibleMilestones.map((m) => {
-    cumulativeWeight += m.weight;
+  const milestoneDots = visibleMilestones.map((m, idx) => {
+    const cumulativeWeight = visibleMilestones
+      .slice(0, idx + 1)
+      .reduce((sum, item) => sum + item.weight, 0);
     const isDone = m.status === "completed" || m.progress === 100;
     const isInProg = m.status === "in_progress" && m.progress < 100;
     return { position: Math.min(cumulativeWeight, 100), isDone, isInProg, title: m.title };
