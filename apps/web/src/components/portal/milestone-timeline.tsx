@@ -92,7 +92,7 @@ export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps
         </div>
       </div>
 
-      {/* Filter and Search Controls (User Feedback Improvement) */}
+      {/* Filter and Search Controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-muted/20 p-3 rounded-xl border border-border/60">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs font-semibold text-muted-foreground mr-1 flex items-center gap-1">
@@ -182,11 +182,12 @@ export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps
           )}
         </div>
       ) : (
-        /* Timeline List */
-        <div className="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-2.5 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-muted">
+        /* Timeline List — connector line more visible */
+        <div className="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-2.5 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-border">
           {filteredMilestones.map((m, index) => {
             const isDone = m.status === "completed" || m.progress === 100;
             const isInProgress = m.status === "in_progress" && m.progress < 100;
+            const isUpcoming = !isDone && !isInProgress;
 
             return (
               <div key={m.id} className="relative group">
@@ -209,11 +210,15 @@ export function MilestoneTimeline({ milestones, locale }: MilestoneTimelineProps
                   )}
                 </div>
 
-                {/* Milestone Card */}
+                {/* Milestone Card — left border based on status */}
                 <div
                   className={`rounded-xl border p-4 transition-all duration-200 ${
-                    isInProgress
-                      ? "border-primary/40 bg-muted/20 shadow-sm"
+                    isDone
+                      ? "border-l-4 border-l-emerald-500 border-t-border border-r-border border-b-border bg-card"
+                      : isInProgress
+                      ? "border-l-4 border-l-primary border-t-border border-r-border border-b-border bg-primary/5 shadow-sm ring-1 ring-primary/10"
+                      : isUpcoming
+                      ? "border-border bg-muted/20 opacity-75"
                       : "border-border bg-card"
                   }`}
                 >
