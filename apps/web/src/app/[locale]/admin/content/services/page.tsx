@@ -5,6 +5,8 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { requirePermission } from "@/lib/auth/guards";
 import { ActionMessage, CheckboxField, ContentHeader, EditorPanel, Field, FormActions, SelectField, StatusBadge, TextareaField } from "@/components/admin-content";
+import { ServiceIconPicker } from "@/components/service-icon-picker";
+import { ServiceIcon } from "@/components/service-icon";
 import { saveService, setServiceArchived } from "../actions";
 
 type Search = { edit?: string; saved?: string; error?: string };
@@ -23,12 +25,12 @@ export default async function ServicesPage({ params, searchParams }: { params: P
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.services.title")} description={t("resources.services.description")} backLabel={t("back")} />
       <ActionMessage saved={query.saved ? t("saved") : null} error={errorMessage} />
       <EditorPanel title={selected ? t("editItem") : t("newService")} defaultOpen={Boolean(selected)}>
-        <form action={saveService} className="content-form">
+        <form action={saveService} encType="multipart/form-data" className="content-form">
           <input type="hidden" name="locale" value={locale} /><input type="hidden" name="id" value={selected?.id ?? ""} />
           <Field label={t("fields.nameEn")} name="name_en" defaultValue={selected?.name_en} required />
           <Field label={t("fields.nameBn")} name="name_bn" defaultValue={selected?.name_bn} />
           <Field label={t("fields.slug")} name="slug" defaultValue={selected?.slug} placeholder="website-development" />
-          <Field label={t("fields.icon")} name="icon" defaultValue={selected?.icon} />
+          <ServiceIconPicker label={t("fields.icon")} defaultValue={selected?.icon} locale={locale} />
           <TextareaField label={t("fields.summaryEn")} name="summary_en" defaultValue={selected?.summary_en} />
           <TextareaField label={t("fields.summaryBn")} name="summary_bn" defaultValue={selected?.summary_bn} />
           <TextareaField label={t("fields.bodyEn")} name="body_en" defaultValue={selected?.body_en} rows={8} />
@@ -41,7 +43,7 @@ export default async function ServicesPage({ params, searchParams }: { params: P
         </form>
       </EditorPanel>
       <section className="content-list"><div className="content-list-heading"><h2>{t("allItems")}</h2><span>{items.length}</span></div>
-        <div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.nameEn")}</th><th>{t("fields.pricingModel")}</th><th>{t("status")}</th><th>{t("actions")}</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.name_en}</strong><small>{item.slug}</small></td><td>{t(`options.${item.pricing_model}`)}</td><td><StatusBadge active={Boolean(item.archived_at) || item.is_published} activeLabel={item.archived_at ? t("archived") : t("published")} inactiveLabel={t("draft")} warning={Boolean(item.archived_at)} /></td><td><div className="content-row-actions"><Link href={`/admin/content/services?edit=${item.id}`}>{t("edit")}</Link><form action={setServiceArchived}><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={item.id}/><input type="hidden" name="archived" value={item.archived_at ? "false" : "true"}/><button type="submit">{item.archived_at ? t("restore") : t("archive")}</button></form></div></td></tr>)}</tbody></table></div>
+        <div className="content-table-wrap"><table className="content-table"><thead><tr><th>{t("fields.nameEn")}</th><th>{t("fields.pricingModel")}</th><th>{t("status")}</th><th>{t("actions")}</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}><div style={{ width: "2rem", height: "2rem", display: "grid", placeItems: "center", borderRadius: "0.5rem", background: "rgba(var(--primary), 0.1)", flexShrink: 0, overflow: "hidden", padding: "0.25rem" }}><ServiceIcon icon={item.icon} className="h-4 w-4 text-primary" imgClassName="h-4 w-4 object-contain" /></div><div><strong>{item.name_en}</strong><small>{item.slug}</small></div></div></td><td>{t(`options.${item.pricing_model}`)}</td><td><StatusBadge active={Boolean(item.archived_at) || item.is_published} activeLabel={item.archived_at ? t("archived") : t("published")} inactiveLabel={t("draft")} warning={Boolean(item.archived_at)} /></td><td><div className="content-row-actions"><Link href={`/admin/content/services?edit=${item.id}`}>{t("edit")}</Link><form action={setServiceArchived}><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={item.id}/><input type="hidden" name="archived" value={item.archived_at ? "false" : "true"}/><button type="submit">{item.archived_at ? t("restore") : t("archive")}</button></form></div></td></tr>)}</tbody></table></div>
       </section>
     </main>
   );

@@ -11,41 +11,17 @@ import {
   SERVICES_CATALOG,
 } from "@/lib/services-catalog";
 import { getPublishedServices, getServiceBySlug } from "@/lib/services-server";
+import { ServiceIcon } from "@/components/service-icon";
 
 import {
   ArrowLeft,
   ArrowRight,
-  Bot,
   CheckCircle2,
-  Cpu,
-  DollarSign,
-  Globe,
-  Layers,
-  Network,
-  Palette,
-  Rocket,
-  Server,
   Sparkles,
-  TrendingUp,
-  Users,
 } from "lucide-react";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
-};
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Globe,
-  Cpu,
-  Bot,
-  Palette,
-  Layers,
-  Server,
-  Network,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Rocket,
 };
 
 export async function generateStaticParams() {
@@ -103,9 +79,6 @@ export default async function ServiceDetailPage({ params }: Props) {
   const processSteps = locale === "bn" ? service.process_bn : service.process_en;
   const faqs = locale === "bn" ? service.faqs_bn : service.faqs_en;
 
-  // Icon component
-  const IconComponent = iconMap[service.icon] || Globe;
-
   // Format pricing model label
   const modelLabels: Record<string, string> = {
     fixed: t("fixedModel"),
@@ -153,8 +126,8 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary shadow-sm">
-                <IconComponent className="h-6 w-6" />
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary shadow-sm overflow-hidden p-2">
+                <ServiceIcon icon={service.icon} className="h-6 w-6" imgClassName="h-6 w-6 object-contain" />
               </div>
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
                 {name}
@@ -361,7 +334,6 @@ export default async function ServiceDetailPage({ params }: Props) {
           {otherServices.map((other) => {
             const otherName = locale === "bn" ? other.name_bn : other.name_en;
             const otherSummary = locale === "bn" ? other.summary_bn : other.summary_en;
-            const OtherIcon = iconMap[other.icon] || Globe;
             return (
               <Card
                 key={other.slug}
@@ -369,8 +341,8 @@ export default async function ServiceDetailPage({ params }: Props) {
               >
                 <CardHeader className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                      <OtherIcon className="h-5 w-5" />
+                    <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary overflow-hidden p-1.5 shrink-0">
+                      <ServiceIcon icon={other.icon} className="h-5 w-5" imgClassName="h-5 w-5 object-contain" />
                     </div>
                     <Badge variant="outline" className="text-xs">
                       {modelLabels[other.pricing_model] || other.pricing_model}

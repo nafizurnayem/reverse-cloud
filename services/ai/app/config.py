@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 		env_file=".env.local",
 		env_file_encoding="utf-8",
 		extra="ignore",
+		populate_by_name=True,
 	)
 
 	app_name: str = "Reverse Cloud AI service"

@@ -9,38 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getPublishedServices } from "@/lib/services-server";
 import { WizardContainer } from "@/components/wizard/wizard-container";
 import { getWizardQuestions } from "@/lib/wizard-server";
-import {
-  ArrowRight,
-  Bot,
-  Cpu,
-  DollarSign,
-  Globe,
-  Layers,
-  Network,
-  Palette,
-  Rocket,
-  Server,
-  Sparkles,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { ServiceIcon } from "@/components/service-icon";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 type Props = {
   params: Promise<{ locale: string }>;
-};
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Globe,
-  Cpu,
-  Bot,
-  Palette,
-  Layers,
-  Server,
-  Network,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Rocket,
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -125,7 +98,6 @@ export default async function ServicesPage({ params }: Props) {
         {services.map((service) => {
           const name = locale === "bn" ? service.name_bn : service.name_en;
           const summary = locale === "bn" ? service.summary_bn : service.summary_en;
-          const IconComponent = iconMap[service.icon] || Globe;
           const pricingLabel = modelLabels[service.pricing_model] || tDetail("customModel");
           const priceString = service.starting_from_usd
             ? tDetail("startingPriceLabel", { price: service.starting_from_usd.toLocaleString() })
@@ -139,8 +111,8 @@ export default async function ServicesPage({ params }: Props) {
             >
               <CardHeader className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <IconComponent className="h-5 w-5" />
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground overflow-hidden p-1.5 shrink-0">
+                    <ServiceIcon icon={service.icon} className="h-5 w-5" imgClassName="h-5 w-5 object-contain" />
                   </div>
                   <Badge variant="secondary" className="font-medium text-xs">
                     {pricingLabel}
