@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { UserMenu } from "@/components/user-menu";
 import { isDashboardDestination } from "@/lib/auth/routes";
 import { cn } from "@/lib/utils";
+import { ServicesNavMenu, type ServiceGroup } from "@/components/services-nav-menu";
 
 type HeaderUser = {
   name: string;
@@ -18,18 +19,22 @@ type HeaderUser = {
 export function Header({
   accountHref = null,
   user = null,
+  serviceGroups = [],
+  locale: localeProp,
 }: {
   accountHref?: string | null;
   user?: HeaderUser | null;
+  serviceGroups?: ServiceGroup[];
+  locale?: string;
 }) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
-  const locale = useLocale();
+  const localeHook = useLocale();
+  const locale = localeProp ?? localeHook;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navLinks = [
+  const otherNavLinks = [
     { href: "/", label: t("home") },
-    { href: "/services", label: t("services") },
     { href: "/portfolio", label: t("portfolio") },
     { href: "/pricing", label: t("pricing") },
     { href: "/blog", label: t("blog") },
@@ -88,7 +93,28 @@ export function Header({
 
           {/* Desktop Nav */}
           <nav className="hidden items-center gap-4 xl:flex" aria-label="Main Navigation">
-            {navLinks.map((link) => {
+            {/* Home */}
+            <Link
+              href="/"
+              aria-current={pathname === "/" ? "page" : undefined}
+              className={cn(
+                "whitespace-nowrap text-xs font-medium transition-colors hover:text-foreground",
+                pathname === "/" ? "font-semibold text-primary" : "text-muted-foreground"
+              )}
+            >
+              {t("home")}
+            </Link>
+
+            {/* Services with mega-menu */}
+            <ServicesNavMenu
+              label={t("services")}
+              groups={serviceGroups}
+              isActive={pathname === "/services" || pathname.startsWith("/services/")}
+              locale={locale}
+            />
+
+            {/* Rest of nav links */}
+            {otherNavLinks.slice(1).map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link
@@ -97,9 +123,7 @@ export function Header({
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "whitespace-nowrap text-xs font-medium transition-colors hover:text-foreground",
-                    isActive
-                      ? "font-semibold text-primary"
-                      : "text-muted-foreground"
+                    isActive ? "font-semibold text-primary" : "text-muted-foreground"
                   )}
                 >
                   {link.label}
@@ -156,8 +180,32 @@ export function Header({
           aria-label={t("brand")}
           className="fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-border bg-background/95 backdrop-blur-md px-4 py-6 shadow-xl xl:hidden"
         >
-          <nav className="flex flex-col space-y-3" aria-label="Mobile Navigation">
-            {navLinks.map((link) => {
+          <nav className="flex flex-col space-y-1" aria-label="Mobile Navigation">
+            {/* Home */}
+            <Link
+              href="/"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={pathname === "/" ? "page" : undefined}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
+                pathname === "/" ? "bg-primary/10 font-bold text-primary" : "text-muted-foreground"
+              )}
+            >
+              {t("home")}
+            </Link>
+
+            {/* Services accordion mega-menu for mobile */}
+            <ServicesNavMenu
+              label={t("services")}
+              groups={serviceGroups}
+              isActive={pathname === "/services" || pathname.startsWith("/services/")}
+              locale={locale}
+              isMobile
+              onNavigate={() => setIsMobileMenuOpen(false)}
+            />
+
+            {/* Other links */}
+            {otherNavLinks.slice(1).map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link
@@ -167,9 +215,7 @@ export function Header({
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
-                    isActive
-                      ? "bg-primary/10 font-bold text-primary"
-                      : "text-muted-foreground"
+                    isActive ? "bg-primary/10 font-bold text-primary" : "text-muted-foreground"
                   )}
                 >
                   {link.label}

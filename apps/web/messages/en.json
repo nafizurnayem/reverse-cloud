@@ -154,6 +154,7 @@
     "restore": "Restore",
     "editItem": "Edit item",
     "newService": "Add a service",
+    "newServiceGroup": "Add a service group",
     "newFaq": "Add an FAQ",
     "newPortfolio": "Add a portfolio item",
     "newBlog": "Add a blog post",
@@ -175,6 +176,10 @@
       "services": {
         "title": "Services",
         "description": "Edit the service catalog, bilingual descriptions and display pricing."
+      },
+      "service-groups": {
+        "title": "Service Groups",
+        "description": "Group services into named categories shown in the navigation mega-menu."
       },
       "faqs": {
         "title": "FAQs",

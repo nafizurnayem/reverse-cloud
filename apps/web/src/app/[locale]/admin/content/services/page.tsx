@@ -23,6 +23,12 @@ export default async function ServicesPage({ params, searchParams }: { params: P
   return (
     <main className="admin-page content-page">
       <ContentHeader eyebrow={t("eyebrow")} title={t("resources.services.title")} description={t("resources.services.description")} backLabel={t("back")} />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", background: "var(--card, #fff)", border: "1px solid var(--border, #e5e7eb)", borderRadius: "0.75rem", marginBottom: "1rem", fontSize: "0.875rem" }}>
+        <span>{locale === "bn" ? "নেভিগেশন মেগামেনুর জন্য সার্ভিস গ্রুপ পরিচালনা করুন:" : "Organize services into mega-menu navigation groups:"}</span>
+        <Link href="/admin/content/service-groups" style={{ fontWeight: 600, color: "var(--primary)" }}>
+          {locale === "bn" ? "সার্ভিস গ্রুপ →" : "Service Groups →"}
+        </Link>
+      </div>
       <ActionMessage saved={query.saved ? t("saved") : null} error={errorMessage} />
       <EditorPanel title={selected ? t("editItem") : t("newService")} defaultOpen={Boolean(selected)}>
         <form action={saveService} encType="multipart/form-data" className="content-form">

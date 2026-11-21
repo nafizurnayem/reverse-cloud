@@ -7,6 +7,67 @@ import {
   PricingModel,
 } from "./services-catalog";
 
+export interface ServiceGroupNavItem {
+  id: string;
+  slug: string;
+  name: string;
+  sort_order: number;
+  services: Array<{ slug: string; name: string; icon: string | null }>;
+}
+
+export async function getPublishedServiceGroups(locale: string): Promise<ServiceGroupNavItem[]> {
+  const isBn = locale === "bn";
+  if (!getPublicSupabaseEnv()) return [];
+  try {
+    const supabase = await createClient();
+    const { data: groups, error: ge } = await supabase
+      .from("service_groups")
+      .select("id, slug, name_en, name_bn, sort_order")
+      .eq("is_active", true)
+      .order("sort_order");
+    if (ge || !groups?.length) return [];
+
+    const { data: members, error: me } = await supabase
+      .from("service_group_members")
+      .select("group_id, sort_order, services(slug, name_en, name_bn, icon)")
+      .order("sort_order");
+    if (me) return [];
+
+    type SvcItem = { slug: string; name_en: string; name_bn: string | null; icon: string | null };
+    type MemberRow = {
+      group_id: string;
+      sort_order: number;
+      services: SvcItem | SvcItem[] | null;
+    };
+    const memberRows = (members ?? []) as unknown as MemberRow[];
+
+    return groups.map((g) => {
+      const svcMembers = memberRows
+        .filter((m) => m.group_id === g.id && m.services)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((m) => {
+          const s = Array.isArray(m.services) ? m.services[0] : m.services;
+          if (!s) return null;
+          return {
+            slug: s.slug,
+            name: (isBn ? s.name_bn : null) || s.name_en,
+            icon: s.icon,
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => Boolean(s));
+      return {
+        id: g.id,
+        slug: g.slug,
+        name: (isBn ? (g as { name_bn?: string | null }).name_bn : null) || g.name_en,
+        sort_order: g.sort_order,
+        services: svcMembers,
+      };
+    }).filter((g) => g.services.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 interface DbServiceRow {
   id: string;
   slug: string;

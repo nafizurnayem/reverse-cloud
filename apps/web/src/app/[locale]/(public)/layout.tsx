@@ -6,6 +6,7 @@ import { accountDestination } from "@/lib/auth/destination";
 import { createClient } from "@/lib/supabase/server";
 import { getLocale } from "next-intl/server";
 import type { Locale } from "@/lib/auth/routes";
+import { getPublishedServiceGroups } from "@/lib/services-server";
 
 type Props = {
   children: ReactNode;
@@ -14,8 +15,10 @@ type Props = {
 export default async function PublicLayout({ children }: Props) {
   let accountHref: string | null = null;
   let headerUser: { name: string; email: string; avatarUrl?: string | null } | null = null;
+  let locale: string = "en";
   try {
-    const [supabase, locale] = await Promise.all([createClient(), getLocale()]);
+    const [supabase, loc] = await Promise.all([createClient(), getLocale()]);
+    locale = loc;
     const { data: { user }, error } = await supabase.auth.getUser();
     if (!error && user) {
       accountHref = await accountDestination(supabase, user.id, locale as Locale);
@@ -35,9 +38,11 @@ export default async function PublicLayout({ children }: Props) {
     // The public site remains available while authentication is unavailable.
   }
 
+  const serviceGroups = await getPublishedServiceGroups(locale).catch(() => []);
+
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Header accountHref={accountHref} user={headerUser} />
+      <Header accountHref={accountHref} user={headerUser} serviceGroups={serviceGroups} locale={locale} />
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
