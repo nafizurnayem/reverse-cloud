@@ -56,6 +56,10 @@ function validId(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+const mediaTypes = new Map([
+  ["image/jpeg", "jpg"], ["image/png", "png"], ["image/webp", "webp"], ["image/avif", "avif"],
+]);
+
 export async function saveService(formData: FormData) {
   const locale = localeFrom(formData);
   const { supabase, access } = await requirePermission(locale, "content.manage");
@@ -69,6 +73,26 @@ export async function saveService(formData: FormData) {
   const rawBodyEn = optionalText(formData, "body_en");
   const summaryEn = rawSummaryEn || (isPublished ? nameEn : null);
   const bodyEn = rawBodyEn || (isPublished ? (rawSummaryEn || nameEn) : null);
+
+  let icon = optionalText(formData, "icon");
+  const logoFile = formData.get("logo_file");
+  if (logoFile instanceof File && logoFile.size > 0) {
+    if (!mediaTypes.has(logoFile.type) || logoFile.size > 5_242_880) {
+      actionError(access, "services", "invalidFile");
+    }
+    const path = `services/logos/${crypto.randomUUID()}.${mediaTypes.get(logoFile.type)}`;
+    const uploaded = await supabase.storage
+      .from("public-media")
+      .upload(path, logoFile, { contentType: logoFile.type, upsert: false });
+    if (uploaded.error) {
+      actionError(access, "services", "saveFailed");
+    }
+    const { data: { publicUrl } } = supabase.storage
+      .from("public-media")
+      .getPublicUrl(path);
+    icon = publicUrl;
+  }
+
   const payload = {
     slug,
     name_en: nameEn,
@@ -77,7 +101,7 @@ export async function saveService(formData: FormData) {
     summary_bn: optionalText(formData, "summary_bn"),
     body_en: bodyEn,
     body_bn: optionalText(formData, "body_bn"),
-    icon: optionalText(formData, "icon"),
+    icon,
     pricing_model: text(formData, "pricing_model") || "custom",
     starting_from_usd: decimal(formData, "starting_from_usd"),
     sort_order: integer(formData, "sort_order"),
@@ -175,10 +199,6 @@ export async function savePortfolio(formData: FormData) {
   }
   actionSuccess(locale, access, "portfolio");
 }
-
-const mediaTypes = new Map([
-  ["image/jpeg", "jpg"], ["image/png", "png"], ["image/webp", "webp"], ["image/avif", "avif"],
-]);
 
 export async function uploadPortfolioMedia(formData: FormData) {
   const locale = localeFrom(formData);

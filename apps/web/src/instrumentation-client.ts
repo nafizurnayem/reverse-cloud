@@ -43,8 +43,15 @@ function safePath(input: string | URL) {
   }
 }
 
-function identifier(value: string | null | undefined) {
-  const candidate = value?.trim() ?? "";
+function identifier(value: unknown) {
+  if (typeof value !== "string") {
+    if (value && typeof value === "object" && "baseVal" in value && typeof (value as { baseVal: unknown }).baseVal === "string") {
+      value = (value as { baseVal: string }).baseVal;
+    } else {
+      return "";
+    }
+  }
+  const candidate = (value as string).trim();
   return /^[A-Za-z0-9:_-]{1,80}$/.test(candidate) ? candidate : "";
 }
 
