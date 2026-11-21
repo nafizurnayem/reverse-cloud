@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { requirePermission } from "@/lib/auth/guards";
 
-const resources = ["services", "faqs", "portfolio", "blog", "settings"] as const;
+const resources = ["services", "service-groups", "faqs", "portfolio", "blog", "settings"] as const;
 
 export default async function ContentPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

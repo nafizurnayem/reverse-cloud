@@ -93,8 +93,24 @@ export function Field({ label, name, defaultValue, type = "text", required = fal
   min?: string | number; step?: string | number; maxLength?: number; placeholder?: string; readOnly?: boolean;
 }) {
   const val = inputValue(defaultValue);
-  const valueProps = type === "file" ? {} : { defaultValue: val, key: String(val) };
-  return <label className="content-field"><span>{label}</span><input name={name} type={type} {...valueProps} required={required} min={min} step={step} maxLength={maxLength} placeholder={placeholder} readOnly={readOnly} /></label>;
+  const isFile = type === "file";
+  return (
+    <label className="content-field">
+      <span>{label}</span>
+      <input
+        key={isFile ? undefined : String(val)}
+        name={name}
+        type={type}
+        defaultValue={isFile ? undefined : val}
+        required={required}
+        min={min}
+        step={step}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        readOnly={readOnly}
+      />
+    </label>
+  );
 }
 
 export function TextareaField({ label, name, defaultValue, required = false, rows = 4, placeholder, maxLength }: {

@@ -21,7 +21,7 @@ import {
   type ContentErrorKey,
 } from "@/lib/admin/content-values";
 
-type Resource = "services" | "faqs" | "portfolio" | "blog" | "settings";
+type Resource = "services" | "faqs" | "portfolio" | "blog" | "settings" | "service-groups";
 
 function localeFrom(formData: FormData): Locale {
   const value = text(formData, "locale");
@@ -321,4 +321,88 @@ export async function deleteSetting(formData: FormData) {
   const result = await supabase.from("site_settings").delete().eq("key", key);
   if (result.error) actionError(access, "settings", contentErrorKey(result.error));
   actionSuccess(locale, access, "settings");
+}
+
+// ─────────────────────────── SERVICE GROUPS ───────────────────────────────
+
+export async function saveServiceGroup(formData: FormData) {
+  const locale = localeFrom(formData);
+  const { supabase, access } = await requirePermission(locale, "content.manage");
+  const id = text(formData, "id");
+  if (id && !validId(id)) actionError(access, "service-groups", "invalidInput");
+  const nameEn = text(formData, "name_en");
+  if (!nameEn) actionError(access, "service-groups", "invalidInput");
+  const slug = normalizeSlug(text(formData, "slug") || nameEn);
+  if (!slug) actionError(access, "service-groups", "invalidInput");
+  const payload = {
+    slug,
+    name_en: nameEn,
+    name_bn: optionalText(formData, "name_bn"),
+    sort_order: integer(formData, "sort_order"),
+    is_active: checkbox(formData, "is_active"),
+  };
+  const result = id && validId(id)
+    ? await supabase.from("service_groups").update(payload).eq("id", id)
+    : await supabase.from("service_groups").insert(payload);
+  if (result.error) actionError(access, "service-groups", contentErrorKey(result.error));
+  revalidatePath("/");
+  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  actionSuccess(locale, access, "service-groups");
+}
+
+export async function setServiceGroupActive(formData: FormData) {
+  const locale = localeFrom(formData);
+  const { supabase, access } = await requirePermission(locale, "content.manage");
+  const id = text(formData, "id");
+  if (!validId(id)) actionError(access, "service-groups", "invalidInput");
+  const active = checkbox(formData, "active");
+  const result = await supabase
+    .from("service_groups")
+    .update({ is_active: active })
+    .eq("id", id);
+  if (result.error) actionError(access, "service-groups", contentErrorKey(result.error));
+  revalidatePath("/");
+  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  actionSuccess(locale, access, "service-groups");
+}
+
+export async function updateServiceGroupMembers(formData: FormData) {
+  const locale = localeFrom(formData);
+  const { supabase, access } = await requirePermission(locale, "content.manage");
+  const groupId = text(formData, "group_id");
+  if (!validId(groupId)) actionError(access, "service-groups", "invalidInput");
+  const serviceIds = stringValues(formData, "service_ids");
+
+  // Delete existing members for this group only
+  const delResult = await supabase
+    .from("service_group_members")
+    .delete()
+    .eq("group_id", groupId);
+  if (delResult.error) actionError(access, "service-groups", "saveFailed");
+
+  if (serviceIds.length > 0) {
+    const rows = serviceIds.map((sid, idx) => ({
+      group_id: groupId,
+      service_id: sid,
+      sort_order: idx,
+    }));
+    const insResult = await supabase.from("service_group_members").insert(rows);
+    if (insResult.error) actionError(access, "service-groups", contentErrorKey(insResult.error));
+  }
+
+  revalidatePath("/");
+  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  actionSuccess(locale, access, "service-groups");
+}
+
+export async function deleteServiceGroup(formData: FormData) {
+  const locale = localeFrom(formData);
+  const { supabase, access } = await requirePermission(locale, "content.manage");
+  const id = text(formData, "id");
+  if (!validId(id)) actionError(access, "service-groups", "invalidInput");
+  const result = await supabase.from("service_groups").delete().eq("id", id);
+  if (result.error) actionError(access, "service-groups", contentErrorKey(result.error));
+  revalidatePath("/");
+  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  actionSuccess(locale, access, "service-groups");
 }
