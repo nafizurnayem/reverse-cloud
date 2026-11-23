@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import { fetchClientProjects, fetchUpcomingClientAppointment } from "@/lib/portal/portal-server";
-import { calculateClientProgress } from "@/lib/portal/portal-calc";
+import { calculateClientProgress, calculatePaymentAlerts } from "@/lib/portal/portal-calc";
 import { toBanglaDigits } from "@/lib/money";
-import { UpcomingAppointmentCard } from "@/components/portal";
+import { PaymentAlert, UpcomingAppointmentCard } from "@/components/portal";
 
 export default async function PortalProjectsPage({
   params,
@@ -40,6 +40,7 @@ export default async function PortalProjectsPage({
   ]);
 
   const hasProjects = projects.length > 0;
+  const paymentAlert = calculatePaymentAlerts(projects);
 
   // Stats for active client view
   const totalProjects = projects.length;
@@ -57,6 +58,9 @@ export default async function PortalProjectsPage({
           {t("inviteAccepted")}
         </p>
       ) : null}
+
+      {/* Payment Alert Banner (Overdue / Due Soon) */}
+      <PaymentAlert alert={paymentAlert} locale={locale} />
 
       {/* ── EMPTY STATE (no projects) ─────────────────────────── */}
       {!hasProjects && (
