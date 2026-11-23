@@ -29,11 +29,39 @@ export interface PortalPaymentItem {
   title: string;
   amountUsd: number;
   amountBdt: number;
-  status: "paid" | "due" | "upcoming";
+  status: "paid" | "due" | "upcoming" | "overdue";
   dueDate: string;
   paidAt?: string;
   invoiceNumber: string;
   invoiceDownloadUrl?: string;
+}
+
+export interface PortalPaymentAlertItem {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  title: string;
+  amountUsd: number;
+  amountBdt: number;
+  dueDate: string;
+  status: "due" | "overdue";
+  invoiceNumber: string;
+  invoiceDownloadUrl?: string;
+  isOverdue: boolean;
+  daysDiff: number;
+}
+
+export interface PortalPaymentAlert {
+  hasAlert: boolean;
+  severity: "overdue" | "due" | "none";
+  overdueCount: number;
+  dueSoonCount: number;
+  totalOverdueUsd: number;
+  totalOverdueBdt: number;
+  totalDueUsd: number;
+  totalDueBdt: number;
+  earliestDueDate?: string;
+  items: PortalPaymentAlertItem[];
 }
 
 export interface PortalProject {

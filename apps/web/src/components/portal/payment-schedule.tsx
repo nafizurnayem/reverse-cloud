@@ -78,6 +78,7 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
           <div className="divide-y divide-border rounded-xl border overflow-hidden">
             {project.payments.map((pay) => {
               const isPaid = pay.status === "paid";
+              const isOverdue = pay.status === "overdue";
               const isDue = pay.status === "due";
 
               return (
@@ -97,6 +98,8 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
                         className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                           isPaid
                             ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            : isOverdue
+                            ? "bg-rose-500/10 text-rose-700 dark:text-rose-400"
                             : isDue
                             ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
                             : "bg-muted text-muted-foreground"
@@ -104,6 +107,8 @@ export function PaymentSchedule({ project, locale }: PaymentScheduleProps) {
                       >
                         {isPaid
                           ? (isBn ? "পরিশোধিত" : "Paid")
+                          : isOverdue
+                          ? (isBn ? "বকেয়া" : "Overdue")
                           : isDue
                           ? (isBn ? "প্রদেয়" : "Due")
                           : (isBn ? "আসন্ন" : "Upcoming")}

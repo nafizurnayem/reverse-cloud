@@ -9,6 +9,9 @@ import { getActiveStaffRoleKeys } from "@/lib/supabase/roles";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ChatWidget } from "@/components/chat";
+import { fetchClientProjects } from "@/lib/portal/portal-server";
+import { calculatePaymentAlerts } from "@/lib/portal/portal-calc";
+import { cn } from "@/lib/utils";
 export default async function PortalLayout({
   children,
   params,
@@ -23,6 +26,10 @@ export default async function PortalLayout({
   const staffRoleKeys = await getActiveStaffRoleKeys(supabase, user.id);
   if (!staffRoleKeys) throw new Error("Unable to verify portal access");
   if (staffRoleKeys.length) redirect(`/${staffDashboardSegmentForRoles(staffRoleKeys)}`);
+
+  const projects = await fetchClientProjects();
+  const paymentAlert = calculatePaymentAlerts(projects);
+
   const isBn = locale === "bn";
   const accountHref = "/portal";
   const meta = user.user_metadata as Record<string, unknown> | undefined;
@@ -47,8 +54,29 @@ export default async function PortalLayout({
           <Link href={accountHref} className="font-semibold text-foreground hover:text-primary">
             {isBn ? "আমার প্রজেক্ট" : "My projects"}
           </Link>
-          <Link href="/portal/payments" className="font-semibold text-foreground hover:text-primary">
-            {isBn ? "পেমেন্ট" : "Payments"}
+          <Link
+            href="/portal/payments"
+            className="flex items-center gap-1.5 font-semibold text-foreground hover:text-primary transition-colors"
+          >
+            <span>{isBn ? "পেমেন্ট" : "Payments"}</span>
+            {paymentAlert.hasAlert && (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider",
+                  paymentAlert.severity === "overdue"
+                    ? "border border-rose-500/30 bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                    : "border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                )}
+              >
+                {paymentAlert.severity === "overdue"
+                  ? isBn
+                    ? "বকেয়া"
+                    : "Overdue"
+                  : isBn
+                  ? "প্রদেয়"
+                  : "Due"}
+              </span>
+            )}
           </Link>
         </div>
       </nav>
