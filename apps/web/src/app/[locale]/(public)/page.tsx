@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArrowUpRight } from "lucide-react";
 import { hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { Link, getPathname } from "@/i18n/navigation";
@@ -125,6 +126,15 @@ export default async function HomePage({ params }: Props) {
               {clients.map((name) => <li key={name}>{name}</li>)}
             </ul>
           ))}
+        </div>
+      </section>
+      <section className="studio-booking" aria-labelledby="studio-booking-heading">
+        <div className="studio-booking-inner">
+          <h2 id="studio-booking-heading">{isBn ? "চলুন কথা বলি" : "Let’s Talk"}</h2>
+          <Link href="/schedule" className="studio-booking-link">
+            {isBn ? "কল বুক করুন" : "Book a Call"}
+            <ArrowUpRight aria-hidden="true" size={40} strokeWidth={1.75} />
+          </Link>
         </div>
       </section>
     </div>
