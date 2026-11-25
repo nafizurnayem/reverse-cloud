@@ -61,7 +61,7 @@ export const REVIEWS_CATALOG: PublicReviewItem[] = [
   },
 ];
 
-export async function getApprovedReviews(locale?: string): Promise<PublicReviewItem[]> {
+export async function getApprovedReviews(locale?: string, includeFallback = true): Promise<PublicReviewItem[]> {
   const env = getPublicSupabaseEnv();
 
   if (env) {
@@ -89,6 +89,8 @@ export async function getApprovedReviews(locale?: string): Promise<PublicReviewI
       // Fall through to catalog
     }
   }
+
+  if (!includeFallback) return [];
 
   // Filter or prioritize fallback catalog
   if (locale) {

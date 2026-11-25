@@ -325,6 +325,13 @@ export async function deleteSetting(formData: FormData) {
 
 // ─────────────────────────── SERVICE GROUPS ───────────────────────────────
 
+function revalidateServiceGroups() {
+  for (const loc of routing.locales) {
+    revalidatePath(`/${loc}`, "layout");
+    revalidatePath(`/${loc}/services`);
+  }
+}
+
 export async function saveServiceGroup(formData: FormData) {
   const locale = localeFrom(formData);
   const { supabase, access } = await requirePermission(locale, "content.manage");
@@ -345,8 +352,7 @@ export async function saveServiceGroup(formData: FormData) {
     ? await supabase.from("service_groups").update(payload).eq("id", id)
     : await supabase.from("service_groups").insert(payload);
   if (result.error) actionError(access, "service-groups", contentErrorKey(result.error));
-  revalidatePath("/");
-  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  revalidateServiceGroups();
   actionSuccess(locale, access, "service-groups");
 }
 
@@ -361,8 +367,7 @@ export async function setServiceGroupActive(formData: FormData) {
     .update({ is_active: active })
     .eq("id", id);
   if (result.error) actionError(access, "service-groups", contentErrorKey(result.error));
-  revalidatePath("/");
-  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  revalidateServiceGroups();
   actionSuccess(locale, access, "service-groups");
 }
 
@@ -390,8 +395,7 @@ export async function updateServiceGroupMembers(formData: FormData) {
     if (insResult.error) actionError(access, "service-groups", contentErrorKey(insResult.error));
   }
 
-  revalidatePath("/");
-  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  revalidateServiceGroups();
   actionSuccess(locale, access, "service-groups");
 }
 
@@ -402,7 +406,6 @@ export async function deleteServiceGroup(formData: FormData) {
   if (!validId(id)) actionError(access, "service-groups", "invalidInput");
   const result = await supabase.from("service_groups").delete().eq("id", id);
   if (result.error) actionError(access, "service-groups", contentErrorKey(result.error));
-  revalidatePath("/");
-  for (const loc of routing.locales) revalidatePath(`/${loc}`);
+  revalidateServiceGroups();
   actionSuccess(locale, access, "service-groups");
 }

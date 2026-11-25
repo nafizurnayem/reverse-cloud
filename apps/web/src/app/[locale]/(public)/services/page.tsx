@@ -110,6 +110,28 @@ export default async function ServicesPage({ params, searchParams }: Props) {
         </div>
       </div>
 
+      {groups.length > 0 && (
+        <nav className="mt-12 flex flex-wrap items-center justify-center gap-2 border-b border-border/70 pb-5" aria-label={locale === "bn" ? "সার্ভিস গ্রুপ" : "Service groups"}>
+          <Link
+            href="/services"
+            aria-current={!activeGroup ? "page" : undefined}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${!activeGroup ? "bg-primary text-primary-foreground" : "border border-border bg-card text-foreground hover:bg-muted"}`}
+          >
+            {locale === "bn" ? "সব সার্ভিস" : "All Services"}
+          </Link>
+          {groups.map((group) => (
+            <Link
+              key={group.id}
+              href={`/services?group=${group.slug}`}
+              aria-current={activeGroup?.id === group.id ? "page" : undefined}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${activeGroup?.id === group.id ? "bg-primary text-primary-foreground" : "border border-border bg-card text-foreground hover:bg-muted"}`}
+            >
+              {group.name}
+            </Link>
+          ))}
+        </nav>
+      )}
+
       {/* Active Group Filter Banner */}
       {activeGroup ? (
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:px-6">
