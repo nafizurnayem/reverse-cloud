@@ -9,7 +9,7 @@ import { HeroDotField } from "./hero-dot-field";
 
 const poster = "/images/stitch/showreel-frame.jpg";
 
-export function ShowreelStage({ locale, fullMotion, reel = "/images/stitch/reverse-cloud-reel.mp4" }: { locale: string; fullMotion: boolean; reel?: string }) {
+export function ShowreelStage({ locale, fullMotion, reel = "https://pub-d35cdb2fc9ec42e4b98a9a1a2ceec1ec.r2.dev/Home_Page_Videos/reverse-cloud-reel.mp4" }: { locale: string; fullMotion: boolean; reel?: string }) {
   const track = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const inline = useRef<HTMLVideoElement>(null);
