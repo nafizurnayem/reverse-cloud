@@ -37,6 +37,7 @@ export async function saveReview(formData: FormData) {
     : await supabase.from("reviews").insert(payload);
   if (result.error) redirect(`${path}?error=saveFailed`);
   revalidatePath(`/${locale}/admin/reviews`);
+  for (const loc of routing.locales) revalidatePath(`/${loc}`);
   redirect(`${path}?saved=1`);
 }
 
@@ -63,5 +64,6 @@ export async function moderateReview(formData: FormData) {
 
   if (result.error) redirect(`${path}?error=saveFailed`);
   revalidatePath(`/${locale}/admin/reviews`);
+  for (const loc of routing.locales) revalidatePath(`/${loc}`);
   redirect(`${path}?saved=1`);
 }

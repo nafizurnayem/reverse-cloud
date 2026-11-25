@@ -31,7 +31,15 @@ export async function getPublishedServiceGroups(locale: string): Promise<Service
       .from("service_group_members")
       .select("group_id, sort_order, services(slug, name_en, name_bn, icon)")
       .order("sort_order");
-    if (me) return [];
+    if (me) {
+      return groups.map((g) => ({
+        id: g.id,
+        slug: g.slug,
+        name: (isBn ? (g as { name_bn?: string | null }).name_bn : null) || g.name_en,
+        sort_order: g.sort_order,
+        services: [],
+      }));
+    }
 
     type SvcItem = { slug: string; name_en: string; name_bn: string | null; icon: string | null };
     type MemberRow = {
@@ -62,7 +70,7 @@ export async function getPublishedServiceGroups(locale: string): Promise<Service
         sort_order: g.sort_order,
         services: svcMembers,
       };
-    }).filter((g) => g.services.length > 0);
+    });
   } catch {
     return [];
   }

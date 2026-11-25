@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
-import { ChevronDown } from "lucide-react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ServiceGroupItem = {
@@ -98,29 +98,15 @@ export function ServicesNavMenu({
     );
   }
 
-  // Desktop: hover mega-menu
-  if (groups.length === 0) {
-    // No groups → plain link, no mega-menu
-    return (
-      <Link
-        href="/services"
-        aria-current={isActive ? "page" : undefined}
-        className={cn(
-          "whitespace-nowrap text-xs font-medium transition-colors hover:text-foreground",
-          isActive ? "font-semibold text-primary" : "text-muted-foreground"
-        )}
-      >
-        {label}
-      </Link>
-    );
-  }
-
   return (
     <div
       ref={containerRef}
-      className="relative"
+      className="services-nav-container relative"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
+      onFocus={() => { cancelClose(); setOpen(true); }}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}
+      onKeyDown={(event) => { if (event.key === "Escape") { setOpen(false); event.stopPropagation(); } }}
     >
       {/* Services label — clicking navigates to /services */}
       <Link
@@ -137,7 +123,7 @@ export function ServicesNavMenu({
         {label}
         <ChevronDown
           className={cn(
-            "ml-0.5 h-3 w-3 transition-transform duration-200 opacity-70",
+            "ml-1 h-4 w-4 transition-transform duration-200",
             open && "rotate-180"
           )}
           aria-hidden="true"
@@ -146,38 +132,19 @@ export function ServicesNavMenu({
 
       {/* Services sub-bar — same width & height as header, opens on hover */}
       {open && (
-        <div
-          role="navigation"
-          aria-label="Services menu"
-          className="fixed left-0 right-0 top-16 z-50 h-16 border-b border-border/80 bg-background/95 shadow-md backdrop-blur-md transition-all flex items-center"
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-        >
-          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-            {/* Centered, evenly spaced group names with generous clickable hit areas */}
-            <nav className="flex flex-1 items-center justify-center gap-3 sm:gap-6 md:gap-8 overflow-x-auto py-1 scrollbar-none">
+        <div role="navigation" aria-label={_locale === "bn" ? "সার্ভিস গ্রুপ" : "Service groups"}
+          className="services-nav-panel absolute left-0 top-full z-50 w-[min(58rem,80vw)] pt-3 animate-in fade-in slide-in-from-top-2 duration-200"
+          onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
+          <div className="services-nav-surface overflow-hidden rounded-xl border border-border/70 p-4 shadow-xl backdrop-blur-xl">
+            <nav className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(groups.length, 1), 4)}, minmax(0, 1fr))` }}>
+              {groups.length === 0 && <p className="p-4 text-sm text-muted-foreground">{_locale === "bn" ? "সার্ভিস গ্রুপ লোড করা যায়নি।" : "Service groups are unavailable."}</p>}
               {groups.map((group) => (
-                <Link
-                  key={group.id}
-                  href={`/services?group=${group.slug}`}
-                  onClick={() => setOpen(false)}
-                  className="group inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-border/70 bg-card/90 px-4 py-2 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-sm"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary/70 transition-colors group-hover:bg-primary-foreground" />
+                <Link key={group.id} href={`/services?group=${group.slug}`} onClick={() => setOpen(false)} className="group flex min-h-16 items-center justify-between gap-3 rounded-md border border-border/70 bg-background px-4 text-sm font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 hover:shadow-sm">
                   <span>{group.name}</span>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center border border-border bg-background transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true"><ArrowUpRight size={17} /></span>
                 </Link>
               ))}
             </nav>
-
-            {/* Link to view all services */}
-            <Link
-              href="/services"
-              onClick={() => setOpen(false)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs sm:text-sm font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground shadow-xs"
-            >
-              <span>{_locale === "bn" ? "সব সার্ভিস" : "All Services"}</span>
-              <span aria-hidden="true">&rarr;</span>
-            </Link>
           </div>
         </div>
       )}

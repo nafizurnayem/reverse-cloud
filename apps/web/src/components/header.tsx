@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { UserMenu } from "@/components/user-menu";
@@ -31,6 +31,7 @@ export function Header({
   const pathname = usePathname();
   const localeHook = useLocale();
   const locale = localeProp ?? localeHook;
+  const isHome = pathname === "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const otherNavLinks = [
@@ -41,6 +42,12 @@ export function Header({
     { href: "/about", label: t("about") },
     { href: "/schedule", label: t("schedule") },
     { href: "/contact", label: t("contact") },
+  ];
+  const homeNavLinks = [
+    { href: "/services", label: t("services") },
+    { href: "/portfolio", label: locale === "bn" ? "কাজ" : "Work" },
+    { href: "/pricing", label: t("pricing") },
+    { href: "/about", label: locale === "bn" ? "কোম্পানি" : "Company" },
   ];
 
   // Track pathname changes to close mobile drawer without cascading state updates
@@ -66,7 +73,10 @@ export function Header({
   }, [isMobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-md transition-all">
+    <header className={cn(
+      "sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-md transition-all",
+      isHome && "studio-nav",
+    )}>
       {/* Skip to Main Content Link for Keyboard and Screen Reader Accessibility */}
       <a
         href="#main-content"
@@ -80,7 +90,7 @@ export function Header({
         <div className="flex min-w-0 items-center gap-5">
           <Link
             href="/"
-            className="flex items-center gap-2.5 font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
+            className={cn("flex items-center gap-2.5 font-bold tracking-tight text-foreground transition-opacity hover:opacity-90", isHome && "studio-brand")}
           >
             <span
               className="grid h-9 w-9 place-items-center rounded-lg bg-[#b8dc6f] font-extrabold text-[#15261f] shadow-sm"
@@ -88,11 +98,11 @@ export function Header({
             >
               R
             </span>
-            <span className="hidden text-lg font-bold tracking-tight min-[420px]:inline">{t("brand")}</span>
+            <span className={cn("text-lg font-bold tracking-tight", !isHome && "hidden min-[420px]:inline")}>{t("brand")}</span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-4 xl:flex" aria-label="Main Navigation">
+          {!isHome && <nav className="hidden items-center gap-4 xl:flex" aria-label="Main Navigation">
             {/* Home */}
             <Link
               href="/"
@@ -130,15 +140,28 @@ export function Header({
                 </Link>
               );
             })}
-          </nav>
+          </nav>}
         </div>
+
+        {isHome && (
+          <nav className="studio-nav-links" aria-label={locale === "bn" ? "প্রধান নেভিগেশন" : "Main navigation"}>
+            {homeNavLinks.map(({ href, label }) => href === "/services" ? (
+              <ServicesNavMenu key={href} label={label} groups={serviceGroups} isActive={pathname.startsWith("/services")} locale={locale} />
+            ) : <Link href={href} key={href}>{label}</Link>)}
+          </nav>
+        )}
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <div className="hidden xl:block"><LanguageSwitcher /></div>
+          {!isHome && <div className="hidden xl:block"><LanguageSwitcher /></div>}
 
           {/* Signed-in: show avatar + name dropdown; signed-out: show Login/Dashboard link */}
-          {user ? (
+          {isHome ? (
+            <Link href="/contact" className="studio-get-started">
+              {locale === "bn" ? "শুরু করুন" : "Get Started"}
+              <span aria-hidden="true"><ArrowUpRight size={15} /></span>
+            </Link>
+          ) : user ? (
             <UserMenu name={user.name} email={user.email} avatarUrl={user.avatarUrl} />
           ) : (
             <Link
@@ -153,7 +176,7 @@ export function Header({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted xl:hidden transition-colors"
+            className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted transition-colors", isHome ? "lg:hidden" : "xl:hidden")}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-navigation"
             aria-label={
@@ -178,7 +201,7 @@ export function Header({
           role="dialog"
           aria-modal="true"
           aria-label={t("brand")}
-          className="fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-border bg-background/95 backdrop-blur-md px-4 py-6 shadow-xl xl:hidden"
+          className={cn("fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-border bg-background/95 px-4 py-6 shadow-xl backdrop-blur-md", isHome ? "studio-nav-drawer" : "xl:hidden")}
         >
           <nav className="flex flex-col space-y-1" aria-label="Mobile Navigation">
             {/* Home */}
@@ -247,7 +270,14 @@ export function Header({
             </div>
           )}
 
-          <div className="mt-4 border-t border-border pt-4"><LanguageSwitcher /></div>
+          <div className={cn("mt-4 border-t border-border pt-4", isHome && "flex items-center justify-between gap-3")}>
+            {isHome && (
+              <Link href={accountHref ?? "/login"} className="px-3 text-sm font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
+                {accountHref ? t(isDashboardDestination(accountHref) ? "dashboard" : "account") : t("login")}
+              </Link>
+            )}
+            <LanguageSwitcher />
+          </div>
         </div>
       )}
     </header>
