@@ -7,10 +7,9 @@ import { ArrowRight, CalendarDays, Pause, Play, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { HeroDotField } from "./hero-dot-field";
 
-const reel = "/images/stitch/reverse-cloud-reel.mp4";
 const poster = "/images/stitch/showreel-frame.jpg";
 
-export function ShowreelStage({ locale, fullMotion }: { locale: string; fullMotion: boolean }) {
+export function ShowreelStage({ locale, fullMotion, reel = "/images/stitch/reverse-cloud-reel.mp4" }: { locale: string; fullMotion: boolean; reel?: string }) {
   const track = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const inline = useRef<HTMLVideoElement>(null);
@@ -30,7 +29,7 @@ export function ShowreelStage({ locale, fullMotion }: { locale: string; fullMoti
 
     gsap.registerPlugin(ScrollTrigger);
     const motion = gsap.matchMedia();
-    motion.add(fullMotion ? "all" : "(prefers-reduced-motion: no-preference)", () => {
+    motion.add("(prefers-reduced-motion: no-preference)", () => {
       const geometry = { progress: 0 };
       const timeline = gsap.timeline({
         scrollTrigger: {
@@ -71,8 +70,9 @@ export function ShowreelStage({ locale, fullMotion }: { locale: string; fullMoti
 
     function syncPlayback() {
       if (!video) return;
-      const paused = pausedByUser ?? (!fullMotion && reducedMotion.matches);
-      if (visible && !paused) {
+      const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+      const paused = pausedByUser ?? (reducedMotion.matches || saveData === true);
+      if (visible && !document.hidden && !dialog.current?.open && !paused) {
         video.muted = true;
         void video.play().catch(() => {});
       } else {
@@ -86,9 +86,12 @@ export function ShowreelStage({ locale, fullMotion }: { locale: string; fullMoti
     });
     observer.observe(video);
     reducedMotion.addEventListener("change", syncPlayback);
+    document.addEventListener("visibilitychange", syncPlayback);
     return () => {
       observer.disconnect();
       reducedMotion.removeEventListener("change", syncPlayback);
+      document.removeEventListener("visibilitychange", syncPlayback);
+      video.pause();
     };
   }, [fullMotion, pausedByUser]);
 
@@ -107,12 +110,18 @@ export function ShowreelStage({ locale, fullMotion }: { locale: string; fullMoti
     const video = player.current;
     if (!modal || !video) return;
     modal.showModal();
+    inline.current?.pause();
     video.currentTime = inline.current?.currentTime ?? 0;
     void video.play().catch(() => {});
   }
 
   function finishReel() {
     player.current?.pause();
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    const paused = pausedByUser ?? (window.matchMedia("(prefers-reduced-motion: reduce)").matches || saveData === true);
+    if (!paused && !document.hidden) {
+      void inline.current?.play().catch(() => {});
+    }
     trigger.current?.focus({ preventScroll: true });
   }
 
@@ -146,7 +155,7 @@ export function ShowreelStage({ locale, fullMotion }: { locale: string; fullMoti
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             onPlaying={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             aria-hidden="true"

@@ -56,7 +56,7 @@ export default async function HomePage({ params }: Props) {
 
   return (
     <div className="studio-home">
-      <ShowreelStage locale={locale} fullMotion />
+      <ShowreelStage locale={locale} fullMotion reel={process.env.SHOWREEL_VIDEO_URL} />
 
       <section className="studio-proof" id="studio-proof" aria-labelledby="studio-proof-heading">
         <div className="studio-container">
