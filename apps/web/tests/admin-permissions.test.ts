@@ -3,7 +3,12 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { visibleAdminSections } from "../src/lib/auth/admin-sections";
-import { hasAnyPermission } from "../src/lib/auth/permissions";
+import {
+  hasAnyPermission,
+  staffDashboardSegmentForRoles,
+} from "../src/lib/auth/permissions";
+import enMessages from "../messages/en.json";
+import bnMessages from "../messages/bn.json";
 
 let staffAccessFromRows: typeof import("../src/lib/supabase/roles").staffAccessFromRows;
 
@@ -77,5 +82,17 @@ describe("database staff permissions", () => {
   it("fails closed for missing or malformed role rows", () => {
     expect(staffAccessFromRows(null).isStaff).toBe(false);
     expect(staffAccessFromRows([{ roles: { key: "admin" } }]).isStaff).toBe(false);
+  });
+
+  it.each([
+    [["admin"], "admin" as const, "Admin workspace", "অ্যাডমিন ওয়ার্কস্পেস"],
+    [["project_manager"], "project_manager" as const, "Project Manager workspace", "প্রজেক্ট ম্যানেজার ওয়ার্কস্পেস"],
+    [["developer"], "developer" as const, "Developer workspace", "ডেভেলপার ওয়ার্কস্পেস"],
+    [["admin", "developer"], "admin" as const, "Admin workspace", "অ্যাডমিন ওয়ার্কস্পেস"],
+  ])("resolves %s role keys to %s segment with correct bilingual workspace titles", (roleKeys, expectedSegment, enTitle, bnTitle) => {
+    const segment = staffDashboardSegmentForRoles(roleKeys);
+    expect(segment).toBe(expectedSegment);
+    expect(enMessages.Admin.workspaces[expectedSegment]).toBe(enTitle);
+    expect(bnMessages.Admin.workspaces[expectedSegment]).toBe(bnTitle);
   });
 });

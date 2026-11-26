@@ -47,6 +47,10 @@ export function HeroDotField() {
     const leave = () => { pointer.x = -1000; pointer.y = -1000; };
 
     const draw = () => {
+      if (document.hidden || stage.getBoundingClientRect().bottom <= 0) {
+        frame = requestAnimationFrame(draw);
+        return;
+      }
       context.clearRect(0, 0, width, height);
       for (const dot of dots) {
         const dx = dot.x - pointer.x;

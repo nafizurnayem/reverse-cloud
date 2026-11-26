@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getPortalProjects, getPortalProjectById } from "./portal-catalog";
@@ -122,7 +123,7 @@ export function mapDbProjectToPortalProject(p: DbProjectRow): PortalProject {
       title: pi.title,
       amountUsd: isPiBdt ? Math.round(amount / 120) : amount,
       amountBdt: isPiBdt ? amount : Math.round(amount * 120),
-      status: pi.status === "paid" ? "paid" : pi.status === "pending" ? "due" : "upcoming",
+      status: pi.status === "paid" ? "paid" : pi.status === "overdue" ? "overdue" : pi.status === "pending" ? "due" : "upcoming",
       dueDate: pi.due_on ?? "",
       paidAt: pi.paid_at ?? undefined,
       invoiceNumber: `INV-${pi.id.slice(0, 8).toUpperCase()}`,
@@ -173,7 +174,7 @@ export function mapDbProjectToPortalProject(p: DbProjectRow): PortalProject {
   };
 }
 
-export async function fetchClientProjects(): Promise<PortalProject[]> {
+export const fetchClientProjects = cache(async function fetchClientProjects(): Promise<PortalProject[]> {
   try {
     const supabase = await createClient();
     const { data: userRes } = await supabase.auth.getUser();
@@ -223,7 +224,7 @@ export async function fetchClientProjects(): Promise<PortalProject[]> {
     }
     return [];
   }
-}
+});
 
 export async function fetchUpcomingClientAppointment(): Promise<PortalAppointment | null> {
   try {

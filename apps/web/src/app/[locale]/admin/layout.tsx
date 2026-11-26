@@ -8,7 +8,10 @@ import { AdminNavigation } from "@/components/admin-navigation";
 import { AdminThemeToggle } from "@/components/admin-theme-toggle";
 import { routing } from "@/i18n/routing";
 import { visibleAdminSections } from "@/lib/auth/admin-sections";
-import { staffDashboardPath } from "@/lib/auth/permissions";
+import {
+  staffDashboardPath,
+  staffDashboardSegmentForRoles,
+} from "@/lib/auth/permissions";
 import { requireStaff } from "@/lib/auth/guards";
 import Link from "next/link";
 
@@ -28,7 +31,20 @@ export default async function AdminLayout({ children, params }: {
     (typeof user.user_metadata.name === "string" && user.user_metadata.name) ||
     user.email ||
     t("unknownUser");
+  const segment = staffDashboardSegmentForRoles(access.roles.map((role) => role.key));
   const dashboardPath = staffDashboardPath(access);
+  const workspaceTitle =
+    segment === "developer"
+      ? t("workspaces.developer")
+      : segment === "project_manager"
+        ? t("workspaces.project_manager")
+        : t("workspaces.admin");
+  const navigationLabel =
+    segment === "developer"
+      ? t("navigations.developer")
+      : segment === "project_manager"
+        ? t("navigations.project_manager")
+        : t("navigations.admin");
   const items = [
     { href: dashboardPath, label: t("dashboard"), slug: "dashboard" },
     ...visibleAdminSections(access.permissions).map((section) => ({
@@ -55,7 +71,7 @@ export default async function AdminLayout({ children, params }: {
             </span>
             <div className="admin-brand-title-wrap">
               <span className="admin-brand-name">{t("brand")}</span>
-              <span className="admin-brand-pill">{t("workspace")}</span>
+              <span className="admin-brand-pill">{workspaceTitle}</span>
             </div>
           </Link>
         </div>
@@ -121,9 +137,9 @@ export default async function AdminLayout({ children, params }: {
       {/* ── Main Layout: Floating Icon Rail + Main Stage ── */}
       <div className="admin-body-layout">
         {/* Left Floating Rail */}
-        <aside className="admin-sidebar" aria-label={t("navigation")}>
+        <aside className="admin-sidebar" aria-label={navigationLabel}>
           <div className="admin-sidebar-nav">
-            <AdminNavigation items={items} label={t("navigation")} />
+            <AdminNavigation items={items} label={navigationLabel} />
           </div>
         </aside>
 

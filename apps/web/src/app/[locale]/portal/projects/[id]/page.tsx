@@ -4,11 +4,13 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, Layers, Shield } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import { fetchClientProjectById, fetchProjectReview } from "@/lib/portal/portal-server";
+import { calculatePaymentAlerts } from "@/lib/portal/portal-calc";
 import { formatBdt, formatUsd } from "@/lib/money";
 import {
   ActivityFeed,
   LivePreviewCard,
   MilestoneTimeline,
+  PaymentAlert,
   PaymentSchedule,
   ProjectProgressBar,
   ProjectReviewCard,
@@ -30,6 +32,7 @@ export default async function ProjectDetailPage({
   if (!project) notFound();
 
   const isCompleted = project.status === "completed";
+  const projectAlert = calculatePaymentAlerts([project]);
 
   return (
     <div className="space-y-8">
@@ -43,6 +46,11 @@ export default async function ProjectDetailPage({
           <span>{isBn ? "সকল প্রজেক্টে ফিরে যান" : "Back to Projects"}</span>
         </Link>
       </div>
+
+      {/* Project-specific Payment Alert (if due or overdue) */}
+      {projectAlert.hasAlert && (
+        <PaymentAlert alert={projectAlert} locale={locale} compact />
+      )}
 
       {/* Project Hero */}
       <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">

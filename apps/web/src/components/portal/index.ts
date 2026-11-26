@@ -13,3 +13,4 @@ export {
 } from "./payments-view";
 export { ProjectReviewCard } from "./project-review-card";
 export { UpcomingAppointmentCard } from "./upcoming-appointment-card";
+export { PaymentAlert } from "./payment-alert";

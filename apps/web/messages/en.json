@@ -75,7 +75,17 @@
   "Admin": {
     "brand": "Reverse Cloud",
     "workspace": "Admin workspace",
+    "workspaces": {
+      "admin": "Admin workspace",
+      "project_manager": "Project Manager workspace",
+      "developer": "Developer workspace"
+    },
     "navigation": "Admin navigation",
+    "navigations": {
+      "admin": "Admin navigation",
+      "project_manager": "Project manager navigation",
+      "developer": "Developer navigation"
+    },
     "dashboard": "Dashboard",
     "unknownUser": "Staff member",
     "signedInAs": "Signed in as",
