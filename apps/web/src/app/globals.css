@@ -3247,3 +3247,155 @@ details.content-editor-collapsible[open] .content-editor-summary {
     portal-hint-scale 3s ease-in-out forwards;
   transform-origin: center;
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Consultation Link Live Soundwave & Shimmer Pill
+   Self-contained equalizer wave bars + light sweep pill for visitors/clients
+   without an active project. Contained with zero text overlap.
+─────────────────────────────────────────────────────────────────────────── */
+.consultation-pill-highlight {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--studio-accent, #e63946);
+  background: rgb(230 57 70 / 0.07);
+  border: 1px solid rgb(230 57 70 / 0.28);
+  overflow: hidden;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 180ms ease;
+  vertical-align: middle;
+}
+
+:is(.dark) .consultation-pill-highlight {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+/* When the floating nav is over a dark/red section (data-dark on header),
+   flip the pill to white so it reads clearly against the dark background. */
+[data-dark] .consultation-pill-highlight {
+  color: #fff;
+  background: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.4);
+}
+
+[data-dark] .consultation-pill-highlight:hover {
+  background: rgb(255 255 255 / 0.24);
+  border-color: rgb(255 255 255 / 0.65);
+  color: #fff;
+}
+
+/* Flip the sheen sweep to a subtler light-on-dark version when over dark bg */
+[data-dark] .consultation-pill-highlight::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.25) 50%,
+    transparent 100%
+  );
+}
+
+.consultation-pill-highlight:hover {
+  background: rgb(230 57 70 / 0.14);
+  border-color: rgb(230 57 70 / 0.5);
+  transform: translateY(-1px);
+}
+
+:is(.dark) .consultation-pill-highlight:hover {
+  background: hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary) / 0.55);
+}
+
+/* Light sheen wave sweeping across the pill */
+.consultation-pill-highlight::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.5) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  animation: consultation-sheen-sweep 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes consultation-sheen-sweep {
+  0%, 40% {
+    left: -120%;
+  }
+  70%, 100% {
+    left: 170%;
+  }
+}
+
+/* Rhythmic 4-bar soundwave frequency equalizer */
+.consultation-soundwave {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  shrink: 0;
+  vertical-align: middle;
+}
+
+.consultation-soundwave span {
+  display: block;
+  width: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: consultation-eq-bounce 1.4s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.consultation-soundwave span:nth-child(1) {
+  height: 6px;
+  animation-delay: 0s;
+}
+
+.consultation-soundwave span:nth-child(2) {
+  height: 13px;
+  animation-delay: 0.25s;
+}
+
+.consultation-soundwave span:nth-child(3) {
+  height: 15px;
+  animation-delay: 0.5s;
+}
+
+.consultation-soundwave span:nth-child(4) {
+  height: 8px;
+  animation-delay: 0.15s;
+}
+
+@keyframes consultation-eq-bounce {
+  0%, 100% {
+    transform: scaleY(0.35);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultation-soundwave span {
+    animation: none;
+  }
+  .consultation-pill-highlight::before {
+    display: none;
+  }
+}

@@ -60,7 +60,7 @@
 
 .studio-nav-links {
   display: none;
-  gap: clamp(1.4rem, 3vw, 3.25rem);
+  gap: clamp(0.75rem, 1.4vw, 2rem);
   align-items: center;
   color: #333;
   font-size: 0.95rem;

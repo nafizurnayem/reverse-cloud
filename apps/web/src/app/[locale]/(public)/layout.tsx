@@ -16,6 +16,7 @@ export default async function PublicLayout({ children }: Props) {
   let accountHref: string | null = null;
   let headerUser: { name: string; email: string; avatarUrl?: string | null } | null = null;
   let locale: string = "en";
+  let hasActiveProject = false;
   try {
     const [supabase, loc] = await Promise.all([createClient(), getLocale()]);
     locale = loc;
@@ -33,6 +34,24 @@ export default async function PublicLayout({ children }: Props) {
         avatarUrl: (typeof meta?.avatar_url === "string" && meta.avatar_url) ||
                    (typeof meta?.picture === "string" && meta.picture) || null,
       };
+
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("user_id", user.id)
+        .is("archived_at", null)
+        .maybeSingle();
+
+      if (client) {
+        const { data: activeProjects } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("client_id", client.id)
+          .eq("status", "active")
+          .limit(1);
+
+        hasActiveProject = Boolean(activeProjects && activeProjects.length > 0);
+      }
     }
   } catch {
     // The public site remains available while authentication is unavailable.
@@ -42,7 +61,13 @@ export default async function PublicLayout({ children }: Props) {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Header accountHref={accountHref} user={headerUser} serviceGroups={serviceGroups} locale={locale} />
+      <Header
+        accountHref={accountHref}
+        user={headerUser}
+        serviceGroups={serviceGroups}
+        locale={locale}
+        hasActiveProject={hasActiveProject}
+      />
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>

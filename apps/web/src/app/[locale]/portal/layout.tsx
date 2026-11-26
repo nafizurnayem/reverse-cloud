@@ -48,7 +48,11 @@ export default async function PortalLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header accountHref={accountHref} user={headerUser} />
+      <Header
+        accountHref={accountHref}
+        user={headerUser}
+        hasActiveProject={projects.some((p) => p.status === "active")}
+      />
       <nav className="border-b border-border bg-card/70" aria-label={isBn ? "পোর্টাল নেভিগেশন" : "Portal navigation"}>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-sm sm:px-6 lg:px-8">
           <Link href={accountHref} className="font-semibold text-foreground hover:text-primary">
