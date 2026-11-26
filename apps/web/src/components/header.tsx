@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -21,11 +21,13 @@ export function Header({
   user = null,
   serviceGroups = [],
   locale: localeProp,
+  hasActiveProject = false,
 }: {
   accountHref?: string | null;
   user?: HeaderUser | null;
   serviceGroups?: ServiceGroup[];
   locale?: string;
+  hasActiveProject?: boolean;
 }) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
@@ -33,6 +35,7 @@ export function Header({
   const locale = localeProp ?? localeHook;
   const isHome = pathname === "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const shouldAnimateConsultation = !hasActiveProject;
 
   const otherNavLinks = [
     { href: "/", label: t("home") },
@@ -45,17 +48,76 @@ export function Header({
   ];
   const homeNavLinks = [
     { href: "/services", label: t("services") },
-    { href: "/portfolio", label: locale === "bn" ? "কাজ" : "Work" },
+    { href: "/portfolio", label: t("portfolio") },
     { href: "/pricing", label: t("pricing") },
-    { href: "/about", label: locale === "bn" ? "কোম্পানি" : "Company" },
+    { href: "/blog", label: t("blog") },
+    { href: "/about", label: t("about") },
+    { href: "/schedule", label: t("schedule") },
+    { href: "/contact", label: t("contact") },
   ];
 
   // Track pathname changes to close mobile drawer without cascading state updates
+  const headerRef = useRef<HTMLElement>(null);
+
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
     setIsMobileMenuOpen(false);
   }
+
+  // Scroll-aware dark/red-background detection: toggle data-dark on the header
+  // when it overlaps a dark or red section on the homepage.
+  useEffect(() => {
+    if (!isHome) {
+      headerRef.current?.removeAttribute("data-dark");
+      return;
+    }
+    const headerEl = headerRef.current;
+    if (!headerEl) return;
+
+    const selector = ".studio-proof, .studio-reviews, .studio-clients, .studio-booking";
+
+    const updateDarkState = () => {
+      const headerRect = headerEl.getBoundingClientRect();
+      const probeY = headerRect.top + headerRect.height / 2;
+      const sections = document.querySelectorAll<HTMLElement>(selector);
+      let isOverDark = false;
+
+      for (const section of sections) {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= probeY && rect.bottom >= probeY) {
+          isOverDark = true;
+          break;
+        }
+      }
+
+      if (isOverDark) {
+        headerEl.setAttribute("data-dark", "");
+      } else {
+        headerEl.removeAttribute("data-dark");
+      }
+    };
+
+    let rafId = 0;
+    const handleScrollOrResize = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        updateDarkState();
+      });
+    };
+
+    updateDarkState();
+    window.addEventListener("scroll", handleScrollOrResize, { passive: true });
+    window.addEventListener("resize", handleScrollOrResize, { passive: true });
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", handleScrollOrResize);
+      window.removeEventListener("resize", handleScrollOrResize);
+      headerEl.removeAttribute("data-dark");
+    };
+  }, [isHome]);
 
   // Handle Escape key to close mobile menu for accessibility
   useEffect(() => {
@@ -73,7 +135,7 @@ export function Header({
   }, [isMobileMenuOpen]);
 
   return (
-    <header className={cn(
+    <header ref={headerRef} className={cn(
       "sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-md transition-all",
       isHome && "studio-nav",
     )}>
@@ -126,6 +188,8 @@ export function Header({
             {/* Rest of nav links */}
             {otherNavLinks.slice(1).map((link) => {
               const isActive = pathname === link.href;
+              const isConsultation = link.href === "/schedule";
+              const animate = isConsultation && shouldAnimateConsultation;
               return (
                 <Link
                   key={link.href}
@@ -133,9 +197,18 @@ export function Header({
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "whitespace-nowrap text-xs font-medium transition-colors hover:text-foreground",
-                    isActive ? "font-semibold text-primary" : "text-muted-foreground"
+                    isActive ? "font-semibold text-primary" : "text-muted-foreground",
+                    animate && "consultation-pill-highlight text-primary"
                   )}
                 >
+                  {animate && (
+                    <span className="consultation-soundwave" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  )}
                   {link.label}
                 </Link>
               );
@@ -145,30 +218,60 @@ export function Header({
 
         {isHome && (
           <nav className="studio-nav-links" aria-label={locale === "bn" ? "প্রধান নেভিগেশন" : "Main navigation"}>
-            {homeNavLinks.map(({ href, label }) => href === "/services" ? (
-              <ServicesNavMenu key={href} label={label} groups={serviceGroups} isActive={pathname.startsWith("/services")} locale={locale} />
-            ) : <Link href={href} key={href}>{label}</Link>)}
+            {homeNavLinks.map(({ href, label }) => {
+              const isConsultation = href === "/schedule";
+              const animate = isConsultation && shouldAnimateConsultation;
+              return href === "/services" ? (
+                <ServicesNavMenu key={href} label={label} groups={serviceGroups} isActive={pathname.startsWith("/services")} locale={locale} />
+              ) : (
+                <Link
+                  href={href}
+                  key={href}
+                  className={cn(
+                    animate && "consultation-pill-highlight"
+                  )}
+                >
+                  {animate && (
+                    <span className="consultation-soundwave" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  )}
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
         )}
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {!isHome && <div className="hidden xl:block"><LanguageSwitcher /></div>}
+          {!isHome && (
+            <div className="hidden xl:block">
+              <LanguageSwitcher />
+            </div>
+          )}
 
-          {/* Signed-in: show avatar + name dropdown; signed-out: show Login/Dashboard link */}
-          {isHome ? (
-            <Link href="/contact" className="studio-get-started">
-              {locale === "bn" ? "শুরু করুন" : "Get Started"}
-              <span aria-hidden="true"><ArrowUpRight size={15} /></span>
-            </Link>
-          ) : user ? (
+          {/* Signed-in: show avatar + name dropdown; signed-out: show Sign In button (using studio-get-started on home) */}
+          {user ? (
             <UserMenu name={user.name} email={user.email} avatarUrl={user.avatarUrl} />
           ) : (
             <Link
               href={accountHref ?? "/login"}
-              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:px-3.5 sm:text-sm"
+              className={cn(
+                isHome
+                  ? "studio-get-started"
+                  : "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-subtle transition-all hover:bg-accent hover:text-accent-foreground sm:px-3.5 sm:text-sm",
+              )}
             >
               {accountHref ? t(isDashboardDestination(accountHref) ? "dashboard" : "account") : t("login")}
+              {isHome && (
+                <span aria-hidden="true">
+                  <ArrowUpRight size={15} />
+                </span>
+              )}
             </Link>
           )}
 
@@ -230,6 +333,8 @@ export function Header({
             {/* Other links */}
             {otherNavLinks.slice(1).map((link) => {
               const isActive = pathname === link.href;
+              const isConsultation = link.href === "/schedule";
+              const animate = isConsultation && shouldAnimateConsultation;
               return (
                 <Link
                   key={link.href}
@@ -237,10 +342,19 @@ export function Header({
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
-                    isActive ? "bg-primary/10 font-bold text-primary" : "text-muted-foreground"
+                    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
+                    isActive ? "bg-primary/10 font-bold text-primary" : "text-muted-foreground",
+                    animate && "consultation-pill-highlight my-1 justify-start font-semibold text-foreground"
                   )}
                 >
+                  {animate && (
+                    <span className="consultation-soundwave mr-2" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  )}
                   {link.label}
                 </Link>
               );
@@ -270,13 +384,13 @@ export function Header({
             </div>
           )}
 
-          <div className={cn("mt-4 border-t border-border pt-4", isHome && "flex items-center justify-between gap-3")}>
+          <div className={cn("mt-4 border-t border-border pt-4", isHome ? "flex items-center justify-between gap-3" : "")}>
             {isHome && (
               <Link href={accountHref ?? "/login"} className="px-3 text-sm font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
                 {accountHref ? t(isDashboardDestination(accountHref) ? "dashboard" : "account") : t("login")}
               </Link>
             )}
-            <LanguageSwitcher />
+            {!isHome && <LanguageSwitcher />}
           </div>
         </div>
       )}
